@@ -1,0 +1,15 @@
+{
+  "terminal.integrated.tabs.defaultColor": "terminal.ansiYellow",
+  "terminal.integrated.tabs.defaultIcon": "python",
+  "python.defaultInterpreterPath": "./env/bin/python",
+  "editor.tabSize": 4,
+  "editor.defaultFormatter": "ms-python.autopep8",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.sortImports": "explicit"
+  },
+  "files.exclude": {
+    "**/__pycache__/": true,
+    "**/.mypy_cache/": true
+  },
+}

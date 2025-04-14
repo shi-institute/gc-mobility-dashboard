@@ -1,0 +1,9 @@
+name: gcmb-pipeline
+
+dependencies:
+  - python=3.13
+  - conda-forge::pandas-gbq=0.27
+  - conda-forge::pandas>=2.2.3, <2.3.0
+  - conda-forge::geopandas=1
+  - conda-forge::types-requests
+  - conda-forge::autopep8

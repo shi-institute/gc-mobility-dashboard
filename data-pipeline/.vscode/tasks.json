@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Ensure conda environment exists",
+      "type": "shell",
+      "command": "conda env list | grep $(pwd)/env || conda env create --file environment.yaml --prefix ./env",
+      "group": "none",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "close": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "Pipeline",
+      "detail": "Runs the data pipeline",
+      "type": "shell",
+      "command": "python src/main.py",
+      "group": "none",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "showReuseMessage": false,
+      }
+    }
+  ]
+}

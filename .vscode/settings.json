@@ -1,0 +1,7 @@
+{
+  "files.exclude": {
+    "frontend": true,
+    "data-pipeline": true
+  },
+  "autoOpenWorkspace.enableAutoOpenIfSingleWorkspace": true
+}

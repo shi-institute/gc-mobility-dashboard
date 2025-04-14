@@ -1,0 +1,48 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "Repository"
+		},
+		{
+			"path": "frontend",
+			"name": "Frontend"
+		},
+		{
+			"path": "data-pipeline",
+			"name": "Data pipeline"
+		}
+	],
+	"extensions": {
+		"recommendations": [
+			"benjaminbenais.codesandbox-dark",
+			"vscode-icons-team.vscode-icons",
+			"eamodio.gitlens",
+			"oderwat.indent-rainbow"
+		]
+	},
+	"settings": {
+		"workbench.colorTheme": "CodeSandbox Dark",
+		"workbench.productIconTheme": "Default",
+		"workbench.iconTheme": "vscode-icons",
+		"terminal.integrated.defaultProfile.linux": "bash",
+		"editor.fontLigatures": true,
+		"editor.inlayHints.fontSize": 11,
+		"typescript.inlayHints.enumMemberValues.enabled": true,
+		"typescript.inlayHints.parameterNames.enabled": "literals",
+		"typescript.inlayHints.variableTypes.enabled": true,
+		"typescript.inlayHints.parameterTypes.enabled": true,
+		"typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+		"editor.inlayHints.fontFamily": "sans-serif",
+		"python.analysis.inlayHints.callArgumentNames": "partial",
+		"editor.maxTokenizationLineLength": 1000,
+		"editor.renderWhitespace": "all",
+		"explorer.compactFolders": false,
+		"workbench.editor.labelFormat": "short",
+		"workbench.tree.indent": 16,
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+		"editor.formatOnSave": true,
+		"editor.fontFamily": "'Dank Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace",
+	}
+}
