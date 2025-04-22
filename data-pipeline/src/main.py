@@ -1,7 +1,11 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+
 from etl.runner import etl_runner
+
+load_dotenv()  # ensure .env file is loaded
 
 if __name__ == "__main__":
     # prompt whether to run the data pipeline
