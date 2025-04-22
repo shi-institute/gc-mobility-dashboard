@@ -42,7 +42,10 @@ class Downloader:
 
         # delete the file/folder if it already exists
         if os.path.exists(self.download_file_name):
-            shutil.rmtree(self.download_file_name)
+            if os.path.isfile(self.download_file_name):
+                os.remove(self.download_file_name)
+            else:
+                shutil.rmtree(self.download_file_name)
 
         try:
             response = requests.get(self.file_url, verify=verify)
