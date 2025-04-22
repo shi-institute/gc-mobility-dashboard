@@ -3,13 +3,14 @@ import shutil
 
 import geopandas
 import pandas
-from etl.downloader import Downloader
 from shapely import LineString
+
+from etl.downloader import Downloader
 
 
 class GreentlinkGtfsETL:
     gtfs_download_url = 'https://gtfs.greenlink.cadavl.com/GTA/GTFS/GTFS_GTA.zip'
-    folder_path = '../frontend/public/data/greenlink_gtfs'
+    folder_path = './data/greenlink_gtfs'
 
     def run(self):
         self.download()
