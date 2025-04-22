@@ -21,7 +21,7 @@ class Downloader:
         self.file_url = file_url
         self.download_file_name = download_file_name
 
-    def download(self, verify: bool = True) -> Self:
+    def download(self, verify: bool = True, replace: bool = True) -> Self:
         """
         Download a file from a URL and save it to a specified location.
 
@@ -29,7 +29,13 @@ class Downloader:
             file_url (str): The URL of the file to download.
             download_file_name (str): The name of the file to save the downloaded content as.
             verify (bool): Whether to verify the SSL certificate. Defaults to True.
+            replace (bool): Whether to replace the existing file. Defaults to True.
         """
+
+        # if the file already exists and replace is False, do not re-download
+        if os.path.exists(self.download_file_name) and not replace:
+            print(f"{self.download_file_name} already exists. Skipping download.")
+            return self
 
         # create the destination directory if it doesn't exist
         os.makedirs(os.path.dirname(self.download_file_name), exist_ok=True)
