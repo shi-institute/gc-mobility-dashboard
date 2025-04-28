@@ -17,6 +17,21 @@
       }
     },
     {
+      "label": "Update conda environment",
+      "type": "shell",
+      "command": "conda env update --file environment.yaml --prefix ./env",
+      "group": "none",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "close": true,
+        "clear": true
+      }
+    },
+    {
       "label": "Pipeline",
       "detail": "Runs the data pipeline",
       "type": "shell",
