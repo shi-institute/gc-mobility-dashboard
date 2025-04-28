@@ -174,3 +174,7 @@ pyrightconfig.json
 
 # Data files
 data/
+
+# Input files - ignort all files in each input folder except README.md files
+/input/*/*
+!/input/*/README.md
