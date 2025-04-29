@@ -18,7 +18,8 @@
 			"benjaminbenais.codesandbox-dark",
 			"vscode-icons-team.vscode-icons",
 			"eamodio.gitlens",
-			"oderwat.indent-rainbow"
+			"oderwat.indent-rainbow",
+			"batyan-soft.fast-tasks"
 		]
 	},
 	"settings": {
