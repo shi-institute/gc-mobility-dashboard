@@ -35,7 +35,14 @@
       "label": "Pipeline",
       "detail": "Runs the data pipeline",
       "type": "shell",
-      "command": "${command:python.interpreterPath} src/main.py",
+      "options": {
+        "shell": {
+          "args": [
+            "-i"
+          ]
+        }
+      },
+      "command": "conda activate ./env && python src/main.py",
       "group": "none",
       "runOptions": {
         "runOn": "folderOpen"
