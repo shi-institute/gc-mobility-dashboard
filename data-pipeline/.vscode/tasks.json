@@ -35,7 +35,7 @@
       "label": "Pipeline",
       "detail": "Runs the data pipeline",
       "type": "shell",
-      "command": "python src/main.py",
+      "command": "${command:python.interpreterPath} src/main.py",
       "group": "none",
       "runOptions": {
         "runOn": "folderOpen"
