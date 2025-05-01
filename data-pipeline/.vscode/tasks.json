@@ -4,6 +4,13 @@
     {
       "label": "Ensure conda environment exists",
       "type": "shell",
+      "options": {
+        "shell": {
+          "args": [
+            "-i"
+          ]
+        }
+      },
       "command": "conda env list | grep $(pwd)/env || conda env create --file environment.yaml --prefix ./env",
       "group": "none",
       "runOptions": {
@@ -13,12 +20,19 @@
         "reveal": "silent",
         "panel": "dedicated",
         "close": true,
-        "clear": true
+        "clear": true,
       }
     },
     {
       "label": "Update conda environment",
       "type": "shell",
+      "options": {
+        "shell": {
+          "args": [
+            "-i"
+          ]
+        }
+      },
       "command": "conda env update --file environment.yaml --prefix ./env",
       "group": "none",
       "runOptions": {
