@@ -67,6 +67,34 @@
         "clear": true,
         "showReuseMessage": false,
       }
-    }
+    },
+    {
+      "label": "Build data-pipeline docker image",
+      "type": "shell",
+      "command": "docker build -t gc-mobility-dashboard-data-pipeline:latest .",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "close": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "Pipeline (docker)",
+      "detail": "Runs the data pipeline",
+      "dependsOn": [
+        "Build data-pipeline docker image",
+      ],
+      "type": "shell",
+      "command": "docker run -it --volume ./input:/input --volume ./data:/data --user 1000 gc-mobility-dashboard-data-pipeline:latest",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "showReuseMessage": false,
+      }
+    },
   ]
 }
