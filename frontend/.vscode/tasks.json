@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Develop",
+      "detail": "Starts the vite development server",
+      "type": "shell",
+      "command": "npm run dev",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": true,
+        "showReuseMessage": false,
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build",
+      "detail": "Builds the project for production",
+      "type": "shell",
+      "command": "npm run build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "showReuseMessage": false,
+      }
+    }
+  ]
+}
