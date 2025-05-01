@@ -4,6 +4,13 @@
     {
       "label": "Ensure conda environment exists",
       "type": "shell",
+      "options": {
+        "shell": {
+          "args": [
+            "-i"
+          ]
+        }
+      },
       "command": "conda env list | grep $(pwd)/env || conda env create --file environment.yaml --prefix ./env",
       "group": "none",
       "runOptions": {
@@ -13,17 +20,21 @@
         "reveal": "silent",
         "panel": "dedicated",
         "close": true,
-        "clear": true
+        "clear": true,
       }
     },
     {
       "label": "Update conda environment",
       "type": "shell",
+      "options": {
+        "shell": {
+          "args": [
+            "-i"
+          ]
+        }
+      },
       "command": "conda env update --file environment.yaml --prefix ./env",
       "group": "none",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated",
@@ -34,8 +45,18 @@
     {
       "label": "Pipeline",
       "detail": "Runs the data pipeline",
+      "dependsOn": [
+        "Ensure conda environment exists",
+      ],
       "type": "shell",
-      "command": "${command:python.interpreterPath} src/main.py",
+      "options": {
+        "shell": {
+          "args": [
+            "-i"
+          ]
+        }
+      },
+      "command": "conda activate ./env && python src/main.py",
       "group": "none",
       "runOptions": {
         "runOn": "folderOpen"
