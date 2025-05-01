@@ -35,9 +35,6 @@
       },
       "command": "conda env update --file environment.yaml --prefix ./env",
       "group": "none",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated",
@@ -48,6 +45,9 @@
     {
       "label": "Pipeline",
       "detail": "Runs the data pipeline",
+      "dependsOn": [
+        "Ensure conda environment exists",
+      ],
       "type": "shell",
       "options": {
         "shell": {
