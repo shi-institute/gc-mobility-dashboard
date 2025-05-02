@@ -1,0 +1,276 @@
+name: "Data Pipeline (PR)"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "data-pipeline/**"
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up buildx cache directory
+        run: |
+          mkdir -p /tmp/.buildx-cache
+
+      - name: Restore Docker build cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('./data-pipeline/Dockerfile', './data-pipeline/environment.yaml', './data-pipeline/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./data-pipeline
+          file: ./data-pipeline/Dockerfile
+          push: false # don't push the image to the registry
+          load: true # instead, load the image into the daemon
+          tags: gc-mobility-dashboard-data-pipeline:test
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+
+      - name: Verify Built Images
+        run: |
+          docker images
+
+      - name: Save Docker image as artifact
+        run: |
+          docker save gc-mobility-dashboard-data-pipeline:test -o ./gc-mobility-dashboard-data-pipeline.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-data-pipeline
+          path: ./gc-mobility-dashboard-data-pipeline.tar
+          retention-days: 1 # set a low retention for temporary artifacts
+
+  determine_tests_to_run:
+    name: Determine Tests to Run
+    runs-on: ubuntu-latest
+    outputs:
+      run_greenlink_gtfs: ${{ steps.check_changed_dirs.outputs.run_greenlink_gtfs }}
+      run_census_acs_5year: ${{ steps.check_changed_dirs.outputs.run_census_acs_5year }}
+      run_generic_src: ${{ steps.check_changed_dirs.outputs.run_generic_src }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        # Checkout again to get access to the repository for git commands
+
+      - name: Determine changed directories
+        id: check_changed_dirs
+        run: |
+          # Fetch the base branch to ensure the merge-base can be found
+          git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
+
+          # Get a list of changed files between the merge base and the head of the PR
+          # Filter to only files within data-pipeline/src
+          CHANGED_FILES=$(git diff --name-only $(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD) HEAD -- ./data-pipeline/src/)
+
+          RUN_GREENLINK_GTFS_TEST="false"
+          RUN_CENSUS_ACS_5YEAR_TEST="false"
+          RUN_GENERIC_SRC_TEST="false"
+
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Changed files in data-pipeline/src:"
+            echo "$CHANGED_FILES"
+
+            for file in $CHANGED_FILES; do
+              if [[ "$file" == "./data-pipeline/src/etl/sources/greenlink_gtfs/"* ]]; then
+                RUN_GREENLINK_GTFS_TEST="true"
+              elif [[ "$file" == "./data-pipeline/src/etl/sources/census_acs_5year/"* ]]; then
+                RUN_CENSUS_ACS_5YEAR_TEST="true"
+              elif [[ "$file" == "./data-pipeline/src/"* ]] && [[ "$file" != "./data-pipeline/src/etl/sources/"* ]]; then
+                RUN_GENERIC_SRC_TEST="true"
+              fi
+            done
+
+            # if the generic source test is true, do not trigger the specific tests
+            # because the generic test will cover them
+            if [ "$RUN_GENERIC_SRC_TEST" == "true" ]; then
+                RUN_GREENLINK_GTFS_TEST="false"
+                RUN_CENSUS_ACS_5YEAR_TEST="false"
+            fi
+
+          else
+            echo "No changes detected in data-pipeline/src."
+          fi
+
+          echo "run_greenlink_gtfs=$RUN_GREENLINK_GTFS_TEST" >> "$GITHUB_OUTPUT"
+          echo "run_census_acs_5year=$RUN_CENSUS_ACS_5YEAR_TEST" >> "$GITHUB_OUTPUT"
+          echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
+
+  test__greenlink_gtfs:
+    name: "Test / Greenlink GTFS"
+    runs-on: ubuntu-latest
+    needs: [build, determine_tests_to_run]
+    if: needs.determine_tests_to_run.outputs.run_greenlink_gtfs == 'true'
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        # Checkout again to get access to the repository for bind mounts
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-data-pipeline
+          path: .
+
+      - name: Load Docker image from artifact
+        run: |
+          docker load -i ./gc-mobility-dashboard-data-pipeline.tar
+          rm ./gc-mobility-dashboard-data-pipeline.tar
+
+      - name: Prepare test environment
+        run: |
+          # get the user ID of the runner
+          RUNNER_UID=$(id -u)
+          echo "RUNNER_UID=$RUNNER_UID" >> $GITHUB_ENV
+
+          # define the input and data directories relative to the workspace
+          INPUT_DIR="data-pipeline/input"
+          DATA_DIR="data-pipeline/data"
+          echo "INPUT_DIR=$INPUT_DIR" >> $GITHUB_ENV
+          echo "DATA_DIR=$DATA_DIR" >> $GITHUB_ENV
+
+          # ensure the directories for bind mounts exist
+          mkdir -p ${{ github.workspace }}/$INPUT_DIR
+          mkdir -p ${{ github.workspace }}/$DATA_DIR
+
+      - name: Run
+        run: |
+          docker run --rm \
+            --volume ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
+            --volume ${{ github.workspace }}/${{ env.DATA_DIR }}:/data \
+            --user ${{ env.RUNNER_UID }} \
+            gc-mobility-dashboard-data-pipeline:test --etls=greenlink_gtfs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data__greenlink_gtfs
+          path: ${{ github.workspace }}/${{ env.DATA_DIR }}
+          retention-days: 30
+
+  test__census_acs_5year:
+    name: "Test / Census ACS 5-Year Estimates"
+    runs-on: ubuntu-latest
+    needs: [build, determine_tests_to_run]
+    if: needs.determine_tests_to_run.outputs.run_census_acs_5year == 'true'
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-data-pipeline
+          path: .
+
+      - name: Load Docker image from artifact
+        run: |
+          docker load -i ./gc-mobility-dashboard-data-pipeline.tar
+          rm ./gc-mobility-dashboard-data-pipeline.tar
+
+      - name: Prepare test environment
+        run: |
+          # get the user ID of the runner
+          RUNNER_UID=$(id -u)
+          echo "RUNNER_UID=$RUNNER_UID" >> $GITHUB_ENV
+
+          # define the input and data directories relative to the workspace
+          INPUT_DIR="data-pipeline/input"
+          DATA_DIR="data-pipeline/data"
+          echo "INPUT_DIR=$INPUT_DIR" >> $GITHUB_ENV
+          echo "DATA_DIR=$DATA_DIR" >> $GITHUB_ENV
+
+          # ensure the directories for bind mounts exist
+          mkdir -p ${{ github.workspace }}/$INPUT_DIR
+          mkdir -p ${{ github.workspace }}/$DATA_DIR
+
+      - name: Run
+        run: |
+          docker run --rm \
+            --volume ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
+            --volume ${{ github.workspace }}/${{ env.DATA_DIR }}:/data \
+            --user ${{ env.RUNNER_UID }} \
+            gc-mobility-dashboard-data-pipeline:test --etls=census_acs_5year
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data__census_acs_5year
+          path: ${{ github.workspace }}/${{ env.DATA_DIR }}
+          retention-days: 30
+
+  test__all:
+    name: "Test / All ETLs"
+    runs-on: ubuntu-latest
+    needs: [build, determine_tests_to_run]
+    if: needs.determine_tests_to_run.outputs.run_generic_src == 'true'
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-data-pipeline
+          path: .
+
+      - name: Load Docker image from artifact
+        run: |
+          docker load -i ./gc-mobility-dashboard-data-pipeline.tar
+          rm ./gc-mobility-dashboard-data-pipeline.tar
+
+      - name: Prepare test environment
+        run: |
+          # get the user ID of the runner
+          RUNNER_UID=$(id -u)
+          echo "RUNNER_UID=$RUNNER_UID" >> $GITHUB_ENV
+
+          # define the input and data directories relative to the workspace
+          INPUT_DIR="data-pipeline/input"
+          DATA_DIR="data-pipeline/data"
+          echo "INPUT_DIR=$INPUT_DIR" >> $GITHUB_ENV
+          echo "DATA_DIR=$DATA_DIR" >> $GITHUB_ENV
+
+          # ensure the directories for bind mounts exist
+          mkdir -p ${{ github.workspace }}/$INPUT_DIR
+          mkdir -p ${{ github.workspace }}/$DATA_DIR
+
+      - name: Run
+        run: |
+          docker run --rm \
+            --volume ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
+            --volume ${{ github.workspace }}/${{ env.DATA_DIR }}:/data \
+            --user ${{ env.RUNNER_UID }} \
+            gc-mobility-dashboard-data-pipeline:test
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data__all
+          path: ${{ github.workspace }}/${{ env.DATA_DIR }}
+          retention-days: 30
