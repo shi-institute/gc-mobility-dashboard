@@ -67,13 +67,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        # Checkout again to get access to the repository for git commands
+        with:
+          fetch-depth: 0 # fetch all history to ensure we can find the merge base
 
       - name: Determine changed directories
         id: check_changed_dirs
         run: |
           # Fetch the base branch to ensure the merge-base can be found
           git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
+          MERGE_BASE=$(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD)
+          echo "Merge base: $MERGE_BASE"
+          echo "HEAD: $(git rev-parse HEAD)"
+          echo "Base Ref: ${{ github.event.pull_request.base.ref }}"
+          echo "Origin Base Ref SHA: $(git rev-parse origin/${{ github.event.pull_request.base.ref }})"
 
           # Get a list of changed files between the merge base and the head of the PR
           # Filter to only files within data-pipeline/src
@@ -88,11 +94,11 @@ jobs:
             echo "$CHANGED_FILES"
 
             for file in $CHANGED_FILES; do
-              if [[ "$file" == "./data-pipeline/src/etl/sources/greenlink_gtfs/"* ]]; then
+              if [[ "$file" == "data-pipeline/src/etl/sources/greenlink_gtfs/"* ]]; then
                 RUN_GREENLINK_GTFS_TEST="true"
-              elif [[ "$file" == "./data-pipeline/src/etl/sources/census_acs_5year/"* ]]; then
+              elif [[ "$file" == "data-pipeline/src/etl/sources/census_acs_5year/"* ]]; then
                 RUN_CENSUS_ACS_5YEAR_TEST="true"
-              elif [[ "$file" == "./data-pipeline/src/"* ]] && [[ "$file" != "./data-pipeline/src/etl/sources/"* ]]; then
+              elif [[ "$file" == "data-pipeline/src/"* ]] && [[ "$file" != "data-pipeline/src/etl/sources/"* ]]; then
                 RUN_GENERIC_SRC_TEST="true"
               fi
             done
@@ -111,6 +117,11 @@ jobs:
           echo "run_greenlink_gtfs=$RUN_GREENLINK_GTFS_TEST" >> "$GITHUB_OUTPUT"
           echo "run_census_acs_5year=$RUN_CENSUS_ACS_5YEAR_TEST" >> "$GITHUB_OUTPUT"
           echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
+
+          # print the results
+          echo "Run Greenlink GTFS: $RUN_GREENLINK_GTFS_TEST"
+          echo "Run Census ACS 5-Year: $RUN_CENSUS_ACS_5YEAR_TEST"
+          echo "Run all: $RUN_GENERIC_SRC_TEST"
 
   test__greenlink_gtfs:
     name: "Test / Greenlink GTFS"
