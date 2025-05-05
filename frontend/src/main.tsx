@@ -24,6 +24,8 @@ const emotionCache = createCache({
 // render the app into the shadow DOM
 createRoot(shadowRoot).render(
   <StrictMode>
+    <link rel="stylesheet" href={new URL('./assets/theme.css', import.meta.url).href} />
+
     <CacheProvider value={emotionCache}>
       <Router>
         <App />

@@ -1,0 +1,16 @@
+:host {
+  --color-blue: #222e5d;
+  --color-green1: #62a34b;
+  --color-gray: #2e393c;
+  --color-lightgreen: #c4d8b5;
+  --color-green2: #7fbe40;
+
+  --color-primary: var(--color-green1);
+  --color-secondar: var(--color-blue);
+
+  --button-radius: 3px;
+}
+
+:host {
+  font-family: 'Poppins', sans-serif;
+}
