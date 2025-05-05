@@ -19,8 +19,11 @@ export function DevModeComponentsAll() {
         />
         <Tab label="Button Tab" />
         <Tab
-          label="Active Button Tab with Icon"
+          label="Active Button Tab with Icon and click handler"
           isActive
+          onClick={() => {
+            alert('Button Tab clicked');
+          }}
           iconLeft={
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path
