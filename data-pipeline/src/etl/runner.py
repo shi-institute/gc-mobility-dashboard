@@ -3,6 +3,7 @@
 import importlib
 import os
 import sys
+from typing import Optional
 
 from etl.merge import merge_json_array_files
 from etl.sources.census_acs_5year.etl import CensusACS5YearEstimatesETL
@@ -58,19 +59,30 @@ def load_source_runners():
     return source_runners
 
 
-def etl_runner():
+def etl_runner(etls: Optional[list[str]] = None) -> None:
     """
-    Run the ETL (extract, transform, and load) pipeline for all sources.
+    Run the ETL (extract, transform, and load) pipeline for each source.
+
+    @param etls: List of ETL source names to run. If None, all sources will be run.
     """
     print("Starting ETL pipeline...")
     loaded_runners = load_source_runners()
 
     print("\nLoaded source runners:")
     for source_name, runner_func in loaded_runners.items():
-        print(f"- {source_name}: {runner_func}")
+        will_run = source_name in etls if etls else True
+        print(f"- {source_name}: {runner_func} {'✓' if will_run else '✗'}")
 
     # run the source runners
     for source_name, runner_func in loaded_runners.items():
+        will_run = source_name in etls if etls else True
+
+        # if the source is not in the list of ETLs to run, skip it
+        if not will_run:
+            print(f"Skipping ETL for {source_name}...")
+            continue
+
+        # run the source runner
         print(f"\nRunning ETL for {source_name}...")
         try:
             runner_func()
