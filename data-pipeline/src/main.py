@@ -1,5 +1,7 @@
+import argparse
 import os
 import sys
+from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -10,6 +12,16 @@ if __name__ == "__main__":
     docker = False
     if os.path.exists('/.dockerenv'):
         docker = True
+
+    # configure arguments
+    parser = argparse.ArgumentParser(
+        prog='Greenville Connects Mobility Dashbard Data Pipeline',
+        description='This program runs the data pipeline for the Greenville Connects Mobility Dashboard.',
+        epilog='Created by The Shi Institute for Sustainable Communities at Furman University. https://shi.institute',
+    )
+    parser.add_argument(
+        '--etls', type=str, help='Comma-separated list of ETL sources to run. If not provided, all sources will be run.')
+    args = parser.parse_args()
 
     # if not running in docker, load the .env file
     if not docker:
@@ -27,5 +39,11 @@ if __name__ == "__main__":
             print("Exiting the data pipeline.")
             exit(0)
 
-    etl_runner()
-    print('DONE')
+    # if etls argument is provided, split it into a list of strings
+    etls: Optional[list[str]] = None
+    if args.etls:
+        etls = [string.strip() for string in args.etls.split(',')]
+
+    # run the ETL pipeline
+    etl_runner(etls)
+    print('\nDONE')
