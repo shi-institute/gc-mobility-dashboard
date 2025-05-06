@@ -14,18 +14,17 @@ logger.addHandler(logging.StreamHandler())
 class ReplicaETL:
     project_id = 'replica-customer'
     region = 'south_atlantic'
-    input_folder_path = '../input/replica_interest_area_polygons'
-    folder_path = '../data/replica'
+    input_folder_path = './input/replica_interest_area_polygons'
+    folder_path = './data/replica'
     season_dataset: str
     columns_to_select = 'o.name AS origin_geo, d.name AS destination_geo'
     
     
-    def __init__(self, dataset: str, columns: list[str]) -> None:
+    def __init__(self, columns: list[str]) -> None:
         """
         Initializes the replica ETL with a sepecific dataset and columns from that
         dataset.
         """ 
-        self.season_dataset = f'{self.project_id}.{self.region}.{dataset}'
         
         # append the columns to the existing columns_to_select
         if len(columns) > 0:
@@ -35,6 +34,8 @@ class ReplicaETL:
         # ensure the output folder exists
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
+            
+        print(os.path.abspath(self.input_folder_path))
         
     def run(self):
         # get all geojson files from the input folder
@@ -158,7 +159,8 @@ class ReplicaETL:
             # otherwise, run the query for the current chunk/queue
             # before queueing the current row
             rows_str = ', '.join(queue)
-            query = self._build_query(rows_str, full_table_path, origin_lng_col, origin_lat_col, dest_lng_col, dest_lat_col)
+            query = self._build_query(rows_str, full_table_path, origin_lng_col, 
+                                    origin_lat_col, dest_lng_col, dest_lat_col)
             df = pandas_gbq.read_gbq(query, project_id=self.project_id, dialect='standard')
             result_dfs.append(df)
 
@@ -170,7 +172,8 @@ class ReplicaETL:
         # if there is anything left in the queue, run the query for the last chunk
         if queue:
             rows_str = ', '.join(queue)
-            query = self._build_query(rows_str, full_table_path)
+            query = self._build_query(rows_str, full_table_path, origin_lng_col, origin_lat_col, 
+                                    dest_lng_col, dest_lat_col)
             df = pandas_gbq.read_gbq(query, project_id=self.project_id, dialect='standard')
             result_dfs.append(df)
 
