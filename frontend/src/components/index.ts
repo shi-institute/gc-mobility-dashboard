@@ -1,2 +1,1 @@
-export { Tab } from './Tabs/Tab';
-export { Tabs } from './Tabs/Tabs';
+export * from './common';
