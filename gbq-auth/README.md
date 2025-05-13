@@ -19,3 +19,5 @@ with the credentials to save to bigquery_credentials.json. Authenticate and trig
 https://gbq-auth.shi.institute?postUrl={{postUrl}}, where {{postURL}} is the the URL of the endpoint that can receive the credentials.
 
 Remember to copy the bigquery_credentials.json to the appropriate directory for the data pipeline (the credentials folder).
+
+An example server that can receive the credentials is available at [listen.mjs](../.github/actions/authenticate-gbq/listen.mjs)

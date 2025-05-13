@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - "data-pipeline/**"
+      - "gbq-auth/**"
 
 jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    needs: [determine_tests_to_run]
 
     steps:
       - name: Checkout code
@@ -63,6 +65,7 @@ jobs:
     outputs:
       run_greenlink_gtfs: ${{ steps.check_changed_dirs.outputs.run_greenlink_gtfs }}
       run_census_acs_5year: ${{ steps.check_changed_dirs.outputs.run_census_acs_5year }}
+      run_replica: ${{ steps.check_changed_dirs.outputs.run_replica }}
       run_generic_src: ${{ steps.check_changed_dirs.outputs.run_generic_src }}
     steps:
       - name: Checkout code
@@ -87,6 +90,7 @@ jobs:
 
           RUN_GREENLINK_GTFS_TEST="false"
           RUN_CENSUS_ACS_5YEAR_TEST="false"
+          RUN_REPLICA_TEST="false"
           RUN_GENERIC_SRC_TEST="false"
 
           if [ -n "$CHANGED_FILES" ]; then
@@ -98,6 +102,8 @@ jobs:
                 RUN_GREENLINK_GTFS_TEST="true"
               elif [[ "$file" == "data-pipeline/src/etl/sources/census_acs_5year/"* ]]; then
                 RUN_CENSUS_ACS_5YEAR_TEST="true"
+              elif [[ "$file" == "data-pipeline/src/etl/sources/replica/"* ]]; then
+                RUN_REPLICA_TEST="true"
               elif [[ "$file" == "data-pipeline/src/"* ]] && [[ "$file" != "data-pipeline/src/etl/sources/"* ]]; then
                 RUN_GENERIC_SRC_TEST="true"
               fi
@@ -108,6 +114,7 @@ jobs:
             if [ "$RUN_GENERIC_SRC_TEST" == "true" ]; then
                 RUN_GREENLINK_GTFS_TEST="false"
                 RUN_CENSUS_ACS_5YEAR_TEST="false"
+                RUN_REPLICA_TEST="false"
             fi
 
           else
@@ -116,12 +123,32 @@ jobs:
 
           echo "run_greenlink_gtfs=$RUN_GREENLINK_GTFS_TEST" >> "$GITHUB_OUTPUT"
           echo "run_census_acs_5year=$RUN_CENSUS_ACS_5YEAR_TEST" >> "$GITHUB_OUTPUT"
+          echo "run_replica=$RUN_REPLICA_TEST" >> "$GITHUB_OUTPUT"
           echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
 
           # print the results
           echo "Run Greenlink GTFS: $RUN_GREENLINK_GTFS_TEST"
           echo "Run Census ACS 5-Year: $RUN_CENSUS_ACS_5YEAR_TEST"
+          echo "Run Replica: $RUN_REPLICA_TEST"
           echo "Run all: $RUN_GENERIC_SRC_TEST"
+
+  authenticate_google_big_query:
+    name: Authenticate Google BigQuery
+    runs-on: ubuntu-latest
+    needs: [determine_tests_to_run]
+    if: needs.determine_tests_to_run.outputs.run_replica == 'true' || needs.determine_tests_to_run.outputs.run_generic_src == 'true'
+    outputs:
+      bigquery_credentials: ${{ steps.authenticate.outputs.bigquery_credentials }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate Google BigQuery
+        id: authenticate
+        uses: ./.github/actions/authenticate-gbq
+        with:
+          timeout: 300 # 5 minutes
 
   test__greenlink_gtfs:
     name: "Test / Greenlink GTFS"
@@ -134,49 +161,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        # Checkout again to get access to the repository for bind mounts
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
+      - name: Run test
+        uses: ./.github/actions/prepare-pipeline-test
         with:
-          name: docker-image-data-pipeline
-          path: .
-
-      - name: Load Docker image from artifact
-        run: |
-          docker load -i ./gc-mobility-dashboard-data-pipeline.tar
-          rm ./gc-mobility-dashboard-data-pipeline.tar
-
-      - name: Prepare test environment
-        run: |
-          # get the user ID of the runner
-          RUNNER_UID=$(id -u)
-          echo "RUNNER_UID=$RUNNER_UID" >> $GITHUB_ENV
-
-          # define the input and data directories relative to the workspace
-          INPUT_DIR="data-pipeline/input"
-          DATA_DIR="data-pipeline/data"
-          echo "INPUT_DIR=$INPUT_DIR" >> $GITHUB_ENV
-          echo "DATA_DIR=$DATA_DIR" >> $GITHUB_ENV
-
-          # ensure the directories for bind mounts exist
-          mkdir -p ${{ github.workspace }}/$INPUT_DIR
-          mkdir -p ${{ github.workspace }}/$DATA_DIR
-
-      - name: Run
-        run: |
-          docker run --rm \
-            --volume ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
-            --volume ${{ github.workspace }}/${{ env.DATA_DIR }}:/data \
-            --user ${{ env.RUNNER_UID }} \
-            gc-mobility-dashboard-data-pipeline:test --etls=greenlink_gtfs
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: data__greenlink_gtfs
-          path: ${{ github.workspace }}/${{ env.DATA_DIR }}
-          retention-days: 30
+          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          artifact_name: "data__greenlink_gtfs"
+          etls: "replica"
 
   test__census_acs_5year:
     name: "Test / Census ACS 5-Year Estimates"
@@ -190,52 +181,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
+      - name: Run test
+        uses: ./.github/actions/prepare-pipeline-test
         with:
-          name: docker-image-data-pipeline
-          path: .
+          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          artifact_name: "data__census_acs_5year"
+          etls: "replica"
 
-      - name: Load Docker image from artifact
+  test__replica:
+    name: "Test / Replica"
+    runs-on: ubuntu-latest
+    needs: [build, determine_tests_to_run, authenticate_google_big_query]
+    if: needs.determine_tests_to_run.outputs.run_replica == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create sample input data
+        env:
+          GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
         run: |
-          docker load -i ./gc-mobility-dashboard-data-pipeline.tar
-          rm ./gc-mobility-dashboard-data-pipeline.tar
+          mkdir -p ${{ github.workspace }}/replica-input/replica_interest_area_polygons
+          echo $GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/sample.geojson
 
-      - name: Prepare test environment
-        run: |
-          # get the user ID of the runner
-          RUNNER_UID=$(id -u)
-          echo "RUNNER_UID=$RUNNER_UID" >> $GITHUB_ENV
-
-          # define the input and data directories relative to the workspace
-          INPUT_DIR="data-pipeline/input"
-          DATA_DIR="data-pipeline/data"
-          echo "INPUT_DIR=$INPUT_DIR" >> $GITHUB_ENV
-          echo "DATA_DIR=$DATA_DIR" >> $GITHUB_ENV
-
-          # ensure the directories for bind mounts exist
-          mkdir -p ${{ github.workspace }}/$INPUT_DIR
-          mkdir -p ${{ github.workspace }}/$DATA_DIR
-
-      - name: Run
-        run: |
-          docker run --rm \
-            --volume ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
-            --volume ${{ github.workspace }}/${{ env.DATA_DIR }}:/data \
-            --user ${{ env.RUNNER_UID }} \
-            gc-mobility-dashboard-data-pipeline:test --etls=census_acs_5year
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Run test
+        uses: ./.github/actions/prepare-pipeline-test
         with:
-          name: data__census_acs_5year
-          path: ${{ github.workspace }}/${{ env.DATA_DIR }}
-          retention-days: 30
+          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          artifact_name: "data__replica"
+          input_dir: "${{ github.workspace }}/replica-input"
+          etls: "replica"
 
   test__all:
     name: "Test / All ETLs"
     runs-on: ubuntu-latest
-    needs: [build, determine_tests_to_run]
+    needs: [build, determine_tests_to_run, authenticate_google_big_query]
     if: needs.determine_tests_to_run.outputs.run_generic_src == 'true'
     env:
       CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
@@ -244,44 +225,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v4
+      - name: Create sample input data
+        env:
+          GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
+        run: |
+          mkdir -p ${{ github.workspace }}/replica-input/replica_interest_area_polygons
+          echo $GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/sample.geojson
+
+      - name: Run test
+        uses: ./.github/actions/prepare-pipeline-test
         with:
-          name: docker-image-data-pipeline
-          path: .
-
-      - name: Load Docker image from artifact
-        run: |
-          docker load -i ./gc-mobility-dashboard-data-pipeline.tar
-          rm ./gc-mobility-dashboard-data-pipeline.tar
-
-      - name: Prepare test environment
-        run: |
-          # get the user ID of the runner
-          RUNNER_UID=$(id -u)
-          echo "RUNNER_UID=$RUNNER_UID" >> $GITHUB_ENV
-
-          # define the input and data directories relative to the workspace
-          INPUT_DIR="data-pipeline/input"
-          DATA_DIR="data-pipeline/data"
-          echo "INPUT_DIR=$INPUT_DIR" >> $GITHUB_ENV
-          echo "DATA_DIR=$DATA_DIR" >> $GITHUB_ENV
-
-          # ensure the directories for bind mounts exist
-          mkdir -p ${{ github.workspace }}/$INPUT_DIR
-          mkdir -p ${{ github.workspace }}/$DATA_DIR
-
-      - name: Run
-        run: |
-          docker run --rm \
-            --volume ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
-            --volume ${{ github.workspace }}/${{ env.DATA_DIR }}:/data \
-            --user ${{ env.RUNNER_UID }} \
-            gc-mobility-dashboard-data-pipeline:test
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: data__all
-          path: ${{ github.workspace }}/${{ env.DATA_DIR }}
-          retention-days: 30
+          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          artifact_name: "data__all"
+          input_dir: "${{ github.workspace }}/replica-input"
