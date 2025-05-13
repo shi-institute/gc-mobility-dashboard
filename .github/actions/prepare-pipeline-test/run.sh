@@ -27,7 +27,7 @@ if [ -d $INPUT_DIR ]; then
   sudo chmod -R +r $INPUT_DIR
 fi
 
-# run the data pipeline
+# run the data pipeline and get whether it was successful
 docker run --rm \
   --volume data-pipeline-input_$SUFFIX:/input \
   --volume data-pipeline-output_$SUFFIX:/data \
@@ -35,6 +35,13 @@ docker run --rm \
   -e REPLICA_YEARS_FILTER=2023 \
   -e REPLICA_QUARTERS_FILTER=Q4 \
   gc-mobility-dashboard-data-pipeline:test --etls=$ETLS
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  echo "Data pipeline failed with a non-zero status code: $EXIT_CODE"
+  exit $EXIT_CODE
+else
+  echo "Data pipeline completed successfully."
+fi
 
 # if ARTIFACT_NAME is set, copy the output to a temporary directory
 # with the same name so it can be uploaded as an artifact in the next step
