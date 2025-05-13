@@ -6,7 +6,7 @@
   --color-green2: #7fbe40;
 
   --color-primary: var(--color-green1);
-  --color-secondar: var(--color-blue);
+  --color-secondary: var(--color-blue);
 
   --button-radius: 3px;
 }
