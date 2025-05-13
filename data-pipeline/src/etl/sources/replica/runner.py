@@ -5,11 +5,6 @@ from etl.sources.replica.etl import ReplicaETL
 
 
 def source_runner():
-    # print all environment variables
-    print("Environment variables:")
-    for key, value in os.environ.items():
-        print(f"{key}: {value}")
-
     REPLICA_YEARS_FILTER = os.getenv('REPLICA_YEARS_FILTER') or None
     years: Optional[list[int]] = None
     if REPLICA_YEARS_FILTER is not None:
