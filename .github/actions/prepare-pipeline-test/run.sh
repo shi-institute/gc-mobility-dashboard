@@ -32,6 +32,8 @@ docker run --rm \
   --volume data-pipeline-input_$SUFFIX:/input \
   --volume data-pipeline-output_$SUFFIX:/data \
   --volume data-pipeline-credentials_$SUFFIX:/credentials \
+  -e REPLICA_YEARS_FILTER=2023 \
+  -e REPLICA_QUARTERS_FILTER=Q4 \
   gc-mobility-dashboard-data-pipeline:test --etls=$ETLS
 
 # if ARTIFACT_NAME is set, copy the output to a temporary directory
