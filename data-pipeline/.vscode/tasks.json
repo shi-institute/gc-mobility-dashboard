@@ -87,7 +87,7 @@
         "Build data-pipeline docker image",
       ],
       "type": "shell",
-      "command": "docker run -it --volume ./input:/input --volume ./data:/data --user 1000 gc-mobility-dashboard-data-pipeline:latest",
+      "command": "docker run -it --volume ./input:/input --volume ./data:/data --volume ${workspaceFolder:BigQuery auth}/credentials:/credentials --user 1000 gc-mobility-dashboard-data-pipeline:latest --etls=replica",
       "group": "none",
       "presentation": {
         "reveal": "always",

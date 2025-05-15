@@ -1,0 +1,57 @@
+name: "Test Data Pipeline"
+description: "Loads docker images and sets up the environment for data pipeline tests. This action is used in the test workflow to prepare the environment for running tests on the data pipeline."
+author: jackbuehner
+branding:
+  icon: "anchor"
+  color: "gray-dark"
+
+inputs:
+  bigquery_credentials:
+    description: "Credentials JSON for pandas-gbq"
+    required: false
+  etls:
+    description: "ETL files to run"
+    required: false
+  input_dir:
+    description: "Input directory for the data pipeline"
+    required: false
+  artifact_name:
+    description: "Name of the artifact created from the output data"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image-data-pipeline
+        path: .
+
+    - name: Load Docker image from artifact
+      run: |
+        docker load -i ./gc-mobility-dashboard-data-pipeline.tar
+        rm ./gc-mobility-dashboard-data-pipeline.tar
+      shell: bash
+
+    - name: Run test
+      env:
+        BIGQUERY_CREDENTIALS: ${{ inputs.bigquery_credentials }}
+        INPUT_DIR: ${{ inputs.input_dir }}
+        ETLS: ${{ inputs.etls }}
+        ARTIFACT_NAME: ${{ inputs.artifact_name }}
+      run: |
+        cd ${{ github.action_path }}
+        BIGQUERY_CREDENTIALS=$BIGQUERY_CREDENTIALS \
+          INPUT_DIR=$INPUT_DIR \
+          ETLS=$ETLS \
+          ARTIFACT_NAME=$ARTIFACT_NAME \
+          ./run.sh
+      shell: bash
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: /tmp/artifacts/${{ inputs.artifact_name }}
+        retention-days: 30
