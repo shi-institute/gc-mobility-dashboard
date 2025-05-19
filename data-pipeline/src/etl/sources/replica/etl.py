@@ -68,14 +68,132 @@ class ReplicaETL:
             gdf['geometry_wkt'] = gdf['geometry'].apply(
                 lambda x: shapely.wkt.dumps(x))
 
-            # Getting Replica trip data
-            trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
             # Getting network segments data
             segments_df = self._run_for_network_segments(
                 gdf, area_name, self.schema_df)
             # Getting Replica population data
             pop_df = self._run_for_pop_(gdf, area_name, self.schema_df)
+            # Getting Replica trip data
+            trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
 
+    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
+        result_dfs: pandas.DataFrame = []
+        segments_df = pandas.DataFrame()
+        # Loop through network segments tables and run queries
+        # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
+        schema_df = schema_df[schema_df['table_name'].str.endswith('segments')]
+
+        if schema_df is not None and not schema_df.empty:
+            for table_name in schema_df['table_name']:
+                # Set full_table_path be equal to the table_name column in the schema_df
+                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
+
+                for _, row in gdf.iterrows():
+                    # this is a tuple for each row
+                    rows_str = str((row['name'], row['geometry_wkt']))
+
+                    # Run query to get netowrk segments tables
+                    segments_query = f'''
+                    CREATE TEMP TABLE geo_table (
+                        name STRING,
+                        geometry_wkt STRING
+                    );
+                    INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
+                    CREATE TEMP TABLE query_geo AS
+                    SELECT
+                        name,
+                        SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
+                    FROM geo_table;
+                    
+                    SELECT *
+                    FROM {full_table_path}
+                    WHERE
+                    EXISTS (
+                        SELECT 1 FROM (
+                            SELECT * FROM query_geo
+                            WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(startLon, startLat))
+                        )  
+                    )
+                    OR
+                    EXISTS (
+                        SELECT 1 FROM (
+                            SELECT * FROM query_geo
+                            WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(endLon, endLat))
+                        )
+                    )
+                    '''
+                    segments_df = pandas_gbq.read_gbq(
+                        segments_query, project_id=self.project_id, dialect='standard')
+                    result_dfs.append(segments_df)
+                    # Build output path with both area_name and table_name
+                    safe_table_name = table_name.replace('.', '_')
+                    output_filename = f"{area_name}_{safe_table_name}.json"
+                    segment_folder_path = os.path.join(
+                        self.folder_path, area_name, "network_segments")
+                    os.makedirs(segment_folder_path, exist_ok=True)
+                    output_path = os.path.join(
+                        segment_folder_path, output_filename)
+                    segments_df.to_json(output_path, orient='records', indent=2)
+                    print(f"Saved results to {output_path}")
+                print(
+                    f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
+        else:
+            print("No network segments tables found to process queries.")
+
+    def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
+        result_dfs: pandas.DataFrame = []
+        population_df = pandas.DataFrame()
+        # Loop through network segments tables and run queries
+        # Filter schema_df to only inclue the tables where the table_name column ends with 'population'
+        schema_df = schema_df[schema_df['table_name'].str.endswith(
+            'population')]
+        print(schema_df)
+
+        if schema_df is not None and not schema_df.empty:
+            for table_name in schema_df['table_name']:
+                # Set full_table_path be equal to the table_name column in the schema_df
+                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
+
+                for _, row in gdf.iterrows():
+                    # this is a tuple for each row
+                    rows_str = str((row['name'], row['geometry_wkt']))
+
+                    # Run query to get netowrk segments tables
+                    pop_query = f'''
+                    CREATE TEMP TABLE geo_table (
+                        name STRING,
+                        geometry_wkt STRING
+                    );
+                    INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
+                    CREATE TEMP TABLE query_geo AS
+                    SELECT
+                        name,
+                        SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
+                    FROM geo_table;
+                    
+                    SELECT t.*
+                    FROM {full_table_path} AS t
+                    JOIN query_geo AS q
+                    ON ST_COVERS(q.geometry, ST_GEOGPOINT(t.lng, t.lat))
+                    
+                    '''
+                    population_df = pandas_gbq.read_gbq(
+                        pop_query, project_id=self.project_id, dialect='standard')
+                    result_dfs.append(population_df)
+                    # Build output path with both area_name and table_name
+                    safe_table_name = table_name.replace('.', '_')
+                    output_filename = f"{area_name}_{safe_table_name}.json"
+                    pop_folder_path = os.path.join(
+                        self.folder_path, area_name, "population")
+                    os.makedirs(pop_folder_path, exist_ok=True)
+                    output_path = os.path.join(pop_folder_path, output_filename)
+                    population_df.to_json(output_path, orient='records', indent=2)
+                    print(f"Saved results to {output_path}")
+                print(
+                    f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
+        else:
+            print("No network segments tables found to process queries.")
+            
     def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
         # Loop through trip tables and run queries
         all_trip_results = []
@@ -131,126 +249,8 @@ class ReplicaETL:
         else:
             print("No trip tables found to process queries.")
 
-    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
-        result_dfs: pandas.DataFrame = []
-        segments_df = pandas.DataFrame()
-        # Loop through network segments tables and run queries
-        # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
-        schema_df = schema_df[schema_df['table_name'].str.endswith('segments')]
-
-        if schema_df is not None and not schema_df.empty:
-            for table_name in schema_df['table_name']:
-                # Set full_table_path be equal to the table_name column in the schema_df
-                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
-
-            for _, row in gdf.iterrows():
-                # this is a tuple for each row
-                rows_str = str((row['name'], row['geometry_wkt']))
-
-                # Run query to get netowrk segments tables
-                segments_query = f'''
-                CREATE TEMP TABLE geo_table (
-                    name STRING,
-                    geometry_wkt STRING
-                );
-                INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
-                CREATE TEMP TABLE query_geo AS
-                SELECT
-                    name,
-                    SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
-                FROM geo_table;
-                
-                SELECT *
-                FROM {full_table_path}
-                WHERE
-                EXISTS (
-                    SELECT 1
-                    FROM query_geo
-                    WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(startLon, startLat))   
-                )
-                OR
-                EXISTS (
-                    SELECT 1
-                    FROM query_geo
-                    WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(endLon, endLat))
-                )
-                '''
-                segments_df = pandas_gbq.read_gbq(
-                    segments_query, project_id=self.project_id, dialect='standard')
-                result_dfs.append(segments_df)
-                # Build output path with both area_name and table_name
-                safe_table_name = table_name.replace('.', '_')
-                output_filename = f"{area_name}_{safe_table_name}.json"
-                segment_folder_path = os.path.join(
-                    self.folder_path, area_name, "network_segments")
-                os.makedirs(segment_folder_path, exist_ok=True)
-                output_path = os.path.join(
-                    segment_folder_path, output_filename)
-                segments_df.to_json(output_path, orient='records', indent=2)
-                print(f"Saved results to {output_path}")
-            print(
-                f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
-        else:
-            print("No network segments tables found to process queries.")
-
-    def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
-        result_dfs: pandas.DataFrame = []
-        population_df = pandas.DataFrame()
-        # Loop through network segments tables and run queries
-        # Filter schema_df to only inclue the tables where the table_name column ends with 'population'
-        schema_df = schema_df[schema_df['table_name'].str.endswith(
-            'population')]
-
-        if schema_df is not None and not schema_df.empty:
-            for table_name in schema_df['table_name']:
-                # Set full_table_path be equal to the table_name column in the schema_df
-                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
-
-            for _, row in gdf.iterrows():
-                # this is a tuple for each row
-                rows_str = str((row['name'], row['geometry_wkt']))
-
-                # Run query to get netowrk segments tables
-                pop_query = f'''
-                CREATE TEMP TABLE geo_table (
-                    name STRING,
-                    geometry_wkt STRING
-                );
-                INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
-                CREATE TEMP TABLE query_geo AS
-                SELECT
-                    name,
-                    SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
-                FROM geo_table;
-                
-                SELECT *
-                FROM {full_table_path}
-                WHERE
-                EXISTS (
-                    SELECT 1
-                    FROM query_geo
-                    WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(lng, lat))   
-                )
-                '''
-                population_df = pandas_gbq.read_gbq(
-                    pop_query, project_id=self.project_id, dialect='standard')
-                result_dfs.append(population_df)
-                # Build output path with both area_name and table_name
-                safe_table_name = table_name.replace('.', '_')
-                output_filename = f"{area_name}_{safe_table_name}.json"
-                pop_folder_path = os.path.join(
-                    self.folder_path, area_name, "population")
-                os.makedirs(pop_folder_path, exist_ok=True)
-                output_path = os.path.join(pop_folder_path, output_filename)
-                population_df.to_json(output_path, orient='records', indent=2)
-                print(f"Saved results to {output_path}")
-            print(
-                f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
-        else:
-            print("No network segments tables found to process queries.")
-
     def _build_query(self, rows_str: str, full_table_path: str, origin_lng_col: str, origin_lat_col: str,
-                     dest_lng_col: str, dest_lat_col: str) -> str:
+                    dest_lng_col: str, dest_lat_col: str) -> str:
         '''
         Builds the query to get data from the replica dataset.        
         '''
@@ -303,7 +303,7 @@ class ReplicaETL:
             # before queueing the current row
             rows_str = ', '.join(queue)
             query = self._build_query(rows_str, full_table_path, origin_lng_col,
-                                      origin_lat_col, dest_lng_col, dest_lat_col)
+                                    origin_lat_col, dest_lng_col, dest_lat_col)
             df = pandas_gbq.read_gbq(
                 query, project_id=self.project_id, dialect='standard')
             result_dfs.append(df)
@@ -314,7 +314,7 @@ class ReplicaETL:
         if queue:
             rows_str = ', '.join(queue)
             query = self._build_query(rows_str, full_table_path, origin_lng_col, origin_lat_col,
-                                      dest_lng_col, dest_lat_col)
+                                    dest_lng_col, dest_lat_col)
             df = pandas_gbq.read_gbq(
                 query, project_id=self.project_id, dialect='standard')
             result_dfs.append(df)
