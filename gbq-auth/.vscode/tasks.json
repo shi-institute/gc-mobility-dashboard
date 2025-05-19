@@ -19,7 +19,7 @@
         "Build gbq-auth docker image",
       ],
       "type": "shell",
-      "command": "docker run -it --volume ./credentials:/credentials -p 3000:3000 --user 1000 gbq-auth:latest",
+      "command": "docker run -it --volume ./credentials:/credentials -p 3000:3000 gbq-auth:latest",
       "group": "none",
       "presentation": {
         "reveal": "always",
