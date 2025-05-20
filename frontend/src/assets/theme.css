@@ -9,6 +9,7 @@
   --color-secondary: var(--color-blue);
 
   --button-radius: 3px;
+  --surface-radius: 6px;
 }
 
 :host {
