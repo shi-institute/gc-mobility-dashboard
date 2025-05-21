@@ -14,6 +14,12 @@ if [ ! -d "/input" ]; then
   exit 1
 fi
 
+# if /credentials is not mounted, throw an error
+if [ ! -d "/credentials" ]; then
+  echo "Error: /credentials directory is not mounted. Please mount the /credentials directory."
+  exit 1
+fi
+
 # ensure /data has read-write-delete permissions for all users
 if [ -d "/data" ]; then
   # echo "Ensuring permissions for /data"
@@ -24,6 +30,12 @@ fi
 if [ -d "/input" ]; then
   # echo "Ensuring permissions for /input"
   sudo chmod -R u+rwx /input
+fi
+
+# ensure /credentials has read-write-delete permissions for all users
+if [ -d "/credentials" ]; then
+  # echo "Ensuring permissions for /credentials"
+  sudo chmod -R u+rwx /credentials
 fi
 
 # execute the provided command

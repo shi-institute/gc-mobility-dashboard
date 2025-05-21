@@ -1,7 +1,8 @@
 {
   "files.exclude": {
     "frontend": true,
-    "data-pipeline": true
+    "data-pipeline": true,
+    "gbq-auth/": true
   },
   "autoOpenWorkspace.enableAutoOpenIfSingleWorkspace": true
 }

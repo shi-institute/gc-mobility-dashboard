@@ -49,9 +49,11 @@ def load_source_runners():
                             f"Warning: {module_name} does not have a 'source_runner' function.")
                 except ImportError as e:
                     print(f"Error importing module {source_name}/runner: {e}")
+                    raise
                 except Exception as e:
                     print(
                         f"An unexpected error occurred while processing {source_name}/runner: {e}")
+                    raise
 
     # Remove the sources directory from the system path after importing
     sys.path.remove(sources_dir)
@@ -88,3 +90,4 @@ def etl_runner(etls: Optional[list[str]] = None) -> None:
             runner_func()
         except Exception as e:
             print(f"Error running ETL for {source_name}: {e}")
+            raise
