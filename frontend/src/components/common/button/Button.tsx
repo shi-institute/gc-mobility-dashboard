@@ -1,39 +1,52 @@
 import styled from '@emotion/styled';
-import React from 'react';
-
-export default MyButton;
 
 /**
  * MyButtonProps: The properties for the MyButton component.
  */
-type MyButtonProps = {
-  /** the name of the button or the text held within it */
-  buttonName: string;
+interface MyButtonProps {
+  children: React.ReactNode;
   /** optional link property given to MyButton */
-  URL?: string;
+  href?: string;
   /** svg icon to appear to the left of the button label */
   iconLeft?: React.ReactNode;
   /** svg icon to appear to the right of the button label */
   iconRight?: React.ReactNode;
-};
+
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
+
+  disabled?: boolean;
+}
 
 /**
  * MyButton: A reusable button component that can either be a regular button or a link.
  */
-function MyButton({ buttonName, URL, iconLeft, iconRight }: MyButtonProps) {
-  function handleClick() {
-    if (URL) {
-      window.open(URL, '_blank', 'noopener,noreferrer');
-    } else {
-      alert('Button Clicked!');
-    }
+export function Button(props: MyButtonProps) {
+  if (props.href) {
+    return (
+      <AnchorButton
+        as="a"
+        href={props.href}
+        className={props.disabled ? 'disabled' : ''}
+        onClick={props.onClick}
+        title={props.href}
+      >
+        {props.iconLeft}
+        <span className="label">{props.children}</span>
+        {props.iconRight}
+      </AnchorButton>
+    );
   }
 
   return (
-    <StyledButton type="button" onClick={handleClick} title={URL}>
-      {iconLeft}
-      <span className="label">{buttonName}</span>
-      {iconRight}
+    <StyledButton
+      type="button"
+      onClick={props.onClick}
+      title={props.href}
+      disabled={props.disabled}
+    >
+      {props.iconLeft}
+      <span className="label">{props.children}</span>
+      {props.iconRight}
     </StyledButton>
   );
 }
@@ -51,8 +64,7 @@ const StyledButton = styled.button`
   height: 2.25rem;
   box-sizing: border-box;
   border: 1px solid lightgray;
-  border-bottom: none;
-  border-radius: var(--button-radius) var(--button-radius) 0 0;
+  border-radius: var(--button-radius);
   text-decoration: none;
   color: inherit;
   user-select: none;
@@ -73,6 +85,12 @@ const StyledButton = styled.button`
 
   &:active {
     background-color: #ededed;
+  }
+
+  &:disabled {
+    background-color: #f4f4f4;
+    color: #a0a0a0;
+    cursor: not-allowed;
   }
 
   & > svg {
@@ -96,9 +114,4 @@ const StyledButton = styled.button`
   }
 `;
 
-/**
- * <span> tag: A span element that wraps the actual text of the button in a style tag (<StyledButton></StyledButton>)
- * StyledButton is a React component that renders a button with a specific style when used like this: <StyledButton></StyledButton>
- * The button can be styled using CSS properties defined in the StyledButton component. When used as a tag, it renders an instance
- * of the StyledButton component with the specified properties.
- */
+const AnchorButton = StyledButton.withComponent('a');
