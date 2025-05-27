@@ -123,7 +123,7 @@ const OtherStyledTab = styled.a`
   user-select: none;
   background-color: #fff;
   flex-wrap: nowrap;
-  border-radius: var(--button-radius) var(--button-radius) 0 0;
+  border-radius: var(--button-radius);
 
   .label {
     white-space: nowrap;
