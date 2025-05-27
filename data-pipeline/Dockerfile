@@ -17,8 +17,10 @@ ENV CONDA_DEFAULT_ENV=/home/pipeline/env
 # allow mounting volumes
 RUN mkdir -p /data && ln -s /data /home/pipeline/data
 RUN mkdir -p /input && ln -s /input /home/pipeline/input
+RUN mkdir -p /credentials && ln -s /credentials /home/pipeline/credentials
 VOLUME /data
 VOLUME /input
+VOLUME /credentials
 
 # add entrypoint script
 COPY docker-image-entrypoint.sh /entrypoint.sh
