@@ -18,4 +18,4 @@ def source_runner():
 
     # get replica data
     ReplicaETL(['activity_id', 'person_id', 'mode',
-               'travel_purpose'], years, quarters).run()
+            'travel_purpose', 'tour_type', 'transit_route_ids', 'network_link_ids', 'vehicle_type'], years, quarters).run()
