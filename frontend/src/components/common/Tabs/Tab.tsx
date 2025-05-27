@@ -1,6 +1,7 @@
 import styled from '@emotion/styled';
 
 interface TabProps {
+  children?: React.ReactNode;
   /** The label for the tab */
   label: string;
   /** If provided, the tab will be an anchor tag that goes to this destination href. May be relative to the root OR a full href URL. */
@@ -13,6 +14,8 @@ interface TabProps {
   iconLeft?: React.ReactNode;
   /** svg icon to appear to the right of the button label */
   iconRight?: React.ReactNode;
+
+  variant?: 'standard' | 'line';
 }
 
 /**
@@ -20,9 +23,11 @@ interface TabProps {
  * It can be either a button or an anchor tag.
  */
 export function Tab(props: TabProps) {
+  const Component = props.variant === 'line' ? OtherStyledTab : StyledTab;
+
   if (props.href) {
     return (
-      <StyledTab
+      <Component
         href={props.href}
         className={props.isActive ? 'active' : ''}
         onClick={props.onClick}
@@ -30,16 +35,16 @@ export function Tab(props: TabProps) {
         {props.iconLeft}
         <span className="label">{props.label}</span>
         {props.iconRight}
-      </StyledTab>
+      </Component>
     );
   }
 
   return (
-    <StyledTab as="button" className={props.isActive ? 'active' : ''} onClick={props.onClick}>
+    <Component as="button" className={props.isActive ? 'active' : ''} onClick={props.onClick}>
       {props.iconLeft}
       <span className="label">{props.label}</span>
       {props.iconRight}
-    </StyledTab>
+    </Component>
   );
 }
 
@@ -70,6 +75,66 @@ const StyledTab = styled.a`
 
   &.active {
     box-shadow: inset 0 2px 0 var(--color-primary);
+  }
+
+  &:hover {
+    background-color: #f4f4f4;
+  }
+
+  &:active {
+    background-color: #ededed;
+  }
+
+  & > svg {
+    fill: currentColor;
+    block-size: 1rem;
+    inline-size: 1rem;
+  }
+
+  &:has(> svg:first-child) {
+    padding-left: 0.75rem;
+  }
+  svg + .label {
+    margin-left: 0.25rem;
+  }
+
+  &:has(> svg:last-child) {
+    padding-right: 0.75rem;
+  }
+  .label + svg {
+    margin-left: 0.25rem;
+  }
+`;
+
+const OtherStyledTab = styled.a`
+  appearance: none;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 0 1rem;
+  height: 2.25rem;
+  border: none;
+  text-decoration: none;
+  color: inherit;
+  user-select: none;
+  background-color: #fff;
+  flex-wrap: nowrap;
+  border-radius: var(--button-radius);
+
+  .label {
+    white-space: nowrap;
+  }
+  &.active {
+    font-weight: bold;
+    text-decoration: underline;
+    text-decoration-color: var(--color-primary);
+    text-decoration-thickness: 0.15rem;
+    text-underline-offset: 0.25rem;
+    padding-top: 0.1rem;
   }
 
   &:hover {
