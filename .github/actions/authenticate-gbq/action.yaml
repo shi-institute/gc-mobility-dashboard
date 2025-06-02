@@ -1,0 +1,61 @@
+name: "Get Google BigQuery Credentials for pandas-gbq"
+description: "Exposes a local server that listens for a POST request with the JSON credentials required for pandas-gbq"
+author: jackbuehner
+branding:
+  icon: "loader"
+  color: "blue"
+
+inputs:
+  auth-server:
+    description: "The server that communicates with Google's OAuth server to get the credentials. The server should be able to POST the credentials to the action's tunnel URL when it receives a postUrl search param with the URL to this action's tunnel when the authentication process is first initiated."
+    required: true
+    default: https://gbq-auth.shi.institute
+  timeout:
+    description: "How long to wait in seconds for the credentials to be received"
+    required: false
+
+outputs:
+  bigquery_credentials:
+    description: "Credentials JSON for pandas-gbq"
+    value: ${{ steps.get-credentials.outputs.BIGQUERY_CREDENTIALS }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install GitHub CLI when running with act
+      if: ${{ env.ACT }}
+      run: |
+        (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+        && sudo mkdir -p -m 755 /etc/apt/keyrings \
+              && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+              && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+        && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && sudo apt update \
+        && sudo apt install gh -y
+      shell: bash
+
+    - name: Set up cloudflared
+      uses: AnimMouse/setup-cloudflared@v2
+
+    - name: Set up cloudflared tunnel
+      uses: AnimMouse/setup-cloudflared/tunnel@v2
+      with:
+        autostart: false
+
+    - name: Set up node v22
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - run: npm i express@5
+      shell: bash
+
+    - name: Start tunnel and listen for credentials
+      id: get-credentials
+      run: |
+        cd ${{ github.action_path }}
+        TIMEOUT=$TIMEOUT ./tunnel_and_listen.sh
+      shell: bash
+      env:
+        TIMEOUT: ${{ inputs.timeout }}

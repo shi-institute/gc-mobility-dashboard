@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build gbq-auth docker image",
+      "type": "shell",
+      "command": "docker build -t gbq-auth:latest .",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "close": true,
+        "clear": true
+      }
+    },
+    {
+      "label": "Authenticate BigQuery",
+      "dependsOn": [
+        "Build gbq-auth docker image",
+      ],
+      "type": "shell",
+      "command": "docker run -it --volume ./credentials:/credentials -p 3000:3000 gbq-auth:latest",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "showReuseMessage": false,
+      }
+    },
+  ]
+}

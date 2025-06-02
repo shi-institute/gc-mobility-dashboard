@@ -9,6 +9,10 @@
 			"name": "Frontend"
 		},
 		{
+			"path": "gbq-auth",
+			"name": "BigQuery auth"
+		}
+		{
 			"path": "data-pipeline",
 			"name": "Data pipeline"
 		}

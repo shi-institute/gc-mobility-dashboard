@@ -3,6 +3,8 @@ import os
 import sys
 from typing import Optional
 
+import pandas_gbq
+import pydata_google_auth
 from dotenv import load_dotenv
 
 from etl.runner import etl_runner
@@ -43,6 +45,15 @@ if __name__ == "__main__":
     etls: Optional[list[str]] = None
     if args.etls:
         etls = [string.strip() for string in args.etls.split(',')]
+
+    print("Checking credentials...")
+    try:
+        credentials = pydata_google_auth.load_user_credentials(
+            './credentials/bigquery_credentials.json')
+        pandas_gbq.context.credentials = credentials
+    except (Exception) as e:
+        print("Credentials not found. Please run the authentication script.")
+        exit(1)
 
     # run the ETL pipeline
     etl_runner(etls)
