@@ -1,6 +1,7 @@
 import styled from '@emotion/styled';
 import { useRef, useState } from 'react';
 import { useRect } from '../../../hooks';
+import { Tab } from '../../common';
 import { SidebarWrapper } from './SidebarWrapper';
 
 interface CoreFrameProps {
@@ -45,14 +46,15 @@ export function CoreFrame(props: CoreFrameProps) {
                       (section.props as Record<string, unknown>).label?.toString() ||
                       `Tab ${index + 1}`;
                     return (
-                      <button
+                      <Tab
                         key={index}
                         onClick={() => {
                           setActiveMobileSection(index);
                         }}
-                      >
-                        {tabLabel}
-                      </button>
+                        label={tabLabel}
+                        variant="line"
+                        isActive={activeMobileSection === index}
+                      />
                     );
                   })}
               </div>
