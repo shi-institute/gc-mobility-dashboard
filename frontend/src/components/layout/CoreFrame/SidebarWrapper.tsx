@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, IconButton } from '../../common';
 
 interface SidebarWrapperProps {
@@ -35,9 +35,11 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
   );
 
   // close the overlay sidebar if the window expands to >= 1280px
-  if (props.frameWidth >= 1280 && optionsOpen) {
-    setOptionsOpen(false);
-  }
+  useEffect(() => {
+    if (props.frameWidth >= 1280 && optionsOpen) {
+      setOptionsOpen(false);
+    }
+  }, [props.frameWidth, optionsOpen, setOptionsOpen]);
 
   if (props.frameWidth >= 1280 && !forceClosed) {
     return (
