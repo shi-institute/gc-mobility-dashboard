@@ -31,6 +31,7 @@ export function Section(props: SectionProps) {
 const SectionComponent = styled.section`
   container-type: inline-size;
   container-name: section;
+  inline-size: 100%; /* required because container-type: inline-size collapses inline-size to 0 with auto values */
 
   .section-content {
     display: grid;
