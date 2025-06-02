@@ -77,13 +77,15 @@ export function CoreFrame(props: CoreFrameProps) {
 }
 
 const Container = styled.div`
-  container-type: size;
+  container-type: inline-size;
   container-name: core;
+  inline-size: 100%;
 `;
 
 const OuterFrame = styled.div`
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 
   display: grid;
   grid-template-rows: auto 1fr;
