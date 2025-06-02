@@ -1,7 +1,8 @@
 import styled from '@emotion/styled';
-import { useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { useRect } from '../../../hooks';
 import { Tab } from '../../common';
+import { CoreFrameContext } from './CoreFrameContext';
 import { SidebarWrapper } from './SidebarWrapper';
 
 interface CoreFrameProps {
@@ -26,7 +27,7 @@ export function CoreFrame(props: CoreFrameProps) {
 
   const [activeMobileSection, setActiveMobileSection] = useState(0);
 
-  const [fixedSidebarOpen, setFixedSidebarOpen] = useState(true);
+  const { fixedSidebarOpen } = useContext(CoreFrameContext);
 
   return (
     <Container ref={containerRef}>
@@ -66,12 +67,7 @@ export function CoreFrame(props: CoreFrameProps) {
               <MainArea>{props.sections?.map((section) => section)}</MainArea>
             </>
           )}
-          <SidebarWrapper
-            frameWidth={width}
-            onToggleFixedSidebar={(forcedClosed) => setFixedSidebarOpen(!forcedClosed)}
-          >
-            {props.sidebar}
-          </SidebarWrapper>
+          <SidebarWrapper frameWidth={width}>{props.sidebar}</SidebarWrapper>
         </InnerFrame>
       </OuterFrame>
     </Container>
