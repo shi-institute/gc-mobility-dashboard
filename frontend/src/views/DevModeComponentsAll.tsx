@@ -1,4 +1,4 @@
-import { Button, IconButton, Tab, Tabs } from '../components';
+import { Button, IconButton, Section, SectionEntry, Tab, Tabs } from '../components';
 
 export function DevModeComponentsAll() {
   return (
@@ -81,7 +81,7 @@ export function DevModeComponentsAll() {
       </Tabs>
 
       <h2>Button</h2>
-      <div style={{ padding: 20, display: 'flex', gap: '0.5rem' }}>
+      <div style={{ padding: 20, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <Button
           href="https://www.google.com/"
           onClick={() => {
@@ -155,6 +155,59 @@ export function DevModeComponentsAll() {
             />
           </svg>
         </IconButton>
+      </div>
+
+      <h2>Section</h2>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+        <Section title="Section Title">
+          <SectionEntry>
+            <div>Card 1</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 2</div>
+          </SectionEntry>
+          <SectionEntry f={{ gridColumn: 'span 2' }}>
+            <div>Card 3</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 4</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 5</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 6</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 7</div>
+          </SectionEntry>
+          <SectionEntry m={{ gridColumn: '2 / 4', gridRow: '1 / 3' }}>
+            <div>Card 8</div>
+          </SectionEntry>
+        </Section>
+        <Section title="Section Title 2">
+          <SectionEntry hidden>
+            <div>Card 1</div>
+          </SectionEntry>
+          <SectionEntry hidden>
+            <div>Card 2</div>
+          </SectionEntry>
+          <SectionEntry f={{ gridColumn: 'span 2' }}>
+            <div>Card 3</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 4</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 5</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 6</div>
+          </SectionEntry>
+          <SectionEntry>
+            <div>Card 7</div>
+          </SectionEntry>
+        </Section>
       </div>
     </div>
   );
