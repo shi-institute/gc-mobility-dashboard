@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 import { useCallback, useState } from 'react';
-import { IconButton } from '../../common';
+import { Button, IconButton } from '../../common';
 
 interface SidebarWrapperProps {
   children: React.ReactNode;
@@ -62,12 +62,28 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
   }
 
   const openButton = (
-    <OpenButtonWrapper>
-      <button
+    <OpenButtonWrapper visible={scrimVisible}>
+      <Button
         onClick={() => (props.frameWidth >= 1280 ? setForceClosed(false) : setOptionsOpen(true))}
+        iconLeft={
+          props.frameWidth >= 900 ? (
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M15.707 4.293a1 1 0 0 1 0 1.414L9.414 12l6.293 6.293a1 1 0 0 1-1.414 1.414l-7-7a1 1 0 0 1 0-1.414l7-7a1 1 0 0 1 1.414 0Z"
+                fill="currentColor"
+              />
+            </svg>
+          ) : null
+        }
       >
         Show options
-      </button>
+      </Button>
     </OpenButtonWrapper>
   );
 
@@ -147,19 +163,30 @@ const Scrim = styled.div<{ optionsOpen: boolean; visible: boolean }>`
   transition: opacity 360ms;
 `;
 
-const OpenButtonWrapper = styled.div`
+const OpenButtonWrapper = styled.div<{ visible: boolean }>`
   position: absolute;
   right: 0;
   bottom: 1rem;
-  block-size: 2.25rem;
-  background-color: white;
-  border: 1px solid lightgray;
-  border-radius: var(--button-radius);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @container core (min-width: 900px) {
+    transform: ${({ visible }) => (visible ? 'translateX(100%)' : 'translateX(0)')};
+
+    button {
+      border-radius: var(--button-radius) 0 0 var(--button-radius);
+      border-right: none;
+    }
+  }
 
   @container core (max-width: 899px) {
-    transform: rotate(90deg);
+    transform: rotate(90deg) ${({ visible }) => (visible ? 'translateY(-100%)' : 'translateY(0)')};
     transform-origin: top right;
     bottom: 3rem;
+
+    button {
+      border-radius: 0 0 var(--button-radius) var(--button-radius);
+      border-top: none;
+    }
   }
 `;
 
