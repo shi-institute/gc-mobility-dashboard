@@ -1,38 +1,22 @@
 import styled from '@emotion/styled';
-import { useCallback, useEffect, useState } from 'react';
+import { useContext, useEffect } from 'react';
 import { Button, IconButton } from '../../common';
+import { CoreFrameContext } from './CoreFrameContext';
 
 interface SidebarWrapperProps {
   children: React.ReactNode;
   frameWidth: number;
-  onToggleFixedSidebar?: (open: boolean) => void;
 }
 
 export function SidebarWrapper(props: SidebarWrapperProps) {
-  const [optionsOpen, _setOptionsOpen] = useState(false);
-  const setOptionsOpen = useCallback((bool: boolean) => {
-    _setOptionsOpen(bool);
-    setForceClosed(false);
-
-    if (bool) {
-      setScrimVisible(true);
-    } else {
-      setTimeout(() => {
-        setScrimVisible(false);
-      }, 300);
-    }
-  }, []);
-
-  const [scrimVisible, setScrimVisible] = useState(false);
-
-  const [forceClosed, _setForceClosed] = useState(false);
-  const setForceClosed = useCallback(
-    (bool: boolean) => {
-      _setForceClosed(bool);
-      props.onToggleFixedSidebar?.(bool);
-    },
-    [props.onToggleFixedSidebar]
-  );
+  const {
+    optionsOpen,
+    setOptionsOpen,
+    scrimVisible,
+    showButtonVisible,
+    forceClosed,
+    setForceClosed,
+  } = useContext(CoreFrameContext);
 
   // close the overlay sidebar if the window expands to >= 1280px
   useEffect(() => {
@@ -64,7 +48,7 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
   }
 
   const openButton = (
-    <OpenButtonWrapper visible={scrimVisible}>
+    <OpenButtonWrapper visible={showButtonVisible}>
       <Button
         onClick={() => (props.frameWidth >= 1280 ? setForceClosed(false) : setOptionsOpen(true))}
         iconLeft={
@@ -172,7 +156,7 @@ const OpenButtonWrapper = styled.div<{ visible: boolean }>`
   transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 
   @container core (min-width: 900px) {
-    transform: ${({ visible }) => (visible ? 'translateX(100%)' : 'translateX(0)')};
+    transform: ${({ visible }) => (visible ? 'translateX(0)' : 'translateX(100%)')};
 
     button {
       border-radius: var(--button-radius) 0 0 var(--button-radius);
@@ -181,7 +165,7 @@ const OpenButtonWrapper = styled.div<{ visible: boolean }>`
   }
 
   @container core (max-width: 899px) {
-    transform: rotate(90deg) ${({ visible }) => (visible ? 'translateY(-100%)' : 'translateY(0)')};
+    transform: rotate(90deg) ${({ visible }) => (visible ? 'translateY(0)' : 'translateY(-100%)')};
     transform-origin: top right;
     bottom: 3rem;
 
