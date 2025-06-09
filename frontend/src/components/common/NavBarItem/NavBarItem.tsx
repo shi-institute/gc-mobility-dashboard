@@ -34,7 +34,7 @@ const NavBarElement = styled.a<{ active?: boolean }>`
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: ${(props) => (props.active ? '#61b329' : 'gray')};
+  color: ${(props) => (props.active ? 'var(--color-primary)' : 'inherit')};
   font-size: 0.813rem;
   font-family: sans-serif;
   background: none;

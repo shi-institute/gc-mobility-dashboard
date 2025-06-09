@@ -1,15 +1,8 @@
 import styled from '@emotion/styled';
 
-export const NavWrapper = styled.div`
-  border-top: 1px solid #ccc;
-  background-color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-`;
-
 export const NavBar = styled.nav`
-  display: grid;
+  display: flex;
+  border-top: 1px solid #ccc;
   gap: 2rem;
   justify-content: center;
   align-items: center;
