@@ -10,4 +10,5 @@ export const NavBar = styled.nav`
 
   @media (max-width: 600px) {
     gap: 0.5rem;
+  }
 `;
