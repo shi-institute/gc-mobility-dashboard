@@ -1,7 +1,7 @@
 import styled from '@emotion/styled';
 
 export const NavBar = styled.nav`
-  display: flex;
+  display: grid;
   border-top: 1px solid #ccc;
   gap: 2rem;
   justify-content: center;
