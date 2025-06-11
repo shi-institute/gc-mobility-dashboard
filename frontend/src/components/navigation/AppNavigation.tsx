@@ -9,7 +9,7 @@ import {
 } from './constants';
 
 export function AppNavigation() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
 
   const handleClick =
@@ -22,33 +22,33 @@ export function AppNavigation() {
     <Tabs>
       <Tab
         label="General Access"
-        href={'#' + TAB_1_FRAGMENT}
+        href={'#' + TAB_1_FRAGMENT + search}
         isActive={pathname === TAB_1_FRAGMENT}
-        onClick={handleClick(TAB_1_FRAGMENT)}
+        onClick={handleClick(TAB_1_FRAGMENT + search)}
       />
       <Tab
         label="Future Opportunities"
-        href={'#' + TAB_2_FRAGMENT}
+        href={'#' + TAB_2_FRAGMENT + search}
         isActive={pathname === TAB_2_FRAGMENT}
-        onClick={handleClick(TAB_2_FRAGMENT)}
+        onClick={handleClick(TAB_2_FRAGMENT + search)}
       />
       <Tab
         label="Job Access"
-        href={'#' + TAB_3_FRAGMENT}
+        href={'#' + TAB_3_FRAGMENT + search}
         isActive={pathname === TAB_3_FRAGMENT}
-        onClick={handleClick(TAB_3_FRAGMENT)}
+        onClick={handleClick(TAB_3_FRAGMENT + search)}
       />
       <Tab
         label="Access to Essential Services"
-        href={'#' + TAB_4_FRAGMENT}
+        href={'#' + TAB_4_FRAGMENT + search}
         isActive={pathname === TAB_4_FRAGMENT}
-        onClick={handleClick(TAB_4_FRAGMENT)}
+        onClick={handleClick(TAB_4_FRAGMENT + search)}
       />
       <Tab
         label="Roads or Transit?"
-        href={'#' + TAB_5_FRAGMENT}
+        href={'#' + TAB_5_FRAGMENT + search}
         isActive={pathname === TAB_5_FRAGMENT}
-        onClick={handleClick(TAB_5_FRAGMENT)}
+        onClick={handleClick(TAB_5_FRAGMENT + search)}
       />
     </Tabs>
   );
