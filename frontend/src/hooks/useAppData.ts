@@ -80,8 +80,6 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
     return () => {
       console.log('Cleaning up fetch effect in useAppData');
       abortController.abort('fetch effect in useAppData is being cleaned up');
-      setLoading(false);
-      setErrors([new Error('Data fetch aborted')]);
     };
   }, [dataPromises]);
 
