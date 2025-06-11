@@ -95,7 +95,7 @@ async function fetchData<T = Record<string, unknown>>(
   })
     .then((response) => {
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error(`Network response was not ok. Status: ${response.status}, URL: ${response.url}`);
       }
       return response;
     })
