@@ -50,8 +50,8 @@ export default function App() {
 
   return (
     <AppWrapper>
-      <AppDataContext value={createAppDataContext(areas, seasons)}>
-        <CoreFrameContext value={createCoreFrameContextValue()}>
+      <AppDataContext.Provider value={createAppDataContext(areas, seasons)}>
+        <CoreFrameContext.Provider value={createCoreFrameContextValue()}>
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 
           <Routes>
@@ -65,8 +65,8 @@ export default function App() {
               <Route path={COMPONENTS_ROUTE_FRAGMENT} element={<DevModeComponentsAll />} />
             ) : null}
           </Routes>
-        </CoreFrameContext>
-      </AppDataContext>
+        </CoreFrameContext.Provider>
+      </AppDataContext.Provider>
     </AppWrapper>
   );
 }
