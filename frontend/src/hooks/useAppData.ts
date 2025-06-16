@@ -21,6 +21,32 @@ interface AppDataHookParameters {
 }
 
 function _useAppData({ areas, seasons }: AppDataHookParameters) {
+  const [areasList, setAreasList] = useState<string[]>([]);
+  useEffect(() => {
+    fetch('./data/replica/area_index.txt')
+      .then((res) => res.text())
+      .then((text) => {
+        const areaList = text
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+        setAreasList(areaList);
+      });
+  }, [setAreasList]);
+
+  const [seasonsList, setSeasonsList] = useState<string[]>([]);
+  useEffect(() => {
+    fetch('./data/replica/season_index.txt')
+      .then((res) => res.text())
+      .then((text) => {
+        const seasonsList = text
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+        setSeasonsList(seasonsList);
+      });
+  }, [setSeasonsList]);
+
   // fetch the census data, which is a static time series file for each category that
   // applies to all areas and seasons
   const censusPromises = useMemo(() => {
@@ -83,7 +109,7 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
     };
   }, [dataPromises]);
 
-  return { data, loading, errors };
+  return { data, loading, errors, areasList, seasonsList };
 }
 
 async function fetchData<T = Record<string, unknown>>(
@@ -95,7 +121,9 @@ async function fetchData<T = Record<string, unknown>>(
   })
     .then((response) => {
       if (!response.ok) {
-        throw new Error(`Network response was not ok. Status: ${response.status}, URL: ${response.url}`);
+        throw new Error(
+          `Network response was not ok. Status: ${response.status}, URL: ${response.url}`
+        );
       }
       return response;
     })
