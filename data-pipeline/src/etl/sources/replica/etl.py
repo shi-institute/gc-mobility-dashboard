@@ -18,7 +18,9 @@ class ReplicaETL:
     region = 'south_atlantic'
     input_folder_path = './input/replica_interest_area_polygons'
     folder_path = './data/replica'
+    output_folder_path = './data/replica/Greenville County'
     columns_to_select = 'household_id'
+    clip_boundary = True 
 
     def __init__(self, columns: list[str], years: Optional[int] = None, quarters: Optional[str] = None) -> None:
         """
@@ -47,8 +49,11 @@ class ReplicaETL:
     def run(self):
         # get all geojson files from the input folder
         input_filenames = os.listdir(self.input_folder_path)
+        
         geojson_filename = [
             filename for filename in input_filenames if filename.endswith('.geojson')]
+        #List of files in the output folder
+        file_list = self.list_files_in_folders(self.output_folder_path)
 
         # process each geojson file
         for filename in geojson_filename:
@@ -68,13 +73,29 @@ class ReplicaETL:
             gdf['geometry_wkt'] = gdf['geometry'].apply(
                 lambda x: shapely.wkt.dumps(x))
 
-            # Getting network segments data
-            segments_df = self._run_for_network_segments(
-                gdf, area_name, self.schema_df)
-            # Getting Replica population data
-            pop_df = self._run_for_pop_(gdf, area_name, self.schema_df)
-            # Getting Replica trip data
-            trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
+            # if the clip_boundary is set to True, clip the gdf to the geometry
+            if self.clip_boundary:
+                #clip county-wide data to neighborhood boundaries  
+                for file in file_list:
+                    # Check if the file is a GeoJSON file
+                    if file.endswith('.json'):
+                        # Read the JSON file into a GeoDataFrame
+                        output_gdf = geopandas.read_file(file)
+                        # Clip the output_gdf to the gdf geometry
+                        clipped_gdf = geopandas.clip(output_gdf, gdf)
+                        # Save the clipped GeoDataFrame to a new file
+                        output_filename = os.path.join(
+                            self.output_folder_path, area_name + '_' + os.path.basename(filename))
+                        clipped_gdf.to_file(output_filename, driver='GeoJSON')
+                        print(f"Clipped results saved to {output_filename}")
+            else:
+                # Getting network segments data
+                segments_df = self._run_for_network_segments(
+                    gdf, area_name, self.schema_df)
+                # Getting Replica population data
+                pop_df = self._run_for_pop_(gdf, area_name, self.schema_df)
+                # Getting Replica trip data
+                trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
 
     def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
         result_dfs: pandas.DataFrame = []
@@ -340,3 +361,13 @@ class ReplicaETL:
         `replica-customer.south_atlantic.INFORMATION_SCHEMA.TABLES`;
         '''
         return pandas_gbq.read_gbq(query, project_id=self.project_id, dialect='standard')
+    
+    def list_files_in_folders(root_folder):
+        all_files = []
+        for folder_path, _, files in os.walk(root_folder):
+            for file in files:
+                file_path = os.path.join(folder_path, file)
+                all_files.append(file_path)
+        return all_files
+    
+##Function to clip Greenville City trips, network segments, and population data to the boundaries of different neighborhoods 
