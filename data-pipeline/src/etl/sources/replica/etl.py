@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from typing import Optional
+from typing import Literal, Optional
 
 import geopandas
 import pandas
@@ -18,7 +18,9 @@ class ReplicaETL:
     region = 'south_atlantic'
     input_folder_path = './input/replica_interest_area_polygons'
     folder_path = './data/replica'
+    output_folder_path = './data/replica/Greenville County'
     columns_to_select = 'household_id'
+    clip_boundary = False
 
     def __init__(self, columns: list[str], years: Optional[int] = None, quarters: Optional[str] = None) -> None:
         """
@@ -47,8 +49,11 @@ class ReplicaETL:
     def run(self):
         # get all geojson files from the input folder
         input_filenames = os.listdir(self.input_folder_path)
+
         geojson_filename = [
             filename for filename in input_filenames if filename.endswith('.geojson')]
+        # List of files in the output folder
+        file_list = self.list_files_in_folders(self.output_folder_path)
 
         # process each geojson file
         for filename in geojson_filename:
@@ -60,25 +65,51 @@ class ReplicaETL:
             gdf = geopandas.read_file(os.path.join(
                 self.input_folder_path, filename)).to_crs(epsg=4326)
 
+            # dissolve the features in the gdf, for use in the network_segments
+            # and population tables, which do not have batching logic implimented
+            # and require only a single polygon
+            dissolved_gdf = gdf.dissolve()
+
             # set the name column to the area name
             # and discard all other columns
             gdf['name'] = area_name
+            dissolved_gdf['name'] = area_name
             gdf = gdf[['name', 'geometry']].copy()
+            dissolved_gdf = dissolved_gdf[['name', 'geometry']].copy()
+
             # get the geometry in wkt format
             gdf['geometry_wkt'] = gdf['geometry'].apply(
                 lambda x: shapely.wkt.dumps(x))
+            dissolved_gdf['geometry_wkt'] = dissolved_gdf['geometry'].apply(
+                lambda x: shapely.wkt.dumps(x))
 
-            # Getting network segments data
-            segments_df = self._run_for_network_segments(
-                gdf, area_name, self.schema_df)
-            # Getting Replica population data
-            pop_df = self._run_for_pop_(gdf, area_name, self.schema_df)
-            # Getting Replica trip data
-            trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
+            # if the clip_boundary is set to True, clip the gdf to the geometry
+            if self.clip_boundary:
+                # clip county-wide data to neighborhood boundaries
+                for file in file_list:
+                    # Check if the file is a GeoJSON file
+                    if file.endswith('.json'):
+                        # Read the JSON file into a GeoDataFrame
+                        output_gdf = geopandas.read_file(file)
+                        # Clip the output_gdf to the gdf geometry
+                        clipped_gdf = geopandas.clip(output_gdf, gdf)
+                        # Save the clipped GeoDataFrame to a new file
+                        output_filename = os.path.join(
+                            self.output_folder_path, area_name + '_' + os.path.basename(filename))
+                        clipped_gdf.to_file(output_filename, driver='GeoJSON')
+                        print(f"Clipped results saved to {output_filename}")
+            else:
+                # Getting network segments data
+                segments_df = self._run_for_network_segments(
+                    dissolved_gdf, area_name, self.schema_df)
+                # Getting Replica population data
+                pop_df = self._run_for_pop_(
+                    dissolved_gdf, area_name, self.schema_df)
+                # Getting Replica trip data
+                trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
 
     def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
         result_dfs: pandas.DataFrame = []
-        segments_df = pandas.DataFrame()
         # Loop through network segments tables and run queries
         # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
         schema_df = schema_df[schema_df['table_name'].str.endswith('segments')]
@@ -122,19 +153,26 @@ class ReplicaETL:
                         )
                     )
                     '''
-                    segments_df = pandas_gbq.read_gbq(
+                    segments_df: pandas.DataFrame = pandas_gbq.read_gbq(
                         segments_query, project_id=self.project_id, dialect='standard')
                     result_dfs.append(segments_df)
-                    # Build output path with both area_name and table_name
-                    safe_table_name = table_name.replace('.', '_')
-                    output_filename = f"{area_name}_{safe_table_name}.json"
-                    segment_folder_path = os.path.join(
-                        self.folder_path, area_name, "network_segments")
-                    os.makedirs(segment_folder_path, exist_ok=True)
-                    output_path = os.path.join(
-                        segment_folder_path, output_filename)
-                    segments_df.to_json(output_path, orient='records', indent=2)
-                    print(f"Saved results to {output_path}")
+
+                    # convert to geodataframe
+                    geometry_wkt: pandas.Series = segments_df['geometry']
+                    geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
+                        geometry_wkt)
+                    segments_gdf = geopandas.GeoDataFrame(
+                        segments_df, geometry=geometry, crs="EPSG:4326")
+
+                    # save to file
+                    self._save(
+                        segments_gdf,
+                        area_name,
+                        table_name,
+                        'network_segments',
+                        'geoparquet'
+                    )
+
                 print(
                     f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
         else:
@@ -142,7 +180,6 @@ class ReplicaETL:
 
     def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
         result_dfs: pandas.DataFrame = []
-        population_df = pandas.DataFrame()
         # Loop through network segments tables and run queries
         # Filter schema_df to only inclue the tables where the table_name column ends with 'population'
         schema_df = schema_df[schema_df['table_name'].str.endswith(
@@ -177,27 +214,43 @@ class ReplicaETL:
                     ON ST_COVERS(q.geometry, ST_GEOGPOINT(t.lng, t.lat))
                     
                     '''
-                    population_df = pandas_gbq.read_gbq(
+                    population_df: pandas.DataFrame = pandas_gbq.read_gbq(
                         pop_query, project_id=self.project_id, dialect='standard')
                     result_dfs.append(population_df)
-                    # Build output path with both area_name and table_name
-                    safe_table_name = table_name.replace('.', '_')
-                    output_filename = f"{area_name}_{safe_table_name}.json"
-                    pop_folder_path = os.path.join(
-                        self.folder_path, area_name, "population")
-                    os.makedirs(pop_folder_path, exist_ok=True)
-                    output_path = os.path.join(pop_folder_path, output_filename)
-                    population_df.to_json(output_path, orient='records', indent=2)
-                    print(f"Saved results to {output_path}")
+
+                    # for each case, convert the lat-lng to a geometry column
+                    # and save to file
+                    population_cases = [
+                        ['home', 'lat', 'lng'],
+                        ['work', 'lat_work', 'lng_work'],
+                        ['school', 'lat_school', 'lng_school'],
+                    ]
+                    for [case, lat_column, lng_column] in population_cases:
+                        print(
+                            f'Converting geoemtry for population {case} coordinates...')
+                        population_gdf = geopandas.GeoDataFrame(
+                            population_df,
+                            geometry=geopandas.points_from_xy(
+                                population_df[lng_column], population_df[lat_column]),
+                            crs="EPSG:4326"
+                        )
+
+                        print(f'Saving geometry for population ({case})...')
+                        self._save(
+                            population_gdf,
+                            area_name,
+                            table_name + case,
+                            'population',
+                            'geoparquet'
+                        )
                 print(
-                    f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
+                    f"\nSuccessfully obtained data from {len(result_dfs)} population tables.")
         else:
-            print("No network segments tables found to process queries.")
-            
+            print("No population tables found to process queries.")
+
     def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
         # Loop through trip tables and run queries
         all_trip_results = []
-        table_df = pandas.DataFrame()
         # Filter schema_df to only inclue the tables where the table_name column ends with 'trip'
         schema_df = self.schema_df[schema_df['table_name'].str.endswith(
             'trip')]
@@ -217,14 +270,16 @@ class ReplicaETL:
                     origin_lat_col = "start_lat"
                     dest_lng_col = "end_lng"
                     dest_lat_col = "end_lat"
-                table_df = self._run_with_queue(gdf, full_table_path=full_table_path, max_query_chars=1000000,
-                                                origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
-                                                dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col)
+                table_df: pandas.DataFrame = self._run_with_queue(
+                    gdf, full_table_path=full_table_path, max_query_chars=1000000,
+                    origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
+                    dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
+                )
                 if not table_df.empty:
                     # Add a column to identify the source table
                     table_df['source_table'] = table_name
                     all_trip_results.append(table_df)
-                    # Build output path with both area_name and table_name
+
                     # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
                     # this regex will match the trip type
                     trip_type_match = re.search(
@@ -233,24 +288,38 @@ class ReplicaETL:
                     # this will get the trip type from the regex match
                     trip_type = trip_type_match.group(
                         0)[1:] if trip_type_match else 'other_trip'
-                    # Build directory path dynamically
-                    area_folder_path = os.path.join(
-                        self.folder_path, area_name, trip_type)
-                    os.makedirs(area_folder_path, exist_ok=True)
-                    # Create a safe filename and final output path
-                    safe_table_name = table_name.replace('.', '_')
-                    output_filename = f"{safe_table_name}.json"
-                    output_path = os.path.join(
-                        area_folder_path, output_filename)
-                    table_df.to_json(output_path, orient='records', indent=2)
-                    print(f"Saved results to {output_path}")
+
+                    # for each case, convert the lat-lng to a geometry column
+                    # and save to file
+                    trip_cases = [
+                        ['origin', origin_lat_col, origin_lng_col],
+                        ['dest', dest_lat_col, dest_lng_col],
+                    ]
+                    for [case, lat_column, lng_column] in trip_cases:
+                        print(
+                            f'Converting geoemtry for {trip_type} {case} coordinates...')
+                        trip_gdf = geopandas.GeoDataFrame(
+                            table_df,
+                            geometry=geopandas.points_from_xy(
+                                table_df[lng_column], table_df[lat_column]),
+                            crs="EPSG:4326"
+                        )
+
+                        print(f'Saving geometry for {trip_type} ({case})...')
+                        self._save(
+                            trip_gdf,
+                            area_name,
+                            table_name + case,
+                            trip_type,
+                            'geoparquet'
+                        )
             print(
                 f"\nSuccessfully obtained data from {len(all_trip_results)} trip tables.")
         else:
             print("No trip tables found to process queries.")
 
     def _build_query(self, rows_str: str, full_table_path: str, origin_lng_col: str, origin_lat_col: str,
-                    dest_lng_col: str, dest_lat_col: str) -> str:
+                     dest_lng_col: str, dest_lat_col: str) -> str:
         '''
         Builds the query to get data from the replica dataset.        
         '''
@@ -283,41 +352,62 @@ class ReplicaETL:
 
     def _run_with_queue(self, gdf_upload: geopandas.GeoDataFrame, full_table_path: str, origin_lng_col: str,
                         origin_lat_col: str, dest_lng_col: str, dest_lat_col: str, max_query_chars: int = 1000000) -> pandas.DataFrame:
-        result_dfs: pandas.DataFrame = []
         queue: list[str] = []
         queue_length = 0
-        print(f'Processing chunks for table {full_table_path}...')
+        queries: list[str] = []
+        print(f'Generating chunked queries for table {full_table_path}...')
         for _, row in gdf_upload.iterrows():
             # this is a tuple for each row
-            rows_str = str((row['name'], row['geometry_wkt']))
+            row_str = str((row['name'], row['geometry_wkt']))
+            if (row_str == ''):
+                continue
 
-            queue_is_full = queue_length + len(rows_str) > max_query_chars
+            queue_is_full = queue_length + len(row_str) > max_query_chars
 
             # if the queue is not full, add the row to the queue and continue to the next row
             if (not queue_is_full):
-                queue.append(rows_str)
-                queue_length += len(rows_str)
+                queue.append(row_str)
+                queue_length += len(row_str)
                 continue
 
-            # otherwise, run the query for the current chunk/queue
+            # otherwise, generate the query for the current chunk/queue,
+            # save it for execution, and then prepare a new chunk/queue
             # before queueing the current row
             rows_str = ', '.join(queue)
             query = self._build_query(rows_str, full_table_path, origin_lng_col,
-                                    origin_lat_col, dest_lng_col, dest_lat_col)
-            df = pandas_gbq.read_gbq(
-                query, project_id=self.project_id, dialect='standard')
-            result_dfs.append(df)
+                                      origin_lat_col, dest_lng_col, dest_lat_col)
+            queries.append(query)
+
             # create a new queue with the current row
-            queue = [rows_str]
-            queue_length = len(rows_str)
-        # if there is anything left in the queue, run the query for the last chunk
-        if queue:
+            queue = [row_str]
+            queue_length = len(row_str)
+
+        # if there is anything left in the queue, run create query for the last chunk
+        if len(queue) > 0:
             rows_str = ', '.join(queue)
             query = self._build_query(rows_str, full_table_path, origin_lng_col, origin_lat_col,
-                                    dest_lng_col, dest_lat_col)
-            df = pandas_gbq.read_gbq(
-                query, project_id=self.project_id, dialect='standard')
-            result_dfs.append(df)
+                                      dest_lng_col, dest_lat_col)
+            queries.append(query)
+
+        # run all queries
+        print(
+            f'Generated {len(queries)} chunked queries for for table {full_table_path}.')
+        result_dfs: pandas.DataFrame = []
+        for index, query in enumerate(reversed(queries)):
+            try:
+                print(
+                    f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
+                df = pandas_gbq.read_gbq(
+                    query, project_id=self.project_id, dialect='standard')
+                result_dfs.append(df)
+            except Exception as e:
+                print('Failed to execute query')
+                print('Query:')
+                print('=======================')
+                print(query)
+                print('=======================')
+                raise e
+
         # Merge all results
         return pandas.concat(result_dfs, ignore_index=True)
 
@@ -340,3 +430,39 @@ class ReplicaETL:
         `replica-customer.south_atlantic.INFORMATION_SCHEMA.TABLES`;
         '''
         return pandas_gbq.read_gbq(query, project_id=self.project_id, dialect='standard')
+
+    def list_files_in_folders(self, root_folder):
+        all_files = []
+        for folder_path, _, files in os.walk(root_folder):
+            for file in files:
+                file_path = os.path.join(folder_path, file)
+                all_files.append(file_path)
+        return all_files
+
+    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json']) -> None:
+        # build the output name
+        output_name = full_table_name\
+            .replace('.', ' ')\
+            .replace(table_alias, '')\
+            .replace('_', ' ')\
+            .strip()\
+            .replace(' ', '_')
+
+        # ensure output folder exists
+        output_folder = os.path.join(
+            self.folder_path,
+            area_name,
+            table_alias
+        )
+        os.makedirs(output_folder, exist_ok=True)
+
+        # save to file
+        output_path = os.path.join(output_folder, output_name)
+        if format == 'geoparquet':
+            gdf.to_parquet(output_path + '.geoparquet')
+            print(f'Saved results to {output_path}.geoparquet')
+        if format == 'json':
+            gdf.to_json(output_path + '.json', orient='records', indent=2)
+            print(f'Saved results to {output_path}.json')
+
+# Function to clip Greenville City trips, network segments, and population data to the boundaries of different neighborhoods
