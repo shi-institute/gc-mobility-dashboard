@@ -352,41 +352,62 @@ class ReplicaETL:
 
     def _run_with_queue(self, gdf_upload: geopandas.GeoDataFrame, full_table_path: str, origin_lng_col: str,
                         origin_lat_col: str, dest_lng_col: str, dest_lat_col: str, max_query_chars: int = 1000000) -> pandas.DataFrame:
-        result_dfs: pandas.DataFrame = []
         queue: list[str] = []
         queue_length = 0
-        print(f'Processing chunks for table {full_table_path}...')
+        queries: list[str] = []
+        print(f'Generating chunked queries for table {full_table_path}...')
         for _, row in gdf_upload.iterrows():
             # this is a tuple for each row
-            rows_str = str((row['name'], row['geometry_wkt']))
+            row_str = str((row['name'], row['geometry_wkt']))
+            if (row_str == ''):
+                continue
 
-            queue_is_full = queue_length + len(rows_str) > max_query_chars
+            queue_is_full = queue_length + len(row_str) > max_query_chars
 
             # if the queue is not full, add the row to the queue and continue to the next row
             if (not queue_is_full):
-                queue.append(rows_str)
-                queue_length += len(rows_str)
+                queue.append(row_str)
+                queue_length += len(row_str)
                 continue
 
-            # otherwise, run the query for the current chunk/queue
+            # otherwise, generate the query for the current chunk/queue,
+            # save it for execution, and then prepare a new chunk/queue
             # before queueing the current row
             rows_str = ', '.join(queue)
             query = self._build_query(rows_str, full_table_path, origin_lng_col,
-                                    origin_lat_col, dest_lng_col, dest_lat_col)
-            df = pandas_gbq.read_gbq(
-                query, project_id=self.project_id, dialect='standard')
-            result_dfs.append(df)
+                                      origin_lat_col, dest_lng_col, dest_lat_col)
+            queries.append(query)
+
             # create a new queue with the current row
-            queue = [rows_str]
-            queue_length = len(rows_str)
-        # if there is anything left in the queue, run the query for the last chunk
-        if queue:
+            queue = [row_str]
+            queue_length = len(row_str)
+
+        # if there is anything left in the queue, run create query for the last chunk
+        if len(queue) > 0:
             rows_str = ', '.join(queue)
             query = self._build_query(rows_str, full_table_path, origin_lng_col, origin_lat_col,
-                                    dest_lng_col, dest_lat_col)
-            df = pandas_gbq.read_gbq(
-                query, project_id=self.project_id, dialect='standard')
-            result_dfs.append(df)
+                                      dest_lng_col, dest_lat_col)
+            queries.append(query)
+
+        # run all queries
+        print(
+            f'Generated {len(queries)} chunked queries for for table {full_table_path}.')
+        result_dfs: pandas.DataFrame = []
+        for index, query in enumerate(reversed(queries)):
+            try:
+                print(
+                    f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
+                df = pandas_gbq.read_gbq(
+                    query, project_id=self.project_id, dialect='standard')
+                result_dfs.append(df)
+            except Exception as e:
+                print('Failed to execute query')
+                print('Query:')
+                print('=======================')
+                print(query)
+                print('=======================')
+                raise e
+
         # Merge all results
         return pandas.concat(result_dfs, ignore_index=True)
 
