@@ -104,7 +104,6 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
     }
 
     return () => {
-      console.log('Cleaning up fetch effect in useAppData');
       abortController.abort('fetch effect in useAppData is being cleaned up');
     };
   }, [dataPromises]);
@@ -170,6 +169,8 @@ function handleError(key: string) {
   return (error: Error) => {
     // ignore errors that are caused by the cleanup of the useAppData effect
     if (error.message?.includes('useAppData is being cleaned up')) {
+      console.debug(`Ignoring cleanup error for ${key}:`, error);
+      return null;
     }
 
     throw new Error(
