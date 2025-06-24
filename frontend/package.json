@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@arcgis/map-components": "^4.33.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "pako": "^2.1.0",

@@ -1,3 +1,4 @@
+import '@arcgis/map-components/dist/components/arcgis-map';
 import { CoreFrame, SidebarContent } from '../components';
 import { AppNavigation } from '../components/navigation';
 import {
@@ -18,6 +19,11 @@ export function GeneralAccess() {
       outerStyle={{ height: '100%' }}
       header={<AppNavigation />}
       sidebar={<Sidebar />}
+      map={
+        <div style={{ height: '100%' }}>
+          <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85"></arcgis-map>
+        </div>
+      }
       sections={[
         <div key="placeholder">
           {loading ? (
