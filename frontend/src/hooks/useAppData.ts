@@ -61,7 +61,6 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
 
   // merge the replica promises with the census promises
   const dataPromises = useMemo(() => {
-    console.log(areas, seasons);
     const replicaPaths = constructReplicaPaths(areas, seasons);
     const replicaPromises = constructReplicaPromises(replicaPaths);
     return replicaPromises.map((promises) => {
