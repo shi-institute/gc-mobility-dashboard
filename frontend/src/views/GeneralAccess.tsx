@@ -1,4 +1,4 @@
-import { CoreFrame } from '../components';
+import { CoreFrame, SidebarContent } from '../components';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -56,7 +56,7 @@ function Sidebar() {
   const [isComparisonEnabled] = useComparisonModeState();
 
   return (
-    <aside>
+    <SidebarContent>
       <h1>Options</h1>
 
       <h2>Filters</h2>
@@ -71,6 +71,6 @@ function Sidebar() {
           <SelectedComparisonSeasons seasonsList={seasonsList} />
         </>
       ) : null}
-    </aside>
+    </SidebarContent>
   );
 }
