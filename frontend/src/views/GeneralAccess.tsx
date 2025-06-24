@@ -1,6 +1,13 @@
-import { useSearchParams } from 'react-router';
 import { CoreFrame } from '../components';
 import { AppNavigation } from '../components/navigation';
+import {
+  ComparisonModeSwitch,
+  SelectedArea,
+  SelectedComparisonAreas,
+  SelectedComparisonSeasons,
+  SelectedSeason,
+  useComparisonModeState,
+} from '../components/options';
 import { useAppData } from '../hooks';
 
 export function GeneralAccess() {
@@ -20,7 +27,22 @@ export function GeneralAccess() {
           ) : (
             <div>
               <h2>General Access Data</h2>
-              <pre>{JSON.stringify(data, null, 2)}</pre>
+              <pre>
+                {JSON.stringify(
+                  (data || []).map((o) =>
+                    Object.fromEntries(
+                      Object.entries(o).map(([key, value]) => {
+                        if (Array.isArray(value)) {
+                          return [key, `Array(${value.length})`];
+                        }
+                        return [key, value];
+                      })
+                    )
+                  ),
+                  null,
+                  2
+                )}
+              </pre>
             </div>
           )}
         </div>,
@@ -31,42 +53,24 @@ export function GeneralAccess() {
 
 function Sidebar() {
   const { areasList, seasonsList } = useAppData();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [isComparisonEnabled] = useComparisonModeState();
 
-  function handleAreaChange(evt: React.ChangeEvent<HTMLSelectElement>) {
-    const selectedAreas = Array.from(evt.target.selectedOptions, (option) => option.value);
-    console.log(selectedAreas);
-    searchParams.set('areas', selectedAreas.join(','));
-    setSearchParams(searchParams);
-  }
-
-  function handleSeasonChange(evt: React.ChangeEvent<HTMLSelectElement>) {
-    const selectedSeasons = Array.from(evt.target.selectedOptions, (option) => option.value);
-    console.log(selectedSeasons);
-    searchParams.set('seasons', selectedSeasons.join(','));
-    setSearchParams(searchParams);
-  }
   return (
     <aside>
       <h1>Options</h1>
 
-      <label>
-        Areas
-        <select multiple onChange={handleAreaChange} style={{ width: '100%' }}>
-          {areasList.map((area) => {
-            return <option value={area}>{area}</option>;
-          })}
-        </select>
-      </label>
+      <h2>Filters</h2>
+      <SelectedArea areasList={areasList} />
+      <SelectedSeason seasonsList={seasonsList} />
 
-      <label>
-        Seasons
-        <select multiple onChange={handleSeasonChange} style={{ width: '100%' }}>
-          {seasonsList.map((season) => {
-            return <option value={season}>{season}</option>;
-          })}
-        </select>
-      </label>
+      <h2>Compare</h2>
+      <ComparisonModeSwitch />
+      {isComparisonEnabled ? (
+        <>
+          <SelectedComparisonAreas areasList={areasList} />
+          <SelectedComparisonSeasons seasonsList={seasonsList} />
+        </>
+      ) : null}
     </aside>
   );
 }

@@ -61,6 +61,7 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
 
   // merge the replica promises with the census promises
   const dataPromises = useMemo(() => {
+    console.log(areas, seasons);
     const replicaPaths = constructReplicaPaths(areas, seasons);
     const replicaPromises = constructReplicaPromises(replicaPaths);
     return replicaPromises.map((promises) => {
@@ -168,9 +169,8 @@ async function resolveArrayOfPromiseRecords<T extends DataPromises>(
 
 function handleError(key: string) {
   return (error: Error) => {
-    if (!error.message.includes('useAppData is being cleaned up')) {
-      // ignore errors that are caused by the cleanup of the useAppData effect
-      console.error(`Error fetching ${key} data:`, error);
+    // ignore errors that are caused by the cleanup of the useAppData effect
+    if (error.message?.includes('useAppData is being cleaned up')) {
     }
 
     throw new Error(
