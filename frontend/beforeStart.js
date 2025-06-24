@@ -181,7 +181,7 @@ async function buildSeasonIndex(directory) {
     }
   }
 
-  // write the area names to a text file
+  // write the season quarter-year pairs to a text file
   const seasonIndex = seasonNames.join('\n');
   const seasonIndexPath = joinPath(directory, '../../season_index.txt');
   await writeFile(seasonIndexPath, seasonIndex, 'utf8');
