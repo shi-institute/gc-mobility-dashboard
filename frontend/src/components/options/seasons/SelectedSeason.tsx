@@ -12,7 +12,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
       Reporting window
       <select
         onChange={handleSeasonSelectionChange}
-        value={selectedSeason}
+        value={selectedSeason ?? ''}
         style={{ width: '100%' }}
       >
         {seasonsList.map((season) => {
