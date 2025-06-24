@@ -22,31 +22,38 @@ import {
 export default function App() {
   const [searchParams] = useSearchParams();
 
-  const areas = useMemo(
-    () =>
+  const comparisonEnabled = useMemo(() => {
+    return searchParams.get('compare') === '1';
+  }, [searchParams]);
+
+  const areas = useMemo(() => {
+    const areas =
       searchParams
         .get('areas')
         ?.split(',')
-        .map((str) => str.trim()) ?? [],
-    [searchParams]
-  );
-  const seasons = useMemo(
-    () =>
-      (searchParams.get('seasons')?.split(',') || [])
-        .map((str) => {
-          return str
-            .trim()
-            .split(':')
-            .map((v) => v.trim());
-        })
-        .map(([quarter, year]) => [quarter, parseInt(year)] as const)
-        .filter((v): v is ['Q2' | 'Q4', number] => {
-          const quarter = v[0];
-          const year = v[1];
-          return ['Q2', 'Q4'].includes(quarter) && year >= 2019;
-        }) satisfies Parameters<typeof createAppDataContext>['1'],
-    [searchParams]
-  );
+        .map((str) => str.trim()) ?? [];
+
+    // only use the first area if comparison is not enabled
+    return comparisonEnabled ? areas : areas.slice(0, 1);
+  }, [searchParams, comparisonEnabled]);
+  const seasons = useMemo(() => {
+    const seasons = (searchParams.get('seasons')?.split(',') || [])
+      .map((str) => {
+        return str
+          .trim()
+          .split(':')
+          .map((v) => v.trim());
+      })
+      .map(([quarter, year]) => [quarter, parseInt(year)] as const)
+      .filter((v): v is ['Q2' | 'Q4', number] => {
+        const quarter = v[0];
+        const year = v[1];
+        return ['Q2', 'Q4'].includes(quarter) && year >= 2019;
+      }) satisfies Parameters<typeof createAppDataContext>['1'];
+
+    // only use the first season if comparison is not enabled
+    return comparisonEnabled ? seasons : seasons.slice(0, 1);
+  }, [searchParams, comparisonEnabled]);
 
   return (
     <AppWrapper>

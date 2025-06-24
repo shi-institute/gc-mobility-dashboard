@@ -7,7 +7,7 @@ import { deflate as _deflate } from 'zlib';
 const fileExtensionsToRemove = ['.tmp', '.variables'];
 const pipelineDataDir = resolvePath(import.meta.dirname, '../data-pipeline/data');
 const publicDataDir = resolvePath(import.meta.dirname, './public/data');
-const shouldLog = false;
+const shouldLog = true;
 
 console.log('Copying data-pipeline/data to frontend/public/data...');
 
@@ -22,6 +22,10 @@ await cp(pipelineDataDir, publicDataDir, { recursive: true, force: true });
 await removeFileTypes(publicDataDir, fileExtensionsToRemove);
 await discardNonTimeSeriesACS5(publicDataDir + '/census_acs_5year');
 await deflateJsonFiles(publicDataDir);
+const areaNames = await buildAreaIndex(publicDataDir + '/replica');
+if (areaNames.length) {
+  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/thursday_trip');
+}
 
 if (!shouldLog) {
   console.log = originalConsoleLog;
@@ -124,4 +128,62 @@ async function discardNonTimeSeriesACS5(directory) {
   });
 
   await Promise.allSettled(promises);
+}
+
+/**
+ * Builds an index of areas from the list of folder names in data/replica.
+ *
+ * @param {string} directory
+ */
+async function buildAreaIndex(directory) {
+  console.log(`Building area index from directory: ${directory}`);
+  const items = await readdir(directory);
+
+  const areaNames = [];
+  for await (const item of items) {
+    const itemPath = joinPath(directory, item);
+    const stats = await stat(itemPath);
+
+    if (stats.isDirectory()) {
+      areaNames.push(item);
+    }
+  }
+
+  // write the area names to a text file
+  const areaIndex = areaNames.join('\n');
+  const areaIndexPath = joinPath(directory, 'area_index.txt');
+  await writeFile(areaIndexPath, areaIndex, 'utf8');
+  console.log(`Area index written to: ${areaIndexPath}`);
+
+  return areaNames;
+}
+
+/**
+ * Builds an index of seasons from the first area in data/replica.
+ *
+ * @param {string} directory
+ */
+async function buildSeasonIndex(directory) {
+  console.log(`Building seasons index from directory: ${directory}`);
+  const items = await readdir(directory);
+
+  const seasonNames = [];
+  for await (const item of items) {
+    if (item.includes('.json')) {
+      seasonNames.push(
+        item
+          .replace('south_atlantic_', '')
+          .replace('_thursday_trip.json.deflate', '')
+          .split('_')
+          .reverse()
+          .join(':')
+      );
+    }
+  }
+
+  // write the season quarter-year pairs to a text file
+  const seasonIndex = seasonNames.join('\n');
+  const seasonIndexPath = joinPath(directory, '../../season_index.txt');
+  await writeFile(seasonIndexPath, seasonIndex, 'utf8');
+  console.log(`Season index written to: ${seasonIndexPath}`);
 }

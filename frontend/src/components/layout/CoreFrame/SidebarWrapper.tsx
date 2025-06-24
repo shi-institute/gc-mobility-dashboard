@@ -80,6 +80,7 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
   return (
     <>
       <FloatingSidebarWrapper isOpen={optionsOpen}>
+        {props.children}
         <CloseButton onClick={() => setOptionsOpen(false)} size="1rem">
           <svg
             width="24"
@@ -94,7 +95,6 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
             />
           </svg>
         </CloseButton>
-        {props.children}
       </FloatingSidebarWrapper>
       {openButton}
       <Scrim
@@ -129,7 +129,8 @@ const FloatingSidebarWrapper = styled.div<{ isOpen?: boolean }>`
   border: 1px solid hsla(0, 0%, 46%, 40%);
   border-radius: var(--surface-radius);
   box-shadow: 0px 32px 64px hsla(0, 0%, 0%, 18.76%), 0px 2px 21px hsl(0, 0%, 0%, 14.74%);
-  background-color: hsl(0, 0%, 98%);
+  --sidebar-background-color: hsl(0, 0%, 98%);
+  background-color: var(--sidebar-background-color);
 
   @container core (max-width: 499px) {
     --width: 100%;
