@@ -104,12 +104,14 @@ const OuterFrame = styled.div`
 const InnerFrame = styled.div<{ fixedSidebarOpen: boolean; hasMapElement?: boolean }>`
   display: grid;
   grid-template-rows: 1fr;
-  grid-template-columns: 1fr 1fr ${({ fixedSidebarOpen }) => (fixedSidebarOpen ? '300px' : '0')};
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) ${({ fixedSidebarOpen }) =>
+      fixedSidebarOpen ? '300px' : '0'};
   grid-template-areas: ${({ hasMapElement }) =>
     hasMapElement ? `'map main sidebar'` : `'main main sidebar'`};
 
-  padding: 1rem;
-  gap: 0 1rem;
+  --padding: 1rem;
+  padding: 0 0 0 var(--padding);
+  // gap: 1rem;
 
   transition: 120ms;
 
@@ -117,15 +119,20 @@ const InnerFrame = styled.div<{ fixedSidebarOpen: boolean; hasMapElement?: boole
     padding-right: ${({ fixedSidebarOpen }) => (fixedSidebarOpen ? '1rem' : '0')};
   }
 
+  @container core (max-width: 1279px) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: ${({ hasMapElement }) => (hasMapElement ? `'map main'` : `'main main'`)};
+  }
+
   @container core (max-width: 899px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr 0 0;
     grid-template-areas:
       'section-tabs'
       'main'
       'sidebar';
 
-    padding: 0;
+    --padding: 0;
   }
 `;
 
@@ -133,9 +140,17 @@ const MainArea = styled.div`
   grid-area: main;
 
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   grid-auto-rows: min-content;
   gap: 1rem;
+
+  // enable scrolling (MainArea is a child of another grid container)
+  overflow-y: auto;
+  height: 0;
+  min-height: 100%;
+  box-sizing: border-box;
+
+  padding: var(--padding) var(--padding) var(--padding) 0;
 
   @container core (max-width: 899px) {
     grid-auto-rows: 1fr;
@@ -149,4 +164,5 @@ const MapArea = styled.div`
   grid-area: map;
   border-radius: var(--surface-radius);
   overflow: hidden;
+  margin: var(--padding) var(--padding) var(--padding) 0;
 `;
