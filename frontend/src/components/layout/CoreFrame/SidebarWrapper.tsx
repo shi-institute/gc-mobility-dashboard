@@ -112,6 +112,7 @@ const StyledSidebarWrapper = styled.div<{ isOpen?: boolean }>`
   border: 1px solid hsla(0, 0%, 46%, 40%);
   border-radius: var(--surface-radius);
   opacity: ${({ isOpen }) => (isOpen ? 1 : 0)};
+  margin: 1rem 0;
 `;
 
 const FloatingSidebarWrapper = styled.div<{ isOpen?: boolean }>`
