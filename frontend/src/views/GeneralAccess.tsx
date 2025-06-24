@@ -19,7 +19,7 @@ export function GeneralAccess() {
       header={<AppNavigation />}
       sidebar={<Sidebar />}
       sections={[
-        <div>
+        <div key="placeholder">
           {loading ? (
             <p>Loading...</p>
           ) : errors ? (
