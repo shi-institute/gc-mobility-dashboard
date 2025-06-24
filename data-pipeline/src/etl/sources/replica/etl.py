@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal, Optional
 
 import geopandas
@@ -9,7 +10,7 @@ import pandas_gbq
 import shapely
 
 logger = logging.getLogger('pandas_gbq')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 
@@ -21,6 +22,7 @@ class ReplicaETL:
     output_folder_path = './data/replica/Greenville County'
     columns_to_select = 'household_id'
     clip_boundary = False
+    use_bqstorage_api = False
 
     def __init__(self, columns: list[str], years: Optional[int] = None, quarters: Optional[str] = None) -> None:
         """
@@ -99,12 +101,12 @@ class ReplicaETL:
                         clipped_gdf.to_file(output_filename, driver='GeoJSON')
                         print(f"Clipped results saved to {output_filename}")
             else:
-                # Getting network segments data
-                segments_df = self._run_for_network_segments(
-                    dissolved_gdf, area_name, self.schema_df)
-                # Getting Replica population data
-                pop_df = self._run_for_pop_(
-                    dissolved_gdf, area_name, self.schema_df)
+                # # Getting network segments data
+                # segments_df = self._run_for_network_segments(
+                #     dissolved_gdf, area_name, self.schema_df)
+                # # Getting Replica population data
+                # pop_df = self._run_for_pop_(
+                #     dissolved_gdf, area_name, self.schema_df)
                 # Getting Replica trip data
                 trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
 
@@ -134,7 +136,11 @@ class ReplicaETL:
                 );
                 '''
                 segments_df: pandas.DataFrame = pandas_gbq.read_gbq(
-                    segments_query, project_id=self.project_id, dialect='standard')
+                    segments_query,
+                    project_id=self.project_id,
+                    dialect='standard',
+                    use_bqstorage_api=self.use_bqstorage_api
+                )
                 result_dfs.append(segments_df)
 
                 # convert to geodataframe
@@ -184,7 +190,11 @@ class ReplicaETL:
                 );
                 '''
                 population_df: pandas.DataFrame = pandas_gbq.read_gbq(
-                    pop_query, project_id=self.project_id, dialect='standard')
+                    pop_query,
+                    project_id=self.project_id,
+                    dialect='standard',
+                    use_bqstorage_api=self.use_bqstorage_api
+                )
                 result_dfs.append(population_df)
 
                 # for each case, convert the lat-lng to a geometry column
@@ -240,7 +250,7 @@ class ReplicaETL:
                     dest_lng_col = "end_lng"
                     dest_lat_col = "end_lat"
                 table_df: pandas.DataFrame = self._run_with_queue(
-                    gdf, full_table_path=full_table_path, max_query_chars=1000000,
+                    gdf, full_table_path=full_table_path,
                     origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
                     dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
                 )
@@ -349,7 +359,7 @@ class ReplicaETL:
         '''
 
     def _run_with_queue(self, gdf_upload: geopandas.GeoDataFrame, full_table_path: str, origin_lng_col: str,
-                        origin_lat_col: str, dest_lng_col: str, dest_lat_col: str, max_query_chars: int = 1000000) -> pandas.DataFrame:
+                        origin_lat_col: str, dest_lng_col: str, dest_lat_col: str, max_query_chars: int = 150000) -> pandas.DataFrame:
         queue: list[str] = []
         queue_length = 0
         queries: list[str] = []
@@ -385,26 +395,36 @@ class ReplicaETL:
                                       dest_lng_col, dest_lat_col)
             queries.append(query)
 
-        # run all queries
         print(
             f'Generated {len(queries)} chunked queries for for table {full_table_path}.')
+
+        # create a function to process a query and collect the results
         result_dfs: pandas.DataFrame = []
-        for index, query in enumerate(reversed(queries)):
+        logger.setLevel(logging.WARNING)
+
+        def process_query(query: str, index: int) -> None:
+            print(
+                f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
             try:
-                print(
-                    f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
                 df = pandas_gbq.read_gbq(
-                    query, project_id=self.project_id, dialect='standard')
+                    query,
+                    project_id=self.project_id,
+                    dialect='standard',
+                    use_bqstorage_api=self.use_bqstorage_api
+                )
                 result_dfs.append(df)
             except Exception as e:
                 print('Failed to execute query')
-                print('Query:')
-                print('=======================')
-                print(query)
-                print('=======================')
                 raise e
 
+        # run all queries
+        with ThreadPoolExecutor() as executor:
+            for index, query in enumerate(queries):
+                executor.submit(process_query, query, index)
+
         # Merge all results
+        logger.setLevel(logging.INFO)
+        executor.shutdown(wait=True)  # wait for all futures to finish
         return pandas.concat(result_dfs, ignore_index=True)
 
     def schema_query(self) -> pandas.DataFrame:
