@@ -19,7 +19,7 @@ export function SelectedComparisonSeasons({ seasonsList }: SelectedComparisonSea
       >
         {seasonsList.map((season) => {
           return (
-            <option value={season} disabled={season === selectedSeason}>
+            <option key={season} value={season} disabled={season === selectedSeason}>
               {season}
             </option>
           );

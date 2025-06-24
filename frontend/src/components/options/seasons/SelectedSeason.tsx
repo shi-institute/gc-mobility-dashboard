@@ -18,7 +18,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
         {seasonsList.map((season) => {
           const [quarter, year] = season.split(':');
           return (
-            <option value={season}>
+            <option key={season} value={season}>
               {year} {quarter}
             </option>
           );

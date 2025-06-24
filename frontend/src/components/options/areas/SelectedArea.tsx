@@ -12,7 +12,11 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
       Area
       <select onChange={handleAreaSelectionChange} value={selectedArea} style={{ width: '100%' }}>
         {areasList.map((area) => {
-          return <option value={area}>{area}</option>;
+          return (
+            <option key={area} value={area}>
+              {area}
+            </option>
+          );
         })}
       </select>
     </label>

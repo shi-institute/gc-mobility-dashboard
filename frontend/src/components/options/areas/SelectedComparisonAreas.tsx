@@ -18,7 +18,7 @@ export function SelectedComparisonAreas({ areasList }: SelectedComparisonAreasPr
       >
         {areasList.map((area) => {
           return (
-            <option value={area} disabled={area === selectedArea}>
+            <option key={area} value={area} disabled={area === selectedArea}>
               {area}
             </option>
           );
