@@ -119,62 +119,41 @@ class ReplicaETL:
                 # Set full_table_path be equal to the table_name column in the schema_df
                 full_table_path = f"{self.project_id}.{self.region}.{table_name}"
 
-                for _, row in gdf.iterrows():
-                    # this is a tuple for each row
-                    rows_str = str((row['name'], row['geometry_wkt']))
+                print(f'Running query for {full_table_path}...')
+                query_geometry = self._prepare_query_geometry(gdf['geometry'])
 
-                    # Run query to get netowrk segments tables
-                    segments_query = f'''
-                    CREATE TEMP TABLE geo_table (
-                        name STRING,
-                        geometry_wkt STRING
-                    );
-                    INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
-                    CREATE TEMP TABLE query_geo AS
-                    SELECT
-                        name,
-                        SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
-                    FROM geo_table;
-                    
-                    SELECT *
-                    FROM {full_table_path}
+                # run query to get network segments table
+                segments_query = f'''
+                SELECT * FROM {full_table_path}
+                WHERE EXISTS( -- ensure that the subquery returns at least one row
+                    SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
+                    FROM {query_geometry}
                     WHERE
-                    EXISTS (
-                        SELECT 1 FROM (
-                            SELECT * FROM query_geo
-                            WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(startLon, startLat))
-                        )  
-                    )
-                    OR
-                    EXISTS (
-                        SELECT 1 FROM (
-                            SELECT * FROM query_geo
-                            WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT(endLon, endLat))
-                        )
-                    )
-                    '''
-                    segments_df: pandas.DataFrame = pandas_gbq.read_gbq(
-                        segments_query, project_id=self.project_id, dialect='standard')
-                    result_dfs.append(segments_df)
+                        ST_COVERS(query_geometry, ST_GEOGPOINT(startLon, startLat))
+                        OR ST_COVERS(query_geometry, ST_GEOGPOINT(endLon, endLat))
+                );
+                '''
+                segments_df: pandas.DataFrame = pandas_gbq.read_gbq(
+                    segments_query, project_id=self.project_id, dialect='standard')
+                result_dfs.append(segments_df)
 
-                    # convert to geodataframe
-                    geometry_wkt: pandas.Series = segments_df['geometry']
-                    geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
-                        geometry_wkt)
-                    segments_gdf = geopandas.GeoDataFrame(
-                        segments_df, geometry=geometry, crs="EPSG:4326")
+                # convert to geodataframe
+                geometry_wkt: pandas.Series = segments_df['geometry']
+                geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
+                    geometry_wkt)
+                segments_gdf = geopandas.GeoDataFrame(
+                    segments_df, geometry=geometry, crs="EPSG:4326")
 
-                    # save to file
-                    self._save(
-                        segments_gdf,
-                        area_name,
-                        table_name,
-                        'network_segments',
-                        'geoparquet'
-                    )
+                # save to file
+                self._save(
+                    segments_gdf,
+                    area_name,
+                    table_name,
+                    'network_segments',
+                    'geoparquet'
+                )
 
-                print(
-                    f"\nSuccessfully obtained data from {len(result_dfs)} network segments tables.")
+                print(f"\nSuccessfully obtained data from {full_table_path}.")
         else:
             print("No network segments tables found to process queries.")
 
@@ -191,60 +170,50 @@ class ReplicaETL:
                 # Set full_table_path be equal to the table_name column in the schema_df
                 full_table_path = f"{self.project_id}.{self.region}.{table_name}"
 
-                for _, row in gdf.iterrows():
-                    # this is a tuple for each row
-                    rows_str = str((row['name'], row['geometry_wkt']))
+                print(f'Running query for {full_table_path}...')
+                query_geometry = self._prepare_query_geometry(gdf['geometry'])
 
-                    # Run query to get netowrk segments tables
-                    pop_query = f'''
-                    CREATE TEMP TABLE geo_table (
-                        name STRING,
-                        geometry_wkt STRING
-                    );
-                    INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
-                    CREATE TEMP TABLE query_geo AS
-                    SELECT
-                        name,
-                        SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
-                    FROM geo_table;
-                    
-                    SELECT t.*
-                    FROM {full_table_path} AS t
-                    JOIN query_geo AS q
-                    ON ST_COVERS(q.geometry, ST_GEOGPOINT(t.lng, t.lat))
-                    
-                    '''
-                    population_df: pandas.DataFrame = pandas_gbq.read_gbq(
-                        pop_query, project_id=self.project_id, dialect='standard')
-                    result_dfs.append(population_df)
+                # Run query to get netowrk segments tables
+                pop_query = f'''
+                SELECT * FROM {full_table_path} AS pop
+                WHERE EXISTS( -- ensure that the subquery returns at least one row
+                    SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
+                    FROM {query_geometry}
+                    WHERE
+                        ST_COVERS(query_geometry, ST_GEOGPOINT(pop.lng, pop.lat))
+                );
+                '''
+                population_df: pandas.DataFrame = pandas_gbq.read_gbq(
+                    pop_query, project_id=self.project_id, dialect='standard')
+                result_dfs.append(population_df)
 
-                    # for each case, convert the lat-lng to a geometry column
-                    # and save to file
-                    population_cases = [
-                        ['home', 'lat', 'lng'],
-                        ['work', 'lat_work', 'lng_work'],
-                        ['school', 'lat_school', 'lng_school'],
-                    ]
-                    for [case, lat_column, lng_column] in population_cases:
-                        print(
-                            f'Converting geoemtry for population {case} coordinates...')
-                        population_gdf = geopandas.GeoDataFrame(
-                            population_df,
-                            geometry=geopandas.points_from_xy(
-                                population_df[lng_column], population_df[lat_column]),
-                            crs="EPSG:4326"
-                        )
+                # for each case, convert the lat-lng to a geometry column
+                # and save to file
+                population_cases = [
+                    ['home', 'lat', 'lng'],
+                    ['work', 'lat_work', 'lng_work'],
+                    ['school', 'lat_school', 'lng_school'],
+                ]
+                for [case, lat_column, lng_column] in population_cases:
+                    print(
+                        f'Converting geoemtry for population {case} coordinates...')
+                    population_gdf = geopandas.GeoDataFrame(
+                        population_df,
+                        geometry=geopandas.points_from_xy(
+                            population_df[lng_column], population_df[lat_column]),
+                        crs="EPSG:4326"
+                    )
 
-                        print(f'Saving geometry for population ({case})...')
-                        self._save(
-                            population_gdf,
-                            area_name,
-                            table_name + case,
-                            'population',
-                            'geoparquet'
-                        )
-                print(
-                    f"\nSuccessfully obtained data from {len(result_dfs)} population tables.")
+                    print(f'Saving geometry for population ({case})...')
+                    self._save(
+                        population_gdf,
+                        area_name,
+                        table_name + case,
+                        'population',
+                        'geoparquet'
+                    )
+
+                print(f"\nSuccessfully obtained data from {full_table_path}.")
         else:
             print("No population tables found to process queries.")
 
@@ -318,36 +287,65 @@ class ReplicaETL:
         else:
             print("No trip tables found to process queries.")
 
-    def _build_query(self, rows_str: str, full_table_path: str, origin_lng_col: str, origin_lat_col: str,
+    def _prepare_query_geometry(self, geometry_series: geopandas.GeoSeries) -> str:
+        """
+        Returns a portion of a SQL query to expose each dissolved polygon of the input
+        geometry series. To use in the query, the output of this function should be
+        directly included as part of the FROM clause.
+
+        For example:
+
+        ```
+        SELECT other_columns, {origin_lng_col}, {origin_lat_col}, {dest_lng_col}, {dest_lat_col}
+        FROM table_name, {query_geoemtry}
+        WHERE
+            ST_COVERS(query_geometry, ST_GEOGPOINT({origin_lng_col}, {origin_lat_col}))
+            OR ST_COVERS(query_geometry, ST_GEOGPOINT({dest_lng_col}, {dest_lat_col}));
+        ```
+        """
+        # create a GeoDataFrame from the geometry series
+        gdf = geopandas.GeoDataFrame(geometry_series, columns=[
+            'geometry'], crs="EPSG:4326")
+
+        # dissolve the GeoDataFrame to create a single geometry
+        dissolved_gdf = gdf.dissolve()
+
+        # get the WKT representation of the dissolved geometry
+        wkt_list = dissolved_gdf['geometry'].apply(
+            lambda x: shapely.wkt.dumps(x)).tolist()
+
+        # prepare the geometry for the query
+        prepared_gemmetry = ''
+        for wkt in wkt_list:
+            prepared_gemmetry += f'\nSAFE.ST_GEOGFROMTEXT("{wkt}"), '
+        # remove the last comma and space
+        prepared_gemmetry = prepared_gemmetry[:-2]
+
+        return f'''
+            UNNEST([
+                {prepared_gemmetry}
+            ]) AS query_geometry
+        '''
+
+    def _build_query(self, wkt_list: list[str], full_table_path: str, origin_lng_col: str, origin_lat_col: str,
                      dest_lng_col: str, dest_lat_col: str) -> str:
         '''
         Builds the query to get data from the replica dataset.        
         '''
+        # create an UNNEST clause with the geometry
+        geometry_series = geopandas.GeoSeries.from_wkt(wkt_list)
+        query_geometry = self._prepare_query_geometry(geometry_series)
+
         return f'''
-        CREATE TEMP TABLE geo_table (
-            name STRING,
-            geometry_wkt STRING
-        );
-        INSERT geo_table(name, geometry_wkt) VALUES {rows_str};
-        CREATE TEMP TABLE query_geo AS
-        SELECT
-            name,
-            SAFE.ST_GEOGFROMTEXT(geometry_wkt) AS geometry 
-        FROM geo_table;
         SELECT {self.columns_to_select}, {origin_lng_col}, {origin_lat_col}, {dest_lng_col}, {dest_lat_col}
         FROM {full_table_path}
-        WHERE
-        EXISTS (
-            SELECT 1
-            FROM query_geo
-            WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT({origin_lng_col}, {origin_lat_col}))   
-        )
-        OR
-        EXISTS (
-            SELECT 1
-            FROM query_geo
-            WHERE ST_COVERS(query_geo.geometry, ST_GEOGPOINT({dest_lng_col}, {dest_lat_col}))
-        )
+        WHERE EXISTS( -- ensure that the subquery returns at least one row
+            SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
+            FROM {query_geometry}
+            WHERE
+                ST_COVERS(query_geometry, ST_GEOGPOINT({origin_lng_col}, {origin_lat_col}))
+                OR ST_COVERS(query_geometry, ST_GEOGPOINT({dest_lng_col}, {dest_lat_col}))
+        );
         '''
 
     def _run_with_queue(self, gdf_upload: geopandas.GeoDataFrame, full_table_path: str, origin_lng_col: str,
@@ -358,34 +356,32 @@ class ReplicaETL:
         print(f'Generating chunked queries for table {full_table_path}...')
         for _, row in gdf_upload.iterrows():
             # this is a tuple for each row
-            row_str = str((row['name'], row['geometry_wkt']))
-            if (row_str == ''):
+            wkt = row['geometry_wkt']
+            if (wkt == ''):
                 continue
 
-            queue_is_full = queue_length + len(row_str) > max_query_chars
+            queue_is_full = queue_length + len(wkt) > max_query_chars
 
             # if the queue is not full, add the row to the queue and continue to the next row
             if (not queue_is_full):
-                queue.append(row_str)
-                queue_length += len(row_str)
+                queue.append(wkt)
+                queue_length += len(wkt)
                 continue
 
             # otherwise, generate the query for the current chunk/queue,
             # save it for execution, and then prepare a new chunk/queue
             # before queueing the current row
-            rows_str = ', '.join(queue)
-            query = self._build_query(rows_str, full_table_path, origin_lng_col,
+            query = self._build_query(queue, full_table_path, origin_lng_col,
                                       origin_lat_col, dest_lng_col, dest_lat_col)
             queries.append(query)
 
             # create a new queue with the current row
-            queue = [row_str]
-            queue_length = len(row_str)
+            queue = [wkt]
+            queue_length = len(wkt)
 
-        # if there is anything left in the queue, run create query for the last chunk
+        # if there is anything left in the queue, create a query for the last chunk
         if len(queue) > 0:
-            rows_str = ', '.join(queue)
-            query = self._build_query(rows_str, full_table_path, origin_lng_col, origin_lat_col,
+            query = self._build_query(queue, full_table_path, origin_lng_col, origin_lat_col,
                                       dest_lng_col, dest_lat_col)
             queries.append(query)
 
