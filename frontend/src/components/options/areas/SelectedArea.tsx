@@ -15,6 +15,7 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
         value={selectedArea ?? ''}
         style={{ width: '100%' }}
       >
+        {!selectedArea ? <option key="blank" value=""></option> : null}
         {areasList.map((area) => {
           return (
             <option key={area} value={area}>
