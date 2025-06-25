@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npm run beforestart && vite",
     "build": "npm run beforestart && tsc -b && vite build",
+    "build:gispreview": "NODE_ENV=development npm run build",
     "beforestart": "node beforeStart.js",
     "lint": "eslint .",
     "preview": "vite preview"

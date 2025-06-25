@@ -1,3 +1,4 @@
+import styled from '@emotion/styled';
 import {
   Button,
   CoreFrame,
@@ -255,7 +256,7 @@ export function DevModeComponentsAll() {
       </div>
 
       <h2>Section</h2>
-      <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+      <DevModeSections>
         <Section title="Section Title">
           <SectionEntry>
             <div>Card 1</div>
@@ -305,7 +306,17 @@ export function DevModeComponentsAll() {
             <div>Card 7</div>
           </SectionEntry>
         </Section>
-      </div>
+      </DevModeSections>
     </div>
   );
 }
+
+const DevModeSections = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+
+  div {
+    box-shadow: inset 0 0 1px black;
+  }
+`;
