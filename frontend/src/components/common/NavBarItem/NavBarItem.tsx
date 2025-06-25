@@ -5,7 +5,7 @@ interface NavItemProps {
   icon?: React.ReactNode;
   href?: string;
   isActive?: boolean;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
 }
 
 export function NavBarItem(props: NavItemProps) {
