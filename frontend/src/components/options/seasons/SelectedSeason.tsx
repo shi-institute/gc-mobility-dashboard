@@ -15,6 +15,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
         value={selectedSeason ?? ''}
         style={{ width: '100%' }}
       >
+        {!selectedSeason ? <option key="blank" value=""></option> : null}
         {seasonsList.map((season) => {
           const [quarter, year] = season.split(':');
           return (
