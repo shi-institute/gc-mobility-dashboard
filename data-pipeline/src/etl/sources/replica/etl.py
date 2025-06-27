@@ -553,8 +553,8 @@ class ReplicaETL:
         # save to file
         output_path = os.path.join(output_folder, output_name)
         if format == 'geoparquet':
-            gdf.to_parquet(output_path + '.geoparquet')
-            print(f'Saved results to {output_path}.geoparquet')
+            gdf.to_parquet(output_path + '.parquet')
+            print(f'Saved results to {output_path}.parquet')
         if format == 'json':
             gdf.to_json(output_path + '.json', orient='records', indent=2)
             print(f'Saved results to {output_path}.json')
