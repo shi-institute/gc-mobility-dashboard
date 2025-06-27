@@ -8,6 +8,7 @@ import geopandas
 import pandas
 import pandas_gbq
 import shapely
+import shapely.wkt
 
 logger = logging.getLogger('pandas_gbq')
 logger.setLevel(logging.INFO)
@@ -24,7 +25,7 @@ class ReplicaETL:
     clip_boundary = False
     use_bqstorage_api = False
 
-    def __init__(self, columns: list[str], years: Optional[int] = None, quarters: Optional[str] = None) -> None:
+    def __init__(self, columns: list[str], years: Optional[list[int]] = None, quarters: Optional[list[Literal['Q2', 'Q4']]] = None) -> None:
         """
         Initializes the replica ETL with a sepecific dataset and columns from that
         dataset.
@@ -110,192 +111,236 @@ class ReplicaETL:
                 # Getting Replica trip data
                 trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
 
-    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
-        result_dfs: pandas.DataFrame = []
-        # Loop through network segments tables and run queries
+    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> list[pandas.DataFrame]:
+        """Loop through network segments tables and run queries to get the data.
+
+        Args:
+            gdf (geopandas.GeoDataFrame): _description_
+            area_name (str): _description_
+            schema_df (pandas.DataFrame): _description_
+
+        Returns:
+            list[pandas.DataFrame]: _description_
+        """
+        result_dfs: list[pandas.DataFrame] = []
+
         # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
         schema_df = schema_df[schema_df['table_name'].str.endswith('segments')]
 
-        if schema_df is not None and not schema_df.empty:
-            for table_name in schema_df['table_name']:
-                # Set full_table_path be equal to the table_name column in the schema_df
-                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
-
-                print(f'Running query for {full_table_path}...')
-                query_geometry = self._prepare_query_geometry(gdf['geometry'])
-
-                # run query to get network segments table
-                segments_query = f'''
-                SELECT * FROM {full_table_path}
-                WHERE EXISTS( -- ensure that the subquery returns at least one row
-                    SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
-                    FROM {query_geometry}
-                    WHERE
-                        ST_COVERS(query_geometry, ST_GEOGPOINT(startLon, startLat))
-                        OR ST_COVERS(query_geometry, ST_GEOGPOINT(endLon, endLat))
-                );
-                '''
-                segments_df: pandas.DataFrame = pandas_gbq.read_gbq(
-                    segments_query,
-                    project_id=self.project_id,
-                    dialect='standard',
-                    use_bqstorage_api=self.use_bqstorage_api
-                )
-                result_dfs.append(segments_df)
-
-                # convert to geodataframe
-                geometry_wkt: pandas.Series = segments_df['geometry']
-                geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
-                    geometry_wkt)
-                segments_gdf = geopandas.GeoDataFrame(
-                    segments_df, geometry=geometry, crs="EPSG:4326")
-
-                # save to file
-                self._save(
-                    segments_gdf,
-                    area_name,
-                    table_name,
-                    'network_segments',
-                    'geoparquet'
-                )
-
-                print(f"\nSuccessfully obtained data from {full_table_path}.")
-        else:
+        if schema_df is None or schema_df.empty:
             print("No network segments tables found to process queries.")
+            return result_dfs
 
-    def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
-        result_dfs: pandas.DataFrame = []
-        # Loop through network segments tables and run queries
+        for table_name in schema_df['table_name']:
+            # Set full_table_path be equal to the table_name column in the schema_df
+            full_table_path = f"{self.project_id}.{self.region}.{table_name}"
+
+            print(f'Running query for {full_table_path}...')
+            geoseries = geopandas.GeoSeries(gdf['geometry'], crs="EPSG:4326")
+            query_geometry = self._prepare_query_geometry(geoseries)
+
+            # run query to get network segments table
+            segments_query = f'''
+            SELECT * FROM {full_table_path}
+            WHERE EXISTS( -- ensure that the subquery returns at least one row
+                SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
+                FROM {query_geometry}
+                WHERE
+                    ST_COVERS(query_geometry, ST_GEOGPOINT(startLon, startLat))
+                    OR ST_COVERS(query_geometry, ST_GEOGPOINT(endLon, endLat))
+            );
+            '''
+            segments_df = pandas_gbq.read_gbq(
+                segments_query,
+                project_id=self.project_id,
+                dialect='standard',
+                use_bqstorage_api=self.use_bqstorage_api
+            )
+            if segments_df is None:
+                segments_df = pandas.DataFrame()
+            result_dfs.append(segments_df)
+
+            # convert to geodataframe
+            geometry_wkt: pandas.Series = segments_df['geometry']
+            geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
+                geometry_wkt)
+            segments_gdf = geopandas.GeoDataFrame(
+                segments_df, geometry=geometry, crs="EPSG:4326")
+
+            # save to file
+            self._save(
+                segments_gdf,
+                area_name,
+                table_name,
+                'network_segments',
+                'geoparquet'
+            )
+
+            print(f"\nSuccessfully obtained data from {full_table_path}.")
+
+        return result_dfs
+
+    def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> list[pandas.DataFrame]:
+        """Loop through population tables and run queries to get the data.
+
+        Args:
+            gdf (geopandas.GeoDataFrame): _description_
+            area_name (str): _description_
+            schema_df (pandas.DataFrame): _description_
+
+        Returns:
+            list[pandas.DataFrame]: _description_
+        """
+        result_dfs: list[pandas.DataFrame] = []
+
         # Filter schema_df to only inclue the tables where the table_name column ends with 'population'
         schema_df = schema_df[schema_df['table_name'].str.endswith(
             'population')]
-        print(schema_df)
 
-        if schema_df is not None and not schema_df.empty:
-            for table_name in schema_df['table_name']:
-                # Set full_table_path be equal to the table_name column in the schema_df
-                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
-
-                print(f'Running query for {full_table_path}...')
-                query_geometry = self._prepare_query_geometry(gdf['geometry'])
-
-                # Run query to get netowrk segments tables
-                pop_query = f'''
-                SELECT * FROM {full_table_path} AS pop
-                WHERE EXISTS( -- ensure that the subquery returns at least one row
-                    SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
-                    FROM {query_geometry}
-                    WHERE
-                        ST_COVERS(query_geometry, ST_GEOGPOINT(pop.lng, pop.lat))
-                );
-                '''
-                population_df: pandas.DataFrame = pandas_gbq.read_gbq(
-                    pop_query,
-                    project_id=self.project_id,
-                    dialect='standard',
-                    use_bqstorage_api=self.use_bqstorage_api
-                )
-                result_dfs.append(population_df)
-
-                # for each case, convert the lat-lng to a geometry column
-                # and save to file
-                population_cases = [
-                    ['home', 'lat', 'lng'],
-                    ['work', 'lat_work', 'lng_work'],
-                    ['school', 'lat_school', 'lng_school'],
-                ]
-                for [case, lat_column, lng_column] in population_cases:
-                    print(
-                        f'Converting geoemtry for population {case} coordinates...')
-                    population_gdf = geopandas.GeoDataFrame(
-                        population_df,
-                        geometry=geopandas.points_from_xy(
-                            population_df[lng_column], population_df[lat_column]),
-                        crs="EPSG:4326"
-                    )
-
-                    print(f'Saving geometry for population ({case})...')
-                    self._save(
-                        population_gdf,
-                        area_name,
-                        table_name + case,
-                        'population',
-                        'geoparquet'
-                    )
-
-                print(f"\nSuccessfully obtained data from {full_table_path}.")
-        else:
+        if schema_df is None or schema_df.empty:
             print("No population tables found to process queries.")
+            return result_dfs
 
-    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> pandas.DataFrame:
-        # Loop through trip tables and run queries
-        all_trip_results = []
+        for table_name in schema_df['table_name']:
+            # Set full_table_path be equal to the table_name column in the schema_df
+            full_table_path = f"{self.project_id}.{self.region}.{table_name}"
+
+            print(f'Running query for {full_table_path}...')
+            geoseries = geopandas.GeoSeries(gdf['geometry'], crs="EPSG:4326")
+            query_geometry = self._prepare_query_geometry(geoseries)
+
+            # Run query to get netowrk segments tables
+            pop_query = f'''
+            SELECT * FROM {full_table_path} AS pop
+            WHERE EXISTS( -- ensure that the subquery returns at least one row
+                SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
+                FROM {query_geometry}
+                WHERE
+                    ST_COVERS(query_geometry, ST_GEOGPOINT(pop.lng, pop.lat))
+            );
+            '''
+            population_df = pandas_gbq.read_gbq(
+                pop_query,
+                project_id=self.project_id,
+                dialect='standard',
+                use_bqstorage_api=self.use_bqstorage_api
+            )
+            if population_df is None:
+                population_df = pandas.DataFrame()
+            result_dfs.append(population_df)
+
+            # for each case, convert the lat-lng to a geometry column
+            # and save to file
+            population_cases = [
+                ['home', 'lat', 'lng'],
+                ['work', 'lat_work', 'lng_work'],
+                ['school', 'lat_school', 'lng_school'],
+            ]
+            for [case, lat_column, lng_column] in population_cases:
+                print(
+                    f'Converting geoemtry for population {case} coordinates...')
+                population_gdf = geopandas.GeoDataFrame(
+                    population_df,
+                    geometry=geopandas.points_from_xy(
+                        population_df[lng_column], population_df[lat_column]),
+                    crs="EPSG:4326"
+                )
+
+                print(f'Saving geometry for population ({case})...')
+                self._save(
+                    population_gdf,
+                    area_name,
+                    table_name + case,
+                    'population',
+                    'geoparquet'
+                )
+
+            print(f"\nSuccessfully obtained data from {full_table_path}.")
+
+        return result_dfs
+
+    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> list[pandas.DataFrame]:
+        """Loop through trip tables and run queries to get the data. This gets trip data for thursday and saturday trips.
+
+        Args:
+            gdf (geopandas.GeoDataFrame): _description_
+            area_name (str): _description_
+            schema_df (pandas.DataFrame): _description_
+
+        Returns:
+            list[pandas.DataFrame]: _description_
+        """
+        all_trip_results: list[pandas.DataFrame] = []
+
         # Filter schema_df to only inclue the tables where the table_name column ends with 'trip'
         schema_df = self.schema_df[schema_df['table_name'].str.endswith(
             'trip')]
 
-        if schema_df is not None and not schema_df.empty:
-            for table_name in schema_df['table_name']:
-                # Set full_table_path be equal to the table_name column in the schema_df
-                full_table_path = f"{self.project_id}.{self.region}.{table_name}"
-                # Determine which columns to use based on the table name
-                if "2021_Q2" in table_name:
-                    origin_lng_col = "origin_lng"
-                    origin_lat_col = "origin_lat"
-                    dest_lng_col = "destination_lng"
-                    dest_lat_col = "destination_lat"
-                else:
-                    origin_lng_col = "start_lng"
-                    origin_lat_col = "start_lat"
-                    dest_lng_col = "end_lng"
-                    dest_lat_col = "end_lat"
-                table_df: pandas.DataFrame = self._run_with_queue(
-                    gdf, full_table_path=full_table_path,
-                    origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
-                    dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
-                )
-                if not table_df.empty:
-                    # Add a column to identify the source table
-                    table_df['source_table'] = table_name
-                    all_trip_results.append(table_df)
-
-                    # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
-                    # this regex will match the trip type
-                    trip_type_match = re.search(
-                        r'_(thursday|saturday)_trip', table_name)
-                    # If no match is found, default to 'other_trip'
-                    # this will get the trip type from the regex match
-                    trip_type = trip_type_match.group(
-                        0)[1:] if trip_type_match else 'other_trip'
-
-                    # for each case, convert the lat-lng to a geometry column
-                    # and save to file
-                    trip_cases = [
-                        ['origin', origin_lat_col, origin_lng_col],
-                        ['dest', dest_lat_col, dest_lng_col],
-                    ]
-                    for [case, lat_column, lng_column] in trip_cases:
-                        print(
-                            f'Converting geoemtry for {trip_type} {case} coordinates...')
-                        trip_gdf = geopandas.GeoDataFrame(
-                            table_df,
-                            geometry=geopandas.points_from_xy(
-                                table_df[lng_column], table_df[lat_column]),
-                            crs="EPSG:4326"
-                        )
-
-                        print(f'Saving geometry for {trip_type} ({case})...')
-                        self._save(
-                            trip_gdf,
-                            area_name,
-                            table_name + case,
-                            trip_type,
-                            'geoparquet'
-                        )
-            print(
-                f"\nSuccessfully obtained data from {len(all_trip_results)} trip tables.")
-        else:
+        if schema_df is None or schema_df.empty:
             print("No trip tables found to process queries.")
+            return all_trip_results
+
+        for table_name in schema_df['table_name']:
+            # Set full_table_path be equal to the table_name column in the schema_df
+            full_table_path = f"{self.project_id}.{self.region}.{table_name}"
+            # Determine which columns to use based on the table name
+            if "2021_Q2" in table_name:
+                origin_lng_col = "origin_lng"
+                origin_lat_col = "origin_lat"
+                dest_lng_col = "destination_lng"
+                dest_lat_col = "destination_lat"
+            else:
+                origin_lng_col = "start_lng"
+                origin_lat_col = "start_lat"
+                dest_lng_col = "end_lng"
+                dest_lat_col = "end_lat"
+            table_df = self._run_with_queue(
+                gdf, full_table_path=full_table_path,
+                origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
+                dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
+            )
+            if not table_df.empty:
+                # Add a column to identify the source table
+                table_df['source_table'] = table_name
+                all_trip_results.append(table_df)
+
+                # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
+                # this regex will match the trip type
+                trip_type_match = re.search(
+                    r'_(thursday|saturday)_trip', table_name)
+                # If no match is found, default to 'other_trip'
+                # this will get the trip type from the regex match
+                trip_type = trip_type_match.group(
+                    0)[1:] if trip_type_match else 'other_trip'
+
+                # for each case, convert the lat-lng to a geometry column
+                # and save to file
+                trip_cases = [
+                    ['origin', origin_lat_col, origin_lng_col],
+                    ['dest', dest_lat_col, dest_lng_col],
+                ]
+                for [case, lat_column, lng_column] in trip_cases:
+                    print(
+                        f'Converting geoemtry for {trip_type} {case} coordinates...')
+                    trip_gdf = geopandas.GeoDataFrame(
+                        table_df,
+                        geometry=geopandas.points_from_xy(
+                            table_df[lng_column], table_df[lat_column]),
+                        crs="EPSG:4326"
+                    )
+
+                    print(f'Saving geometry for {trip_type} ({case})...')
+                    self._save(
+                        trip_gdf,
+                        area_name,
+                        table_name + case,
+                        trip_type,
+                        'geoparquet'
+                    )
+
+        print(
+            f"\nSuccessfully obtained data from {len(all_trip_results)} trip tables.")
+        return all_trip_results
 
     def _prepare_query_geometry(self, geometry_series: geopandas.GeoSeries) -> str:
         """
@@ -398,11 +443,21 @@ class ReplicaETL:
         print(
             f'Generated {len(queries)} chunked queries for for table {full_table_path}.')
 
-        # create a function to process a query and collect the results
-        result_dfs: pandas.DataFrame = []
+        # create a function that can be run in parallel to execute the queries
+        # and collect the results in result_dfs
+        result_dfs: list[pandas.DataFrame] = []
         logger.setLevel(logging.WARNING)
 
         def process_query(query: str, index: int) -> None:
+            """Process a single query and collect the results in the external result_dfs list.
+
+            Args:
+                query (str): _description_
+                index (int): _description_
+
+            Raises:
+                e: _description_
+            """
             print(
                 f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
             try:
@@ -412,6 +467,8 @@ class ReplicaETL:
                     dialect='standard',
                     use_bqstorage_api=self.use_bqstorage_api
                 )
+                if df is None:
+                    df = pandas.DataFrame()
                 result_dfs.append(df)
             except Exception as e:
                 print('Failed to execute query')
@@ -439,13 +496,19 @@ class ReplicaETL:
             -- Extract the year (four digits after 'south_atlantic_')
             SPLIT(table_name, '_')[OFFSET(2)] AS year,
             -- Extract the quarter (Q and a digit)
-            REGEXP_EXTRACT(table_name, r'_([Qq]\d)_') AS quarter,
+            REGEXP_EXTRACT(table_name, r'_([Qq]\\d)_') AS quarter,
             -- Extract the dataset (the part after the season)
-            REGEXP_EXTRACT(table_name, r'_[Qq]\d_(.*)') AS dataset
+            REGEXP_EXTRACT(table_name, r'_[Qq]\\d_(.*)') AS dataset
         FROM
         `replica-customer.south_atlantic.INFORMATION_SCHEMA.TABLES`;
         '''
-        return pandas_gbq.read_gbq(query, project_id=self.project_id, dialect='standard')
+        result = pandas_gbq.read_gbq(
+            query, project_id=self.project_id, dialect='standard')
+
+        if result is None or result.empty:
+            raise ValueError("No tables found in the replica dataset schema.")
+
+        return result
 
     def list_files_in_folders(self, root_folder):
         all_files = []
