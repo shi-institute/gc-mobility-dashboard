@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import Literal, Optional
 
 import geopandas
 import pandas
@@ -7,10 +8,43 @@ from shapely import LineString
 
 from etl.downloader import Downloader
 
+type Quarter = Literal['Q2', 'Q4']
+type Season = tuple[int, Quarter]
+
 
 class GreentlinkGtfsETL:
     gtfs_download_url = 'https://gtfs.greenlink.cadavl.com/GTA/GTFS/GTFS_GTA.zip'
     folder_path = './data/greenlink_gtfs'
+    seasons: list[Season]
+
+    def __init__(self, seasons: Optional[list[Season]] = None):
+        """
+        Initialize the GreentlinkGtfsETL with the seasons to process.
+
+        Args:
+            seasons (Optional[tuple[int, str]]): A tuple containing the year and season to process.
+                If None, all seasons will be processed. The season is a tuple of (year, quarter),
+                where quarter is a string that is either 'Q2' or 'Q4'.
+        """
+        if seasons is None:
+            # form a tuple of seasons starting at fall 2019 until the current year
+            current_year = pandas.Timestamp.now().year
+            current_month = pandas.Timestamp.now().month
+            years = list(range(2019, current_year + 1))
+            quarters: list[Quarter] = ['Q2', 'Q4']
+            seasons = [(year, quarter) for year in years for quarter in quarters if not (
+                year == current_year and quarter == 'Q2' and current_month < 6)]
+        else:
+            # validate seasons
+            for year, quarter in seasons:
+                if not isinstance(year, int) or not (quarter in ['Q2', 'Q4']):
+                    raise ValueError(
+                        "Invalid season format. Expected (year: int, quarter: 'Q2' or 'Q4'). Got: ({}, {}).".format(year, quarter))
+
+        self.seasons = seasons
+
+        # create folder if it does not exist
+        os.makedirs(self.folder_path, exist_ok=True)
 
     def run(self):
         self.download()
