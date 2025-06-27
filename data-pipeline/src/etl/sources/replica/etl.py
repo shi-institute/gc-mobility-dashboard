@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Literal, Optional
 
 import geopandas
@@ -474,10 +474,25 @@ class ReplicaETL:
                 print('Failed to execute query')
                 raise e
 
+        def handle_query_error(future: Future[None]) -> None:
+            """Handle errors that occur during query execution."""
+            try:
+                future.result()  # This will raise an exception if the query failed
+            except Exception as e:
+                # stop all processing that has not begun if an error occurs
+                for future in futures:
+                    future.cancel()
+
+                print(f"Error processing query: {e}")
+                raise e
+
         # run all queries
+        futures: list[Future[None]] = []
         with ThreadPoolExecutor() as executor:
             for index, query in enumerate(queries):
-                executor.submit(process_query, query, index)
+                future = executor.submit(process_query, query, index)
+                future.add_done_callback(handle_query_error)
+                futures.append(future)
 
         # Merge all results
         logger.setLevel(logging.INFO)
