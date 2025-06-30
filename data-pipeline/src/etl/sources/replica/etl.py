@@ -608,15 +608,15 @@ class ReplicaETL:
             lambda x: shapely.wkt.dumps(x)).tolist()
 
         # prepare the geometry for the query
-        prepared_gemmetry = ''
+        prepared_geometry = ''
         for wkt in wkt_list:
-            prepared_gemmetry += f'\nSAFE.ST_GEOGFROMTEXT("{wkt}"), '
+            prepared_geometry += f'\nSAFE.ST_GEOGFROMTEXT("{wkt}"), '
         # remove the last comma and space
-        prepared_gemmetry = prepared_gemmetry[:-2]
+        prepared_geometry = prepared_geometry[:-2]
 
         return f'''
             UNNEST([
-                {prepared_gemmetry}
+                {prepared_geometry}
             ]) AS query_geometry
         '''
 
