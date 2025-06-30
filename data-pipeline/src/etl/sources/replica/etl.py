@@ -20,7 +20,6 @@ class ReplicaETL:
     region = 'south_atlantic'
     input_folder_path = './input/replica_interest_area_polygons'
     folder_path = './data/replica'
-    output_folder_path = './data/replica/Greenville County'
     columns_to_select = 'household_id'
     clip_boundary = False
     use_bqstorage_api = False
@@ -49,24 +48,35 @@ class ReplicaETL:
             mask = self.schema_df['quarter'].isin(quarters)
             self.schema_df = self.schema_df[mask]
 
-    def run(self):
-        # get all geojson files from the input folder
-        input_filenames = os.listdir(self.input_folder_path)
+    def run(self, mode: Literal['download', 'process', 'all'] = 'all') -> None:
+        """Downloads or processes the downloaded replica data.
 
-        geojson_filename = [
-            filename for filename in input_filenames if filename.endswith('.geojson')]
-        # List of files in the output folder
-        file_list = self.list_files_in_folders(self.output_folder_path)
+        In download mode, it downloads the data for the entire `full_area.geojson` boundary.
+        `full_area.geojson` is a singular polygon that covers the entire area of interest.
+        It should be provided in at `input/replica_interest_area_polygons/full_area.geojson`.
 
-        # process each geojson file
-        for filename in geojson_filename:
-            print(f'Processing {filename}...')
-            # extract the area name from the filename
-            area_name = os.path.splitext(filename)[0]
+        In process mode, it reads the other GeoJSON files from the `input/replica_interest_area_polygons` folder
+        and filters the data downloaded for the `full_area` extent to the boundary for each GeoJSON file.
+
+        In all mode (default), this method will automatically run in download mode
+        and then run in process mode.
+
+        Args:
+            mode (Literal['download', 'process', 'all']): The mode to run the ETL in. Defaults to 'all'. See method description for details.
+        """
+        full_area_filename = 'full_area.geojson'
+        full_area_path = os.path.join(
+            self.input_folder_path, full_area_filename)
+
+        if mode == 'all':
+            self.run(mode='download')
+            self.run(mode='process')
+
+        if mode == 'download':
+            area_name = 'full_area'
 
             # open the geojson file
-            gdf = geopandas.read_file(os.path.join(
-                self.input_folder_path, filename)).to_crs(epsg=4326)
+            gdf = geopandas.read_file(full_area_path).to_crs(epsg=4326)
 
             # dissolve the features in the gdf, for use in the network_segments
             # and population tables, which do not have batching logic implimented
@@ -86,32 +96,263 @@ class ReplicaETL:
             dissolved_gdf['geometry_wkt'] = dissolved_gdf['geometry'].apply(
                 lambda x: shapely.wkt.dumps(x))
 
-            # if the clip_boundary is set to True, clip the gdf to the geometry
-            if self.clip_boundary:
-                # clip county-wide data to neighborhood boundaries
-                for file in file_list:
-                    # Check if the file is a GeoJSON file
-                    if file.endswith('.json'):
-                        # Read the JSON file into a GeoDataFrame
-                        output_gdf = geopandas.read_file(file)
-                        # Clip the output_gdf to the gdf geometry
-                        clipped_gdf = geopandas.clip(output_gdf, gdf)
-                        # Save the clipped GeoDataFrame to a new file
-                        output_filename = os.path.join(
-                            self.output_folder_path, area_name + '_' + os.path.basename(filename))
-                        clipped_gdf.to_file(output_filename, driver='GeoJSON')
-                        print(f"Clipped results saved to {output_filename}")
-            else:
-                # # Getting network segments data
-                # segments_df = self._run_for_network_segments(
-                #     dissolved_gdf, area_name, self.schema_df)
-                # # Getting Replica population data
-                # pop_df = self._run_for_pop_(
-                #     dissolved_gdf, area_name, self.schema_df)
-                # Getting Replica trip data
-                trips_df = self._run_for_trips(gdf, area_name, self.schema_df)
+            # get network segments data
+            self._run_for_network_segments(dissolved_gdf, area_name)
+            # get population data
+            self._run_for_pop_(dissolved_gdf, area_name)
+            # get trip data (thursday and saturday trips)
+            self._run_for_trips(gdf, area_name)
 
-    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> list[pandas.DataFrame]:
+            print(f"\n\nSuccessfully downloaded data for {area_name}.")
+
+        if mode == 'process':
+            # determine the requested seasons
+            # (get a dataframe of each unique set of region, year, and quarter)
+            seasons = self.schema_df.drop(
+                columns=['table_name', 'dataset']).drop_duplicates().reset_index(drop=True)
+
+            # require that the expected parquet files exist
+            expected_parquet_files = [
+                'full_area/network_segments/{region}_{year}_{quarter}.parquet',
+                'full_area/population/{region}_{year}_{quarter}_home.parquet',
+                'full_area/population/{region}_{year}_{quarter}_school.parquet',
+                'full_area/population/{region}_{year}_{quarter}_work.parquet',
+                'full_area/saturday_trip/{region}_{year}_{quarter}_dest.parquet',
+                'full_area/saturday_trip/{region}_{year}_{quarter}_origin.parquet',
+                'full_area/thursday_trip/{region}_{year}_{quarter}_dest.parquet',
+                'full_area/thursday_trip/{region}_{year}_{quarter}_origin.parquet',
+            ]
+            for season in seasons.itertuples():
+                for expected_filename_template in expected_parquet_files:
+                    expected_filename = expected_filename_template.format(
+                        region=season.region, year=season.year, quarter=season.quarter)
+                    full_expected_path = os.path.join(
+                        self.folder_path, expected_filename)
+                    if not os.path.exists(full_expected_path):
+                        raise FileNotFoundError(
+                            f"Expected output file {full_expected_path} does not exist. Please run in 'download' mode first.")
+
+            # get all geojson file names from the input folder
+            # so we can filter/process the full_area data to each geojson file extent
+            input_filenames = os.listdir(self.input_folder_path)
+            geojson_filenames = list(sorted([
+                filename for filename in input_filenames if filename.endswith('.geojson') and filename != full_area_filename
+            ]))
+
+            for season in seasons.itertuples():
+                region = season.region
+                year = season.year
+                quarter = season.quarter
+
+                print(f'\nProcessing season {year} {quarter} for region {region}...')
+
+                print(f'  Opening source data for season {year} {quarter}')
+
+                print(f'    ...network segments [1/8]')
+                network_segments = geopandas.read_parquet(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[0].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...population data (home) [2/8]')
+                population_home = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[1].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...population data (school) [3/8]')
+                population_school = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[2].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...population data (work) [4/8]')
+                population_work = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[3].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...saturday trip (dest) [5/8]')
+                saturday_trip_dest = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[4].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...saturday trip (origin) [6/8]')
+                saturday_trip_origin = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[5].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...thursday trip (dest) [7/8]')
+                thursday_trip_dest = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[6].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...thursday trip (origin) [8/8]')
+                thursday_trip_origin = geopandas.read_file(os.path.join(
+                    self.folder_path,
+                    expected_parquet_files[7].format(region=region, year=year, quarter=quarter)
+                ))
+
+                for filename in geojson_filenames:
+                    # extract the area name from the filename
+                    area_name = os.path.splitext(filename)[0]
+
+                    print('Processing area:', area_name)
+
+                    # open the geojson file
+                    gdf = geopandas.read_file(os.path.join(
+                        self.input_folder_path, filename)).to_crs(epsg=4326)
+                    gdf_union = gdf.geometry.union_all()
+
+                    # clip all of the geodataframes such that they are only within
+                    # the area for the current geojson file
+                    print(f'  Filtering data for {area_name}...')
+
+                    def filter_intersected(gdf: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
+                        """Filter the GeoDataFrame to only include geometries that intersect with the gdf."""
+                        return gdf[gdf.intersects(gdf_union)]
+
+                    def merge_filtered(gdfs: list[geopandas.GeoDataFrame], id_column: str) -> geopandas.GeoDataFrame:
+                        """Merge filtered GeoDataFrames.
+
+                        Args:
+                            gdfs (list[geopandas.GeoDataFrame]): The list of GeoDataFrames to merge.
+                            id_column (str): The name of the ID column to use for merging.
+
+                        Returns:
+                            geopandas.GeoDataFrame: The merged DataFrame.
+                        """
+
+                        # fmt: off
+                        merged: geopandas.GeoDataFrame = pandas.concat(gdfs, ignore_index=True) # type: ignore
+                        # fmt: on
+
+                        # drop duplicates based on id field
+                        merged = merged.drop_duplicates(subset=[id_column])
+
+                        # empty the geometry column
+                        merged['geometry'] = None
+
+                        return merged
+
+                    print(f'    ...network segments [1/11]')
+                    network_segments_filtered = filter_intersected(network_segments)
+                    print(f'    ...population (home) [2/11]')
+                    population_home_filtered = filter_intersected(population_home)
+                    print(f'    ...population (school) [3/11]')
+                    population_school_filtered = filter_intersected(population_school)
+                    print(f'    ...population (work) [4/11]')
+                    population_work_filtered = filter_intersected(population_work)
+                    print(f'    ...population (all) [5/11]')
+                    population_filtered_df = merge_filtered(
+                        [population_home_filtered, population_school_filtered, population_work_filtered],
+                        'person_id'
+                    )
+                    print(f'    ...saturday trip (dest) [6/11]')
+                    saturday_trip_dest_filtered = filter_intersected(saturday_trip_dest)
+                    print(f'    ...saturday trip (origin) [7/11]')
+                    saturday_trip_origin_filtered = filter_intersected(saturday_trip_origin)
+                    print(f'    ...saturday trip (all) [8/11]')
+                    saturday_trip_filtered_df = merge_filtered(
+                        [saturday_trip_dest_filtered, saturday_trip_origin_filtered],
+                        'activity_id'
+                    )
+                    print(f'    ...thursday trip (dest) [9/11]')
+                    thursday_trip_dest_filtered = filter_intersected(thursday_trip_dest)
+                    print(f'    ...thursday trip (origin) [10/11]')
+                    thursday_trip_origin_filtered = filter_intersected(thursday_trip_origin)
+                    print(f'    ...thursday trip (all) [11/11]')
+                    thursday_trip_filtered_df = merge_filtered(
+                        [thursday_trip_dest_filtered, thursday_trip_origin_filtered],
+                        'activity_id'
+                    )
+
+                    # save the filtered data to files
+                    print(f'  Saving filtered data for {area_name}...')
+                    self._save(
+                        network_segments_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}',
+                        'network_segments',
+                        ['geoparquet', 'json'],
+                    )
+                    self._save(
+                        population_home_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_home',
+                        'population',
+                        'geoparquet',
+                    )
+                    self._save(
+                        population_school_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_school',
+                        'population',
+                        'geoparquet',
+                    )
+                    self._save(
+                        population_work_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_work',
+                        'population',
+                        'geoparquet',
+                    )
+                    self._save(
+                        population_filtered_df,
+                        area_name,
+                        f'{region}_{year}_{quarter}',
+                        'population',
+                        'json',
+                    )
+                    self._save(
+                        saturday_trip_dest_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_saturday_trip_dest',
+                        'saturday_trip',
+                        'geoparquet',
+                    )
+                    self._save(
+                        saturday_trip_origin_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_saturday_trip_origin',
+                        'saturday_trip',
+                        'geoparquet',
+                    )
+                    self._save(
+                        saturday_trip_filtered_df,
+                        area_name,
+                        f'{region}_{year}_{quarter}_saturday_trip',
+                        'saturday_trip',
+                        'json',
+                    )
+                    self._save(
+                        thursday_trip_dest_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_thursday_trip_dest',
+                        'thursday_trip',
+                        'geoparquet',
+                    )
+                    self._save(
+                        thursday_trip_origin_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_thursday_trip_origin',
+                        'thursday_trip',
+                        'geoparquet',
+                    )
+                    self._save(
+                        thursday_trip_filtered_df,
+                        area_name,
+                        f'{region}_{year}_{quarter}_thursday_trip',
+                        'thursday_trip',
+                        'json',
+                    )
+
+                    print(f'  Finished processing area {area_name}.')
+
+    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through network segments tables and run queries to get the data.
 
         Args:
@@ -125,7 +366,7 @@ class ReplicaETL:
         result_dfs: list[pandas.DataFrame] = []
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
-        schema_df = schema_df[schema_df['table_name'].str.endswith('segments')]
+        schema_df = self.schema_df[self.schema_df['table_name'].str.endswith('segments')]
 
         if schema_df is None or schema_df.empty:
             print("No network segments tables found to process queries.")
@@ -180,7 +421,7 @@ class ReplicaETL:
 
         return result_dfs
 
-    def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> list[pandas.DataFrame]:
+    def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through population tables and run queries to get the data.
 
         Args:
@@ -194,8 +435,7 @@ class ReplicaETL:
         result_dfs: list[pandas.DataFrame] = []
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'population'
-        schema_df = schema_df[schema_df['table_name'].str.endswith(
-            'population')]
+        schema_df = self.schema_df[self.schema_df['table_name'].str.endswith('population')]
 
         if schema_df is None or schema_df.empty:
             print("No population tables found to process queries.")
@@ -259,7 +499,7 @@ class ReplicaETL:
 
         return result_dfs
 
-    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str, schema_df: pandas.DataFrame) -> list[pandas.DataFrame]:
+    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through trip tables and run queries to get the data. This gets trip data for thursday and saturday trips.
 
         Args:
@@ -273,8 +513,7 @@ class ReplicaETL:
         all_trip_results: list[pandas.DataFrame] = []
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'trip'
-        schema_df = self.schema_df[schema_df['table_name'].str.endswith(
-            'trip')]
+        schema_df = self.schema_df[self.schema_df['table_name'].str.endswith('trip')]
 
         if schema_df is None or schema_df.empty:
             print("No trip tables found to process queries.")
@@ -525,15 +764,13 @@ class ReplicaETL:
 
         return result
 
-    def list_files_in_folders(self, root_folder):
-        all_files = []
-        for folder_path, _, files in os.walk(root_folder):
-            for file in files:
-                file_path = os.path.join(folder_path, file)
-                all_files.append(file_path)
-        return all_files
+    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json'] | list[Literal['geoparquet', 'json']]) -> None:
+        # if format is a list, call this function for each format in the list
+        if isinstance(format, list):
+            for fmt in format:
+                self._save(gdf, area_name, full_table_name, table_alias, fmt)
+            return
 
-    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json']) -> None:
         # build the output name
         output_name = full_table_name\
             .replace('.', ' ')\
@@ -553,10 +790,10 @@ class ReplicaETL:
         # save to file
         output_path = os.path.join(output_folder, output_name)
         if format == 'geoparquet':
-            gdf.to_parquet(output_path + '.parquet')
+            gdf.to_parquet(output_path + '.parquet',
+                           write_covering_bbox=True, geometry_encoding='WKB', schema_version='1.1.0')
             print(f'Saved results to {output_path}.parquet')
         if format == 'json':
-            gdf.to_json(output_path + '.json', orient='records', indent=2)
+            df = pandas.DataFrame(gdf.drop(columns='geometry', errors='ignore'))
+            df.to_json(output_path + '.json', orient='records', indent=2)
             print(f'Saved results to {output_path}.json')
-
-# Function to clip Greenville City trips, network segments, and population data to the boundaries of different neighborhoods
