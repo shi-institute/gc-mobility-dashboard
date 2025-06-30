@@ -21,7 +21,6 @@ class ReplicaETL:
     input_folder_path = './input/replica_interest_area_polygons'
     folder_path = './data/replica'
     columns_to_select = 'household_id'
-    clip_boundary = False
     use_bqstorage_api = os.getenv('USE_BIGQUERY_STORAGE_API', '0') == '1'
 
     def __init__(self, columns: list[str], years: Optional[list[int]] = None, quarters: Optional[list[Literal['Q2', 'Q4']]] = None) -> None:
