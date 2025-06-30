@@ -22,7 +22,7 @@ class ReplicaETL:
     folder_path = './data/replica'
     columns_to_select = 'household_id'
     clip_boundary = False
-    use_bqstorage_api = False
+    use_bqstorage_api = os.getenv('USE_BIGQUERY_STORAGE_API', '0') == '1'
 
     def __init__(self, columns: list[str], years: Optional[list[int]] = None, quarters: Optional[list[Literal['Q2', 'Q4']]] = None) -> None:
         """
