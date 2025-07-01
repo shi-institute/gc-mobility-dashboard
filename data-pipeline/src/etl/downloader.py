@@ -1,7 +1,7 @@
 import os
 import shutil
 import zipfile
-from typing import Self
+from typing import Mapping, Self
 
 import requests
 
@@ -21,7 +21,7 @@ class Downloader:
         self.file_url = file_url
         self.download_file_name = download_file_name
 
-    def download(self, verify: bool = True, replace: bool = True) -> Self:
+    def download(self, verify: bool = True, replace: bool = True, *, headers: Mapping[str, str | bytes | None] | None = None) -> Self:
         """
         Download a file from a URL and save it to a specified location.
 
@@ -48,7 +48,7 @@ class Downloader:
                 shutil.rmtree(self.download_file_name)
 
         try:
-            response = requests.get(self.file_url, verify=verify)
+            response = requests.get(self.file_url, verify=verify, headers=headers)
             response.raise_for_status()  # Raise an error for bad responses
             with open(self.download_file_name, 'wb') as file:
                 file.write(response.content)
