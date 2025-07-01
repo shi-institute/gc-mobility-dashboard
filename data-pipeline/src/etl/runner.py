@@ -1,13 +1,7 @@
-
-
 import importlib
 import os
 import sys
 from typing import Optional
-
-from etl.merge import merge_json_array_files
-from etl.sources.census_acs_5year.etl import CensusACS5YearEstimatesETL
-from etl.sources.greenlink_gtfs.etl import GreentlinkGtfsETL
 
 # get the absolute path to the directory containing the source runners
 sources_dir = os.path.join(os.path.dirname(__file__), 'sources')
