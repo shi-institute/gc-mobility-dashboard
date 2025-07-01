@@ -230,8 +230,10 @@ jobs:
       - name: Create sample input data
         env:
           GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
+          AREA_GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.41,34.853],[-82.41,34.849],[-82.39,34.849],[-82.39,34.853],[-82.41,34.853]]]}}]}'
         run: |
           mkdir -p ${{ github.workspace }}/replica-input/replica_interest_area_polygons
+          echo $AREA_GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/full_area.geojson
           echo $GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/sample.geojson
 
       - name: Run test
