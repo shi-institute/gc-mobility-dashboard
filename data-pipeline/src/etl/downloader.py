@@ -1,7 +1,7 @@
 import os
 import shutil
 import zipfile
-from typing import Self
+from typing import Mapping, Self
 
 import requests
 
@@ -21,7 +21,7 @@ class Downloader:
         self.file_url = file_url
         self.download_file_name = download_file_name
 
-    def download(self, verify: bool = True, replace: bool = True) -> Self:
+    def download(self, verify: bool = True, replace: bool = True, *, headers: Mapping[str, str | bytes | None] | None = None, raise_on_request_error: bool = False) -> Self:
         """
         Download a file from a URL and save it to a specified location.
 
@@ -30,6 +30,8 @@ class Downloader:
             download_file_name (str): The name of the file to save the downloaded content as.
             verify (bool): Whether to verify the SSL certificate. Defaults to True.
             replace (bool): Whether to replace the existing file. Defaults to True.
+            headers (Mapping[str, str | bytes | None] | None): Optional headers to include in the request.
+            raise_on_request_error (bool): Whether to raise an exception on request errors. Defaults to False.
         """
 
         # if the file already exists and replace is False, do not re-download
@@ -48,7 +50,8 @@ class Downloader:
                 shutil.rmtree(self.download_file_name)
 
         try:
-            response = requests.get(self.file_url, verify=verify)
+            response = requests.get(
+                self.file_url, verify=verify, headers=headers)
             response.raise_for_status()  # Raise an error for bad responses
             with open(self.download_file_name, 'wb') as file:
                 file.write(response.content)
@@ -56,6 +59,8 @@ class Downloader:
                 f"Downloaded {self.file_url} and saved as {self.download_file_name}")
         except requests.exceptions.RequestException as e:
             print(f"Error downloading {self.file_url}: {e}")
+            if raise_on_request_error:
+                raise e
 
         return self
 
