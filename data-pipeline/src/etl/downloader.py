@@ -30,6 +30,8 @@ class Downloader:
             download_file_name (str): The name of the file to save the downloaded content as.
             verify (bool): Whether to verify the SSL certificate. Defaults to True.
             replace (bool): Whether to replace the existing file. Defaults to True.
+            headers (Mapping[str, str | bytes | None] | None): Optional headers to include in the request.
+            raise_on_request_error (bool): Whether to raise an exception on request errors. Defaults to False.
         """
 
         # if the file already exists and replace is False, do not re-download
