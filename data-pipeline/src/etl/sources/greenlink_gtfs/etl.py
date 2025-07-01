@@ -13,7 +13,7 @@ type Quarter = Literal['Q2', 'Q4']
 type Season = tuple[int, Quarter]
 
 
-class GreentlinkGtfsETL:
+class GreenlinkGtfsETL:
     gtfs_download_url = 'https://gtfs.greenlink.cadavl.com/GTA/GTFS/GTFS_GTA.zip'
     folder_path = './data/greenlink_gtfs'
 
@@ -254,8 +254,8 @@ def convert_shapes(shapes_csv_file: str) -> str:
     # read shapes to datframe
     shapes_df = pandas.read_csv(shapes_csv_file)
 
-    # Shapes are represented as a sequency of points.
-    # We can follow the sequency for each shape_id to
+    # Shapes are represented as a sequence of points.
+    # We can follow the sequence for each shape_id to
     # create a LINESTRING for each shape_id.
     linestrings = shapes_df.sort_values(['shape_id', 'shape_pt_sequence'], ascending=True).groupby('shape_id').agg(
         geometry=('shape_pt_lon', lambda x: LineString(
