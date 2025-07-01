@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import time
 from typing import Optional
 
 import pandas_gbq
@@ -14,6 +15,10 @@ if __name__ == "__main__":
     docker = False
     if os.path.exists('/.dockerenv'):
         docker = True
+
+    # check if the script is running in GitHub Actions
+    is_running_in_github_actions = os.getenv(
+        'GITHUB_ACTIONS', 'false').lower() == 'true'
 
     # configure arguments
     parser = argparse.ArgumentParser(
@@ -46,14 +51,33 @@ if __name__ == "__main__":
     if args.etls:
         etls = [string.strip() for string in args.etls.split(',')]
 
-    print("Checking credentials...")
-    try:
-        credentials = pydata_google_auth.load_user_credentials(
-            './credentials/bigquery_credentials.json')
-        pandas_gbq.context.credentials = credentials
-    except (Exception) as e:
-        print("Credentials not found. Please run the authentication script.")
-        exit(1)
+    if (etls is None or 'replica' in etls):
+        print("Checking credentials...")
+        try:
+            credentials = pydata_google_auth.load_user_credentials(
+                './credentials/bigquery_credentials.json')
+            pandas_gbq.context.credentials = credentials
+        except (Exception) as e:
+            print('\n\n' + "-" * 78)
+            print("Warning: Google BigQuery credentials are not set.")
+            print(
+                '         Please run the authentication script to retrieve credentials.')
+            print("-" * 78 + '\n\n')
+            exit(1)
+
+    if (etls is None or 'greenlink_gtfs' in etls):
+        # unless running on GitHub Actions, print a warning if the API key is not set
+        transitland_api_key = os.getenv('TRANSITLAND_API_KEY', None)
+        if transitland_api_key is None:
+            print('\n\n' + "-" * 78)
+            print(
+                "Warning: TRANSITLAND_API_KEY is not set. Current GTFS data will be substituted\n         for historical GTFS data.")
+            print("\n         To get the historical GTFS data, set the TRANSITLAND_API_KEY\n         environment variable.")
+            print("-" * 78 + '\n\n')
+
+            # wait for 10 seconds before continuing
+            if not is_running_in_github_actions:
+                time.sleep(10)
 
     # run the ETL pipeline
     etl_runner(etls)
