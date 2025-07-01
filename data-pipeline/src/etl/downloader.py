@@ -21,7 +21,7 @@ class Downloader:
         self.file_url = file_url
         self.download_file_name = download_file_name
 
-    def download(self, verify: bool = True, replace: bool = True, *, headers: Mapping[str, str | bytes | None] | None = None) -> Self:
+    def download(self, verify: bool = True, replace: bool = True, *, headers: Mapping[str, str | bytes | None] | None = None, raise_on_request_error: bool = False) -> Self:
         """
         Download a file from a URL and save it to a specified location.
 
@@ -48,7 +48,8 @@ class Downloader:
                 shutil.rmtree(self.download_file_name)
 
         try:
-            response = requests.get(self.file_url, verify=verify, headers=headers)
+            response = requests.get(
+                self.file_url, verify=verify, headers=headers)
             response.raise_for_status()  # Raise an error for bad responses
             with open(self.download_file_name, 'wb') as file:
                 file.write(response.content)
@@ -56,6 +57,8 @@ class Downloader:
                 f"Downloaded {self.file_url} and saved as {self.download_file_name}")
         except requests.exceptions.RequestException as e:
             print(f"Error downloading {self.file_url}: {e}")
+            if raise_on_request_error:
+                raise e
 
         return self
 
