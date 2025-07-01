@@ -13,4 +13,7 @@
     "**/.mypy_cache/": true
   },
   "python.analysis.typeCheckingMode": "standard",
+  "autopep8.args": [
+    "--max-line-length=99"
+  ],
 }
