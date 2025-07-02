@@ -39,13 +39,7 @@ class ReplicaETL:
             os.makedirs(self.folder_path)
 
         # get the schema for the replica dataset
-        self.schema_df = self.read_schema()
-        if years is not None:
-            mask = self.schema_df['year'].astype(int).isin(years)
-            self.schema_df = self.schema_df[mask]
-        if quarters is not None:
-            mask = self.schema_df['quarter'].isin(quarters)
-            self.schema_df = self.schema_df[mask]
+        self.tables_to_download_df = self.query_schema(years, quarters)
 
     def run(self, mode: Literal['download', 'process', 'all'] = 'all') -> None:
         """Downloads or processes the downloaded replica data.
@@ -74,6 +68,10 @@ class ReplicaETL:
             self.run(mode='process')
 
         if mode == 'download':
+            if self.tables_to_download_df.empty:
+                print('\nNo tables to download based on the provided season filters.')
+                return
+
             area_name = 'full_area'
 
             # open the geojson file
@@ -109,20 +107,11 @@ class ReplicaETL:
         if mode == 'process':
             # determine the requested seasons
             # (get a dataframe of each unique set of region, year, and quarter)
-            seasons = self.schema_df.drop(
+            seasons = self.infer_schema().drop(
                 columns=['table_name', 'dataset']).drop_duplicates().reset_index(drop=True)
 
             # require that the expected parquet files exist
-            expected_parquet_files = [
-                'full_area/network_segments/{region}_{year}_{quarter}.parquet',
-                'full_area/population/{region}_{year}_{quarter}_home.parquet',
-                'full_area/population/{region}_{year}_{quarter}_school.parquet',
-                'full_area/population/{region}_{year}_{quarter}_work.parquet',
-                'full_area/saturday_trip/{region}_{year}_{quarter}_dest.parquet',
-                'full_area/saturday_trip/{region}_{year}_{quarter}_origin.parquet',
-                'full_area/thursday_trip/{region}_{year}_{quarter}_dest.parquet',
-                'full_area/thursday_trip/{region}_{year}_{quarter}_origin.parquet',
-            ]
+            expected_parquet_files = self._getExpectedParquetFilePaths()
             for season in seasons.itertuples():
                 for expected_filename_template in expected_parquet_files:
                     expected_filename = expected_filename_template.format(
@@ -353,6 +342,24 @@ class ReplicaETL:
 
                     print(f'  Finished processing area {area_name}.')
 
+    def _getExpectedParquetFilePaths(self) -> list[str]:
+        """Get the expected parquet file paths for the replica data.
+
+        Returns:
+            list[str]: A list of expected parquet file paths.
+        """
+        expected_parquet_files = [
+            'full_area/network_segments/{region}_{year}_{quarter}.parquet',
+            'full_area/population/{region}_{year}_{quarter}_home.parquet',
+            'full_area/population/{region}_{year}_{quarter}_school.parquet',
+            'full_area/population/{region}_{year}_{quarter}_work.parquet',
+            'full_area/saturday_trip/{region}_{year}_{quarter}_dest.parquet',
+            'full_area/saturday_trip/{region}_{year}_{quarter}_origin.parquet',
+            'full_area/thursday_trip/{region}_{year}_{quarter}_dest.parquet',
+            'full_area/thursday_trip/{region}_{year}_{quarter}_origin.parquet',
+        ]
+        return expected_parquet_files
+
     def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through network segments tables and run queries to get the data.
 
@@ -367,10 +374,10 @@ class ReplicaETL:
         result_dfs: list[pandas.DataFrame] = []
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
-        schema_df = self.schema_df[self.schema_df['table_name'].str.endswith('segments')]
+        schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
+            'segments')]
 
         if schema_df is None or schema_df.empty:
-            print("No network segments tables found to process queries.")
             return result_dfs
 
         for table_name in schema_df['table_name']:
@@ -436,10 +443,10 @@ class ReplicaETL:
         result_dfs: list[pandas.DataFrame] = []
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'population'
-        schema_df = self.schema_df[self.schema_df['table_name'].str.endswith('population')]
+        schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
+            'population')]
 
         if schema_df is None or schema_df.empty:
-            print("No population tables found to process queries.")
             return result_dfs
 
         for table_name in schema_df['table_name']:
@@ -514,10 +521,10 @@ class ReplicaETL:
         all_trip_results: list[pandas.DataFrame] = []
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'trip'
-        schema_df = self.schema_df[self.schema_df['table_name'].str.endswith('trip')]
+        schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
+            'trip')]
 
         if schema_df is None or schema_df.empty:
-            print("No trip tables found to process queries.")
             return all_trip_results
 
         for table_name in schema_df['table_name']:
@@ -739,7 +746,7 @@ class ReplicaETL:
         executor.shutdown(wait=True)  # wait for all futures to finish
         return pandas.concat(result_dfs, ignore_index=True)
 
-    def schema_query(self) -> pandas.DataFrame:
+    def _run_schema_query(self) -> pandas.DataFrame:
         """
         Returns the schema for the replica dataset.
         """
@@ -758,14 +765,19 @@ class ReplicaETL:
         `replica-customer.south_atlantic.INFORMATION_SCHEMA.TABLES`;
         '''
         result = pandas_gbq.read_gbq(
-            query, project_id=self.project_id, dialect='standard')
+            query, project_id=self.project_id, dialect='standard', progress_bar_type='None')
 
         if result is None or result.empty:
             raise ValueError("No tables found in the replica dataset schema.")
 
+        # only keep network_segments, population, thursday_trip, and saturday_trip tables
+        mask = result['table_name'].str.contains(
+            'network_segments|population|thursday_trip|saturday_trip')
+        result = result[mask].reset_index(drop=True)
+
         return result
 
-    def read_schema(self) -> pandas.DataFrame:
+    def query_schema(self, years_filter: Optional[list[int]] = None, quarters_filter: Optional[list[Literal['Q2', 'Q4']]] = None) -> pandas.DataFrame:
         """Gets a dataframe of available replica datasets.
 
         If not authenticated (or the schema query fails), it will attempt
@@ -777,62 +789,124 @@ class ReplicaETL:
         Returns:
             pandas.DataFrame: A pandas data frame containing columns `table_name`, `region`, `year`, `quarter`, `dataset`
         """
+        inferred_schema_df = self.infer_schema(strict=True)
 
-        try:
-            if not pandas_gbq.context.credentials:
-                raise RuntimeError("No credentials available for pandas_gbq.")
-            schema_df = self.schema_query()
-            return schema_df
-        except:
-            full_area_path = os.path.join(self.folder_path, 'full_area')
-            if not os.path.exists(full_area_path):
-                raise FileNotFoundError(
-                    f"Schema query failed and no full_area file found at {full_area_path}. Please authenticate with BigQuery or provide the full_area data in {full_area_path}.")
+        new_seasons_schema_df: pandas.DataFrame
+        if pandas_gbq.context.credentials:
+            schema_df = self._run_schema_query()
 
-            # find the available tables in the full_area folder
-            inferred_schema_rows = []
-            for root, _, files in os.walk(full_area_path):
-                for filename in files:
-                    if filename.endswith('.parquet'):
+            # skip seasons that are already downloaded (they are in the inferred schema)
+            # by removing table names from schema_df if the table name is in the inferred schema
+            name_is_in_inferred_schema_mask = schema_df['table_name'].isin(
+                inferred_schema_df['table_name'])
+            filtered_schema_df = schema_df[~name_is_in_inferred_schema_mask].reset_index(drop=True)
 
-                        # extract the table info from the file path
-                        relative_path = os.path.relpath(
-                            os.path.join(root, filename), full_area_path)
-                        [dataset, partial_table_name] = relative_path.split(os.sep)
+            skipped_schema_df = schema_df[name_is_in_inferred_schema_mask].reset_index(drop=True)
+            skipped_table_names = skipped_schema_df['table_name'].tolist()
 
-                        # remove suffixes
-                        partial_table_name = partial_table_name\
-                            .replace('.parquet', '')\
-                            .replace('_home', '')\
-                            .replace('_school', '')\
-                            .replace('_work', '')\
-                            .replace('_dest', '')\
-                            .replace('_origin', '')
+            for skipped_table_name in skipped_table_names:
+                print(f"  Skipping already downloaded table: {skipped_table_name}")
 
-                        # extract the parts of the table name
-                        parts = partial_table_name.split('_')
-                        quarter = parts[-1]
-                        year = parts[-2]
-                        region = '_'.join(parts[0:-2])
+            new_seasons_schema_df = filtered_schema_df
+        else:
+            # if not authenticated, use the inferred schema
+            new_seasons_schema_df = inferred_schema_df
 
-                        inferred_schema_rows.append({
-                            'table_name': f'{region}_{year}_{quarter}_{dataset}',
-                            'region': region,
-                            'year': year,
-                            'quarter': quarter,
-                            'dataset': dataset
-                        })
+        # filter the schema by the years and quarters if provided
+        if years_filter is not None:
+            mask = new_seasons_schema_df['year'].astype(int).isin(years_filter)
+            new_seasons_schema_df = new_seasons_schema_df[mask]
+        if quarters_filter is not None:
+            mask = new_seasons_schema_df['quarter'].isin(quarters_filter)
+            new_seasons_schema_df = new_seasons_schema_df[mask]
 
-            # convert the found table information to a DataFrame
-            if inferred_schema_rows:
-                inferred_schema_df = pandas.DataFrame(inferred_schema_rows).drop_duplicates([
-                    'table_name']).reset_index(drop=True)
-            else:
-                # If no files found, return an empty DataFrame with the expected columns
-                inferred_schema_df = pandas.DataFrame(
-                    columns=['table_name', 'region', 'year', 'quarter', 'dataset'])
+        return new_seasons_schema_df.reset_index(drop=True)
 
-            return inferred_schema_df
+    def infer_schema(self, years_filter: Optional[list[int]] = None, quarters_filter: Optional[list[Literal['Q2', 'Q4']]] = None, strict: bool = False) -> pandas.DataFrame:
+        """Infer the schema table from the downloaded full_area files.
+
+        Returns:
+            pandas.DataFrame: A pandas data frame containing columns `table_name`, `region`, `year`, `quarter`, `dataset`
+        """
+        full_area_path = os.path.join(self.folder_path, 'full_area')
+        if not os.path.exists(full_area_path):
+            return pandas.DataFrame(columns=['table_name', 'region', 'year', 'quarter', 'dataset'])
+
+        # find the available tables in the full_area folder
+        inferred_schema_rows = []
+        for root, _, files in os.walk(full_area_path):
+            for filename in files:
+                if filename.endswith('.parquet'):
+
+                    # extract the table info from the file path
+                    relative_path = os.path.relpath(
+                        os.path.join(root, filename), full_area_path)
+                    [dataset, partial_table_name] = relative_path.split(os.sep)
+
+                    # remove suffixes
+                    partial_table_name = partial_table_name\
+                        .replace('.parquet', '')\
+                        .replace('_home', '')\
+                        .replace('_school', '')\
+                        .replace('_work', '')\
+                        .replace('_dest', '')\
+                        .replace('_origin', '')
+
+                    # extract the parts of the table name
+                    parts = partial_table_name.split('_')
+                    quarter = parts[-1]
+                    year = parts[-2]
+                    region = '_'.join(parts[0:-2])
+
+                    if years_filter is not None and int(year) not in years_filter:
+                        continue
+
+                    if quarters_filter is not None and quarter not in quarters_filter:
+                        continue
+
+                    inferred_schema_rows.append({
+                        'table_name': f'{region}_{year}_{quarter}_{dataset}',
+                        'region': region,
+                        'year': year,
+                        'quarter': quarter,
+                        'dataset': dataset,
+                    })
+
+        # convert the found table information to a DataFrame
+        if inferred_schema_rows:
+            inferred_schema_df = pandas.DataFrame(inferred_schema_rows).drop_duplicates([
+                'table_name']).reset_index(drop=True)
+
+            inferred_seasons = inferred_schema_df\
+                .drop(columns=['table_name', 'dataset'])\
+                .drop_duplicates()\
+                .reset_index(drop=True)
+
+            # ensure that all parquet files exist for each dataset
+            # (used when we need to know which seasons have all data available)
+            if strict:
+                expected_parquet_files = self._getExpectedParquetFilePaths()
+                for season in inferred_seasons.itertuples():
+                    for expected_filename_template in expected_parquet_files:
+                        expected_filename = expected_filename_template.format(
+                            region=season.region, year=season.year, quarter=season.quarter)
+                        full_expected_path = os.path.join(
+                            self.folder_path, expected_filename)
+
+                        # if a file is missing, remove the season from the inferred schema
+                        if not os.path.exists(full_expected_path):
+                            dataset = expected_filename.split(os.sep)[-2]
+                            table_name = f'{season.region}_{season.year}_{season.quarter}_{dataset}'
+                            inferred_schema_df = inferred_schema_df[
+                                inferred_schema_df['table_name'] != table_name
+                            ].reset_index(drop=True)
+
+        else:
+            # If no files found, return an empty DataFrame with the expected columns
+            inferred_schema_df = pandas.DataFrame(
+                columns=['table_name', 'region', 'year', 'quarter', 'dataset'])
+
+        return inferred_schema_df
 
     def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json'] | list[Literal['geoparquet', 'json']]) -> None:
         # if format is a list, call this function for each format in the list
