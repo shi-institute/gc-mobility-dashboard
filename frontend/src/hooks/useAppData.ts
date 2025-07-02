@@ -222,10 +222,10 @@ function constructReplicaPaths(
         __year: year,
         __quarter: quarter,
 
-        network_segments: `./data/replica/${area}/network_segments/${area}_south_atlantic_${year}_${quarter}_network_segments.json.deflate`,
-        population: `./data/replica/${area}/population/${area}_south_atlantic_${year}_${quarter}_population.json.deflate`,
-        saturday_trip: `./data/replica/${area}/saturday_trip/south_atlantic_${year}_${quarter}_saturday_trip.json.deflate`,
-        thursday_trip: `./data/replica/${area}/thursday_trip/south_atlantic_${year}_${quarter}_thursday_trip.json.deflate`,
+        network_segments: `./data/replica/${area}/network_segments/south_atlantic_${year}_${quarter}.json.deflate`,
+        population: `./data/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
+        saturday_trip: `./data/replica/${area}/saturday_trip/south_atlantic_${year}_${quarter}.json.deflate`,
+        thursday_trip: `./data/replica/${area}/thursday_trip/south_atlantic_${year}_${quarter}.json.deflate`,
       };
     });
   });

@@ -1,10 +1,10 @@
-import { cp, readdir, readFile, stat, unlink, writeFile } from 'fs/promises';
+import { cp, readdir, readFile, rmdir, stat, unlink, writeFile } from 'fs/promises';
 import { join as joinPath, resolve as resolvePath } from 'path';
 import { promisify } from 'util';
 import { deflate as _deflate } from 'zlib';
 // import { deflate as _deflate } from 'pako';
 
-const fileExtensionsToRemove = ['.tmp', '.variables'];
+const fileExtensionsToMove = ['.json', '.geojson', '.deflate'];
 const pipelineDataDir = resolvePath(import.meta.dirname, '../data-pipeline/data');
 const publicDataDir = resolvePath(import.meta.dirname, './public/data');
 const shouldLog = true;
@@ -18,10 +18,56 @@ if (!shouldLog) {
   console.log = () => {};
 }
 
-await cp(pipelineDataDir, publicDataDir, { recursive: true, force: true });
-await removeFileTypes(publicDataDir, fileExtensionsToRemove);
-await discardNonTimeSeriesACS5(publicDataDir + '/census_acs_5year');
+// delete current contents of public/data (except .gitkeep)
+const files = await readdir(publicDataDir);
+await Promise.all(
+  files.map(async (file) => {
+    if (file === '.gitkeep') {
+      return;
+    }
+    const filePath = joinPath(publicDataDir, file);
+    const isDirectory = (await stat(filePath)).isDirectory();
+    if (isDirectory) {
+      await rmdir(filePath, { recursive: true });
+    } else {
+      await unlink(filePath);
+    }
+  })
+);
+
+// copy approved files from data-pipeline/data to public/data
+await cp(pipelineDataDir, publicDataDir, {
+  recursive: true,
+  force: true,
+  filter: (source, destination) => {
+    // always copy directories
+    const isDirectory = !source.split('/').pop().includes('.');
+    if (isDirectory) {
+      return true;
+    }
+
+    // only allow moving certain file types
+    const isApprovedExtension = fileExtensionsToMove.some((ext) => source.endsWith(ext));
+    if (!isApprovedExtension) {
+      return false;
+    }
+
+    // only copy time series Census ACS 5-year data
+    if (source.includes('census_acs_5year')) {
+      return source.endsWith('time_series.json');
+    }
+
+    return true;
+  },
+});
+
+// recursively delete empty directories in public/data
+await deleteEmptyDirectories(publicDataDir);
+
+// compress JSON files in public/data
 await deflateJsonFiles(publicDataDir);
+
+// build an index of areas and seasons
 const areaNames = await buildAreaIndex(publicDataDir + '/replica');
 if (areaNames.length) {
   await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/thursday_trip');
@@ -33,36 +79,32 @@ if (!shouldLog) {
 
 console.log('Done copying and processing data');
 
-/**
- * Removes files with specified extensions from a directory and its subdirectories.
- *
- * @param {string} directory
- * @param {string[]} extensions
- */
-async function removeFileTypes(directory, extensions) {
-  const fileNames = await readdir(directory);
-
-  const promises = fileNames.map(async (fileName) => {
-    const filePath = joinPath(directory, fileName);
-    const stats = await stat(filePath);
-
-    if (stats.isDirectory()) {
-      await removeFileTypes(filePath, extensions);
-      return;
-    }
-
-    if (extensions.some((ext) => fileName.endsWith(ext))) {
-      await unlink(filePath);
-      console.log(`Deleted file: ${filePath}`);
-      return;
-    }
-  });
-
-  await Promise.allSettled(promises);
-}
-
 async function deflate(data) {
   return promisify(_deflate)(JSON.stringify(data));
+}
+
+/**
+ * Recursively deletes empty directories in the specified directory.
+ * This function will traverse the directory structure and remove any
+ * directories that do not contain any files or subdirectories of files.
+ *
+ * @param {string} directory
+ */
+async function deleteEmptyDirectories(directory) {
+  const items = await readdir(directory);
+  const promises = items.map(async (item) => {
+    const itemPath = joinPath(directory, item);
+    const stats = await stat(itemPath);
+    if (stats.isDirectory()) {
+      await deleteEmptyDirectories(itemPath);
+      const subItems = await readdir(itemPath);
+      if (subItems.length === 0) {
+        await rmdir(itemPath);
+        console.log(`Deleted empty directory: ${itemPath}`);
+      }
+    }
+  });
+  await Promise.all(promises);
 }
 
 /**
@@ -96,35 +138,6 @@ async function deflateJsonFiles(directory) {
     await writeFile(deflatedFilePath, deflatedData).catch(console.error);
     await unlink(filePath); // delete the original file
     console.log(`Deflated JSON file: ${deflatedFilePath}`);
-  });
-
-  await Promise.allSettled(promises);
-}
-
-/**
- * Deletes all files in a directory and subdirectories
- * except for the 'time_series.json' file.
- *
- * @param {string} directory
- */
-async function discardNonTimeSeriesACS5(directory) {
-  const fileNames = await readdir(directory);
-
-  const promises = fileNames.map(async (fileName) => {
-    const filePath = joinPath(directory, fileName);
-    const stats = await stat(filePath);
-
-    if (stats.isDirectory()) {
-      await discardNonTimeSeriesACS5(filePath);
-      return;
-    }
-
-    if (fileName === 'time_series.json') {
-      return;
-    }
-
-    await unlink(filePath);
-    console.log(`Deleted file: ${filePath}`);
   });
 
   await Promise.allSettled(promises);
@@ -173,7 +186,7 @@ async function buildSeasonIndex(directory) {
       seasonNames.push(
         item
           .replace('south_atlantic_', '')
-          .replace('_thursday_trip.json.deflate', '')
+          .replace('.json.deflate', '')
           .split('_')
           .reverse()
           .join(':')
