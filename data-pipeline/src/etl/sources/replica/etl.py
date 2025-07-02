@@ -780,7 +780,7 @@ class ReplicaETL:
 
         try:
             if not pandas_gbq.context.credentials:
-                raise
+                raise RuntimeError("No credentials available for pandas_gbq.")
             schema_df = self.schema_query()
             return schema_df
         except:
