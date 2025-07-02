@@ -52,18 +52,33 @@ if __name__ == "__main__":
         etls = [string.strip() for string in args.etls.split(',')]
 
     if (etls is None or 'replica' in etls):
-        print("Checking credentials...")
+        print("Checking replica credentials...")
         try:
             credentials = pydata_google_auth.load_user_credentials(
                 './credentials/bigquery_credentials.json')
             pandas_gbq.context.credentials = credentials
         except (Exception) as e:
+            # check if there is at least one .parquet file in data/replica/full_area
+            replica_full_data_dir = './data/replica/full_area'
+            replica_full_data_is_available = (
+                os.path.isdir(replica_full_data_dir) and
+                any(
+                    filename.endswith('.parquet')
+                    for _, __, files in os.walk(replica_full_data_dir)
+                    for filename in files
+                )
+            )
+
             print('\n\n' + "-" * 78)
             print("Warning: Google BigQuery credentials are not set.")
-            print(
-                '         Please run the authentication script to retrieve credentials.')
+            if replica_full_data_is_available:
+                print('         Full area data will not be downloaded.')
+                print('         Available season datasets will be inferred from local files.')
+            else:
+                print(
+                    '         Please run the authentication script to retrieve credentials.')
             print("-" * 78 + '\n\n')
-            exit(1)
+            time.sleep(4) if replica_full_data_is_available else exit(1)
 
     if (etls is None or 'greenlink_gtfs' in etls):
         # unless running on GitHub Actions, print a warning if the API key is not set
