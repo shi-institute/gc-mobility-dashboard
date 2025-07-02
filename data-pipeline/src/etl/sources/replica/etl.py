@@ -775,7 +775,7 @@ class ReplicaETL:
         folder.
 
         Returns:
-            pandas.DataFrame: _description_
+            pandas.DataFrame: A pandas data frame containing columns `table_name`, `region`, `year`, `quarter`, `dataset`
         """
 
         try:
