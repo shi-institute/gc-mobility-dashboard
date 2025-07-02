@@ -38,8 +38,8 @@ class ReplicaETL:
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
 
-        # Get the schema for the replica dataset
-        self.schema_df = self.schema_query()
+        # get the schema for the replica dataset
+        self.schema_df = self.read_schema()
         if years is not None:
             mask = self.schema_df['year'].astype(int).isin(years)
             self.schema_df = self.schema_df[mask]
@@ -54,10 +54,11 @@ class ReplicaETL:
         `full_area.geojson` is a singular polygon that covers the entire area of interest.
         It should be provided in at `input/replica_interest_area_polygons/full_area.geojson`.
 
-        In process mode, it reads the other GeoJSON files from the `input/replica_interest_area_polygons` folder
-        and filters the data downloaded for the `full_area` extent to the boundary for each GeoJSON file.
+        In process mode (default when unauthenticated), it reads the other GeoJSON files from the
+        `input/replica_interest_area_polygons` folder and filters the data downloaded for the
+        `full_area` extent to the boundary for each GeoJSON file.
 
-        In all mode (default), this method will automatically run in download mode
+        In all mode (default when authenticated), this method will automatically run in download mode
         and then run in process mode.
 
         Args:
@@ -68,7 +69,8 @@ class ReplicaETL:
             self.input_folder_path, full_area_filename)
 
         if mode == 'all':
-            self.run(mode='download')
+            if pandas_gbq.context.credentials:
+                self.run(mode='download')
             self.run(mode='process')
 
         if mode == 'download':
@@ -762,6 +764,75 @@ class ReplicaETL:
             raise ValueError("No tables found in the replica dataset schema.")
 
         return result
+
+    def read_schema(self) -> pandas.DataFrame:
+        """Gets a dataframe of available replica datasets.
+
+        If not authenticated (or the schema query fails), it will attempt
+        to read the downloaded `full_area` files to construct a schema. This
+        allows running the ETL without needing to authenticate with BigQuery
+        by providing the downloaded `full_area` files in the output data
+        folder.
+
+        Returns:
+            pandas.DataFrame: _description_
+        """
+
+        try:
+            if not pandas_gbq.context.credentials:
+                raise
+            schema_df = self.schema_query()
+            return schema_df
+        except:
+            full_area_path = os.path.join(self.folder_path, 'full_area')
+            if not os.path.exists(full_area_path):
+                raise FileNotFoundError(
+                    f"Schema query failed and no full_area file found at {full_area_path}. Please authenticate with BigQuery or provide the full_area data in {full_area_path}.")
+
+            # find the available tables in the full_area folder
+            inferred_schema_rows = []
+            for root, _, files in os.walk(full_area_path):
+                for filename in files:
+                    if filename.endswith('.parquet'):
+
+                        # extract the table info from the file path
+                        relative_path = os.path.relpath(
+                            os.path.join(root, filename), full_area_path)
+                        [dataset, partial_table_name] = relative_path.split(os.sep)
+
+                        # remove suffixes
+                        partial_table_name = partial_table_name\
+                            .replace('.parquet', '')\
+                            .replace('_home', '')\
+                            .replace('_school', '')\
+                            .replace('_work', '')\
+                            .replace('_dest', '')\
+                            .replace('_origin', '')
+
+                        # extract the parts of the table name
+                        parts = partial_table_name.split('_')
+                        quarter = parts[-1]
+                        year = parts[-2]
+                        region = '_'.join(parts[0:-2])
+
+                        inferred_schema_rows.append({
+                            'table_name': f'{region}_{year}_{quarter}_{dataset}',
+                            'region': region,
+                            'year': year,
+                            'quarter': quarter,
+                            'dataset': dataset
+                        })
+
+            # convert the found table information to a DataFrame
+            if inferred_schema_rows:
+                inferred_schema_df = pandas.DataFrame(inferred_schema_rows).drop_duplicates([
+                    'table_name']).reset_index(drop=True)
+            else:
+                # If no files found, return an empty DataFrame with the expected columns
+                inferred_schema_df = pandas.DataFrame(
+                    columns=['table_name', 'region', 'year', 'quarter', 'dataset'])
+
+            return inferred_schema_df
 
     def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json'] | list[Literal['geoparquet', 'json']]) -> None:
         # if format is a list, call this function for each format in the list
