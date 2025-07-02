@@ -35,6 +35,7 @@ await Promise.all(
   })
 );
 
+// copy approved files from data-pipeline/data to public/data
 await cp(pipelineDataDir, publicDataDir, {
   recursive: true,
   force: true,
@@ -59,7 +60,14 @@ await cp(pipelineDataDir, publicDataDir, {
     return true;
   },
 });
+
+// recursively delete empty directories in public/data
+await deleteEmptyDirectories(publicDataDir);
+
+// compress JSON files in public/data
 await deflateJsonFiles(publicDataDir);
+
+// build an index of areas and seasons
 const areaNames = await buildAreaIndex(publicDataDir + '/replica');
 if (areaNames.length) {
   await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/thursday_trip');
@@ -73,6 +81,30 @@ console.log('Done copying and processing data');
 
 async function deflate(data) {
   return promisify(_deflate)(JSON.stringify(data));
+}
+
+/**
+ * Recursively deletes empty directories in the specified directory.
+ * This function will traverse the directory structure and remove any
+ * directories that do not contain any files or subdirectories of files.
+ *
+ * @param {string} directory
+ */
+async function deleteEmptyDirectories(directory) {
+  const items = await readdir(directory);
+  const promises = items.map(async (item) => {
+    const itemPath = joinPath(directory, item);
+    const stats = await stat(itemPath);
+    if (stats.isDirectory()) {
+      await deleteEmptyDirectories(itemPath);
+      const subItems = await readdir(itemPath);
+      if (subItems.length === 0) {
+        await rmdir(itemPath);
+        console.log(`Deleted empty directory: ${itemPath}`);
+      }
+    }
+  });
+  await Promise.all(promises);
 }
 
 /**
