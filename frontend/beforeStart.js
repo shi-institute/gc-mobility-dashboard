@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import { deflate as _deflate } from 'zlib';
 // import { deflate as _deflate } from 'pako';
 
-const fileExtensionsToRemove = ['.tmp', '.variables'];
+const fileExtensionsToMove = ['.json', '.geojson', '.deflate'];
 const pipelineDataDir = resolvePath(import.meta.dirname, '../data-pipeline/data');
 const publicDataDir = resolvePath(import.meta.dirname, './public/data');
 const shouldLog = true;
@@ -18,9 +18,30 @@ if (!shouldLog) {
   console.log = () => {};
 }
 
-await cp(pipelineDataDir, publicDataDir, { recursive: true, force: true });
-await removeFileTypes(publicDataDir, fileExtensionsToRemove);
-await discardNonTimeSeriesACS5(publicDataDir + '/census_acs_5year');
+await cp(pipelineDataDir, publicDataDir, {
+  recursive: true,
+  force: true,
+  filter: (source, destination) => {
+    // always copy directories
+    const isDirectory = !source.split('/').pop().includes('.');
+    if (isDirectory) {
+      return true;
+    }
+
+    // only allow moving certain file types
+    const isApprovedExtension = fileExtensionsToMove.some((ext) => source.endsWith(ext));
+    if (!isApprovedExtension) {
+      return false;
+    }
+
+    // only copy time series Census ACS 5-year data
+    if (source.includes('census_acs_5year')) {
+      return source.endsWith('time_series.json');
+    }
+
+    return true;
+  },
+});
 await deflateJsonFiles(publicDataDir);
 const areaNames = await buildAreaIndex(publicDataDir + '/replica');
 if (areaNames.length) {
@@ -32,34 +53,6 @@ if (!shouldLog) {
 }
 
 console.log('Done copying and processing data');
-
-/**
- * Removes files with specified extensions from a directory and its subdirectories.
- *
- * @param {string} directory
- * @param {string[]} extensions
- */
-async function removeFileTypes(directory, extensions) {
-  const fileNames = await readdir(directory);
-
-  const promises = fileNames.map(async (fileName) => {
-    const filePath = joinPath(directory, fileName);
-    const stats = await stat(filePath);
-
-    if (stats.isDirectory()) {
-      await removeFileTypes(filePath, extensions);
-      return;
-    }
-
-    if (extensions.some((ext) => fileName.endsWith(ext))) {
-      await unlink(filePath);
-      console.log(`Deleted file: ${filePath}`);
-      return;
-    }
-  });
-
-  await Promise.allSettled(promises);
-}
 
 async function deflate(data) {
   return promisify(_deflate)(JSON.stringify(data));
@@ -96,35 +89,6 @@ async function deflateJsonFiles(directory) {
     await writeFile(deflatedFilePath, deflatedData).catch(console.error);
     await unlink(filePath); // delete the original file
     console.log(`Deflated JSON file: ${deflatedFilePath}`);
-  });
-
-  await Promise.allSettled(promises);
-}
-
-/**
- * Deletes all files in a directory and subdirectories
- * except for the 'time_series.json' file.
- *
- * @param {string} directory
- */
-async function discardNonTimeSeriesACS5(directory) {
-  const fileNames = await readdir(directory);
-
-  const promises = fileNames.map(async (fileName) => {
-    const filePath = joinPath(directory, fileName);
-    const stats = await stat(filePath);
-
-    if (stats.isDirectory()) {
-      await discardNonTimeSeriesACS5(filePath);
-      return;
-    }
-
-    if (fileName === 'time_series.json') {
-      return;
-    }
-
-    await unlink(filePath);
-    console.log(`Deleted file: ${filePath}`);
   });
 
   await Promise.allSettled(promises);
