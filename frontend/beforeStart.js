@@ -186,7 +186,7 @@ async function buildSeasonIndex(directory) {
       seasonNames.push(
         item
           .replace('south_atlantic_', '')
-          .replace('_thursday_trip.json.deflate', '')
+          .replace('.json.deflate', '')
           .split('_')
           .reverse()
           .join(':')
