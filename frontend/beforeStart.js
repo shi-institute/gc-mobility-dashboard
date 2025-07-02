@@ -1,4 +1,4 @@
-import { cp, readdir, readFile, stat, unlink, writeFile } from 'fs/promises';
+import { cp, readdir, readFile, rmdir, stat, unlink, writeFile } from 'fs/promises';
 import { join as joinPath, resolve as resolvePath } from 'path';
 import { promisify } from 'util';
 import { deflate as _deflate } from 'zlib';
@@ -17,6 +17,23 @@ if (!shouldLog) {
   originalConsoleLog = console.log;
   console.log = () => {};
 }
+
+// delete current contents of public/data (except .gitkeep)
+const files = await readdir(publicDataDir);
+await Promise.all(
+  files.map(async (file) => {
+    if (file === '.gitkeep') {
+      return;
+    }
+    const filePath = joinPath(publicDataDir, file);
+    const isDirectory = (await stat(filePath)).isDirectory();
+    if (isDirectory) {
+      await rmdir(filePath, { recursive: true });
+    } else {
+      await unlink(filePath);
+    }
+  })
+);
 
 await cp(pipelineDataDir, publicDataDir, {
   recursive: true,
