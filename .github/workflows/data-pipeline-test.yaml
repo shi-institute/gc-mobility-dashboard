@@ -12,7 +12,8 @@ jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: [determine_tests_to_run]
+    needs: [determine_tests_to_run, check_previous_pass]
+    if: ${{ fromJSON(needs.check_previous_pass.outputs.successfully_passed) == false }}
 
     steps:
       - name: Checkout code
@@ -63,6 +64,7 @@ jobs:
     name: Determine Tests to Run
     runs-on: ubuntu-latest
     outputs:
+      output_hash: ${{ steps.check_changed_dirs.outputs.output_hash }}
       run_greenlink_gtfs: ${{ steps.check_changed_dirs.outputs.run_greenlink_gtfs }}
       run_census_acs_5year: ${{ steps.check_changed_dirs.outputs.run_census_acs_5year }}
       run_replica: ${{ steps.check_changed_dirs.outputs.run_replica }}
@@ -77,16 +79,20 @@ jobs:
         id: check_changed_dirs
         run: |
           # Fetch the base branch to ensure the merge-base can be found
-          git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
-          MERGE_BASE=$(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD)
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+          if [ -z "$BASE_REF" ]; then
+            BASE_REF="main"
+          fi
+          git fetch origin $BASE_REF:$BASE_REF
+          MERGE_BASE=$(git merge-base origin/$BASE_REF HEAD)
           echo "Merge base: $MERGE_BASE"
           echo "HEAD: $(git rev-parse HEAD)"
-          echo "Base Ref: ${{ github.event.pull_request.base.ref }}"
-          echo "Origin Base Ref SHA: $(git rev-parse origin/${{ github.event.pull_request.base.ref }})"
+          echo "Base Ref: $BASE_REF"
+          echo "Origin Base Ref SHA: $(git rev-parse origin/$BASE_REF)"
 
           # Get a list of changed files between the merge base and the head of the PR
           # Filter to only files within data-pipeline/src
-          CHANGED_FILES=$(git diff --name-only $(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD) HEAD -- ./data-pipeline/src/)
+          CHANGED_FILES=$(git diff --name-only $(git merge-base origin/$BASE_REF HEAD) HEAD -- ./data-pipeline/src/)
 
           RUN_GREENLINK_GTFS_TEST="false"
           RUN_CENSUS_ACS_5YEAR_TEST="false"
@@ -126,6 +132,10 @@ jobs:
           echo "run_replica=$RUN_REPLICA_TEST" >> "$GITHUB_OUTPUT"
           echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
 
+          # hash "$GITHUB_OUTPUT" so we can include it in the check_previous_pass/update_pass_variable CURRENT_HASH variable
+          OUTPUT_HASH=($(cat "$GITHUB_OUTPUT" | sort | sha1sum | cut -d ' ' -f 1))
+          echo "output_hash=$OUTPUT_HASH" >> "$GITHUB_OUTPUT"
+
           # print the results
           echo "Run Greenlink GTFS: $RUN_GREENLINK_GTFS_TEST"
           echo "Run Census ACS 5-Year: $RUN_CENSUS_ACS_5YEAR_TEST"
@@ -135,17 +145,21 @@ jobs:
   authenticate_google_big_query:
     name: Authenticate Google BigQuery
     runs-on: ubuntu-latest
-    needs: [determine_tests_to_run]
-    if: needs.determine_tests_to_run.outputs.run_replica == 'true' || needs.determine_tests_to_run.outputs.run_generic_src == 'true'
+    needs: [determine_tests_to_run, check_previous_pass]
+    if: ${{ fromJSON(needs.check_previous_pass.outputs.successfully_passed) == false && (needs.determine_tests_to_run.outputs.run_replica == 'true' || needs.determine_tests_to_run.outputs.run_generic_src == 'true') }}
     outputs:
-      bigquery_credentials: ${{ steps.authenticate.outputs.bigquery_credentials }}
+      bigquery_credentials: ${{ steps.authenticate.outputs.bigquery_credentials || secrets.BIGQUERY_CREDENTIALS }}
+    env:
+      BIGQUERY_CREDENTIALS: ${{ secrets.BIGQUERY_CREDENTIALS }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # if the BIGQUERY_CREDENTIALS secret is missing, run an action that prompts for credentials
       - name: Authenticate Google BigQuery
         id: authenticate
+        if: ${{ env.BIGQUERY_CREDENTIALS == '' }}
         uses: ./.github/actions/authenticate-gbq
         with:
           timeout: 300 # 5 minutes
@@ -201,7 +215,7 @@ jobs:
       - name: Create sample input data
         env:
           GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
-          AREA_GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.41,34.853],[-82.41,34.849],[-82.39,34.849],[-82.39,34.853],[-82.41,34.853]]]}}]}'
+          AREA_GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
         run: |
           mkdir -p ${{ github.workspace }}/replica-input/replica_interest_area_polygons
           echo $AREA_GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/full_area.geojson
@@ -230,7 +244,7 @@ jobs:
       - name: Create sample input data
         env:
           GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
-          AREA_GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.41,34.853],[-82.41,34.849],[-82.39,34.849],[-82.39,34.853],[-82.41,34.853]]]}}]}'
+          AREA_GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
         run: |
           mkdir -p ${{ github.workspace }}/replica-input/replica_interest_area_polygons
           echo $AREA_GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/full_area.geojson
@@ -242,3 +256,135 @@ jobs:
           bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__all"
           input_dir: "${{ github.workspace }}/replica-input"
+
+  check_previous_pass:
+    name: Check Previous Pass
+    runs-on: ubuntu-latest
+    needs: [determine_tests_to_run]
+    env:
+      TESTS_TO_RUN_HASH: ${{ needs.determine_tests_to_run.outputs.output_hash }}
+
+    outputs:
+      successfully_passed: ${{ steps.check.outputs.successfully_passed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check if ACT_SUCCESS_COMMIT_HASH variable exists
+        id: check
+        run: |
+          if [ -n "${{ github.head_ref }}" ]; then
+            LOCAL_REF_NAME="${{ github.head_ref }}"
+          else
+            LOCAL_REF_NAME=$(git rev-parse --abbrev-ref HEAD)
+          fi
+
+          # sanitize branch name: 
+          SANITIZED_BRANCH_NAME=${LOCAL_REF_NAME// /} # remove whitespace
+          SANITIZED_BRANCH_NAME=${SANITIZED_BRANCH_NAME//-/_} # replace '-' with '_'
+          SANITIZED_BRANCH_NAME=$(echo "$SANITIZED_BRANCH_NAME" | tr '[:lower:]' '[:upper:]')
+
+          BRANCH_VAR_NAME="ACT_SUCCESS_COMMIT_HASH__${SANITIZED_BRANCH_NAME}"
+
+          # get the vars that are set in the repository
+          VARS_JSON="${{ toJSON(vars) }}"
+
+          # ensure values are quoted
+          VARS_JSON=$(echo "$VARS_JSON" | sed -E 's/([[:alnum:]_]+): ([^,}[:space:]]+)/\1:"\2"/g' | sed -E 's/([[:alnum:]_]+):/"\1":/g')
+
+          # get the value of the variable for the current branch
+          LAST_PASS_HASH=$(echo "$VARS_JSON" | jq -r --arg key "$BRANCH_VAR_NAME" '.[$key]')
+
+          # hash the contents of the current branch (this includes any uncommitted changes when running locally)
+          CURRENT_HASH=$(find . -type f -not -path "*/.vscode/*" -not -path "*/.git/*" \( -exec sha1sum "$PWD"/{} \; \) | awk '{print $1}' | sort | sha1sum | cut -d ' ' -f 1)
+          CURRENT_HASH="$CURRENT_HASH$TESTS_TO_RUN_HASH" # append the hash of the tests to run to the current hash
+
+          # check whether it matches the current commit hash
+          if [ "$LAST_PASS_HASH" == "$CURRENT_HASH" ]; then
+            echo "$BRANCH_VAR_NAME variable exists and matches the current commit hash."
+            echo "successfully_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$BRANCH_VAR_NAME variable does not exist or does not match the current commit hash."
+            echo "LAST_PASS_HASH: $LAST_PASS_HASH"
+            echo "CURRENT_HASH: $CURRENT_HASH"
+            echo "successfully_passed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  update_pass_variable:
+    name: "Save Run Success"
+    runs-on: ubuntu-latest
+    needs:
+      [
+        determine_tests_to_run,
+        check_previous_pass,
+        build,
+        test__greenlink_gtfs,
+        test__census_acs_5year,
+        test__replica,
+        test__all,
+      ]
+    if: ${{ !cancelled() && fromJSON(needs.check_previous_pass.outputs.successfully_passed) != true }} # always run even if any of the jobs in needs are skipped
+    env:
+      TESTS_TO_RUN_HASH: ${{ needs.determine_tests_to_run.outputs.output_hash }}
+
+    steps:
+      - name: Fail if any job in needs failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: |
+          echo "One or more jobs in needs failed. Failing the workflow."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install GitHub CLI
+        if: "${{ env.ACT }}"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Update ACT_SUCCESS_COMMIT_HASH (on success)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.head_ref }}" ]; then
+            LOCAL_REF_NAME="${{ github.head_ref }}"
+          else
+            LOCAL_REF_NAME=$(git rev-parse --abbrev-ref HEAD)
+          fi
+
+          # sanitize branch name: 
+          SANITIZED_BRANCH_NAME=${LOCAL_REF_NAME// /} # remove whitespace
+          SANITIZED_BRANCH_NAME=${SANITIZED_BRANCH_NAME//-/_} # replace '-' with '_'
+          SANITIZED_BRANCH_NAME=$(echo "$SANITIZED_BRANCH_NAME" | tr '[:lower:]' '[:upper:]')
+
+          BRANCH_VAR_NAME="ACT_SUCCESS_COMMIT_HASH__${SANITIZED_BRANCH_NAME}"
+
+          # hash the contents of the current branch (this includes any uncommitted changes when running locally)
+          CURRENT_HASH=$(find . -type f -not -path "*/.vscode/*" -not -path "*/.git/*" \( -exec sha1sum "$PWD"/{} \; \) | awk '{print $1}' | sort | sha1sum | cut -d ' ' -f 1)
+          CURRENT_HASH="$CURRENT_HASH$TESTS_TO_RUN_HASH" # append the hash of the tests to run to the current hash
+
+          echo "Setting Repository Variable: $BRANCH_VAR_NAME to $CURRENT_HASH"
+
+          # check if the variable already exists
+          EXISTING_VAR=$(gh api -H "Accept: application/vnd.github.v3+json" /repos/${{ github.repository }}/actions/variables/$BRANCH_VAR_NAME --silent 2>/dev/null || echo "null")
+
+          if [ "$EXISTING_VAR" != "null" ]; then
+            echo "Repository variable $BRANCH_VAR_NAME already exists. Updating it."
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github.v3+json" \
+              /repos/${{ github.repository }}/actions/variables/$BRANCH_VAR_NAME \
+              -f value="$CURRENT_HASH"
+          else
+            echo "Repository variable $BRANCH_VAR_NAME does not exist. Creating it."
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              /repos/${{ github.repository }}/actions/variables \
+              -f name=$BRANCH_VAR_NAME \
+              -f value="$CURRENT_HASH"
+          fi
+
+          echo "Repository variable updated successfully."
