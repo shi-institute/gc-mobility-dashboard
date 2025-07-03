@@ -9,7 +9,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
 
   return (
     <label>
-      Reporting window
+      Reporting Period
       <select
         onChange={handleSeasonSelectionChange}
         value={selectedSeason ?? ''}
