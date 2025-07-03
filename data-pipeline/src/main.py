@@ -70,7 +70,7 @@ if __name__ == "__main__":
             )
 
             print('\n\n' + "-" * 78)
-            print("Warning: Google BigQuery credentials are not set.")
+            print("Warning: Google BigQuery credentials are not set (or are expired).")
             if replica_full_data_is_available:
                 print('         Full area data will not be downloaded.')
                 print('         Available season datasets will be inferred from local files.')

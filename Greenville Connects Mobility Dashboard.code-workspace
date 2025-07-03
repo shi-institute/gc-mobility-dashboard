@@ -11,7 +11,7 @@
 		{
 			"path": "gbq-auth",
 			"name": "BigQuery auth"
-		}
+		},
 		{
 			"path": "data-pipeline",
 			"name": "Data pipeline"
@@ -49,5 +49,22 @@
 		"files.trimFinalNewlines": true,
 		"editor.formatOnSave": true,
 		"editor.fontFamily": "'Dank Mono', 'JetBrains Mono', Consolas, 'Courier New', monospace",
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Simulate PR workflow",
+				"command": "mkdir -p ./act && gh api --method GET /repos/shi-institute/gc-mobility-dashboard/actions/variables --jq '.variables[] | \"\\(.name)=\\(.value)\"' > ./act/.vars && gh act pull_request --var-file $PWD/act/.vars --artifact-server-path $PWD/act/.artifacts -s GITHUB_TOKEN=\"$(gh auth token)\" -s BIGQUERY_CREDENTIALS=\"$(cat ./gbq-auth/credentials/bigquery_credentials.json)\" && rm -rf ./act/.vars",
+				"icon": {
+					"id": "github-action",
+					"color": "terminal.ansiGreen"
+				},
+				"type": "shell",
+				"presentation": {
+					"reveal": "always"
+				}
+			}
+		]
 	}
 }
