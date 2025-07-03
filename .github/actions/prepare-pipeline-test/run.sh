@@ -28,12 +28,14 @@ if [ -d $INPUT_DIR ]; then
 fi
 
 # run the data pipeline and get whether it was successful
+SHOULD_USE_BIGQUERY_STORAGE_API=$([ -n "$ACT" ] && echo "true" || echo "false")
 docker run --rm \
   --volume data-pipeline-input_$SUFFIX:/input \
   --volume data-pipeline-output_$SUFFIX:/data \
   --volume data-pipeline-credentials_$SUFFIX:/credentials \
   -e REPLICA_YEARS_FILTER=2023 \
   -e REPLICA_QUARTERS_FILTER=Q4 \
+  -e USE_BIGQUERY_STORAGE_API=$SHOULD_USE_BIGQUERY_STORAGE_API \
   gc-mobility-dashboard-data-pipeline:test --etls=$ETLS
 EXIT_CODE=$?
 if [ $EXIT_CODE -ne 0 ]; then
