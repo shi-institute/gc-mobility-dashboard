@@ -1,10 +1,19 @@
 import { SelectOne } from '../select/SelectOne';
 
+import { useComparisonModeState } from '../compare/useComparisonModeState';
+import { SelectMany } from '../select/SelectMany';
+
 export function SelectedSeason() {
-  return (
-    <label>
-      Test My Basic Selector
+  const [isCompareEnabled] = useComparisonModeState();
+  return isCompareEnabled ? (
+    <div>
+      <label>Select Multiple Seasons:</label>
+      <SelectMany />
+    </div>
+  ) : (
+    <div>
+      <label> Select a Single Season:</label>
       <SelectOne />
-    </label>
+    </div>
   );
 }
