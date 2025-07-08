@@ -27,7 +27,7 @@
 		]
 	},
 	"settings": {
-		"workbench.colorTheme": "CodeSandbox Dark",
+		"workbench.colorTheme": "Default Dark Modern",
 		"workbench.productIconTheme": "Default",
 		"workbench.iconTheme": "vscode-icons",
 		"terminal.integrated.defaultProfile.linux": "bash",
