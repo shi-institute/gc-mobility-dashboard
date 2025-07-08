@@ -2,11 +2,14 @@ import logging
 import os
 import re
 from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import datetime
 from typing import Literal, Optional
 
 import geopandas
+import numpy
 import pandas
 import pandas_gbq
+import polars
 import shapely
 import shapely.wkt
 
@@ -507,7 +510,7 @@ class ReplicaETL:
 
         return result_dfs
 
-    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
+    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str) -> None:
         """Loop through trip tables and run queries to get the data. This gets trip data for thursday and saturday trips.
 
         Args:
@@ -518,14 +521,14 @@ class ReplicaETL:
         Returns:
             list[pandas.DataFrame]: _description_
         """
-        all_trip_results: list[pandas.DataFrame] = []
+        results_count = 0
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'trip'
         schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
             'trip')]
 
         if schema_df is None or schema_df.empty:
-            return all_trip_results
+            return
 
         for table_name in schema_df['table_name']:
             # Set full_table_path be equal to the table_name column in the schema_df
@@ -546,10 +549,11 @@ class ReplicaETL:
                 origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
                 dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
             )
+            print('Obtained data for table:', table_name)
+            results_count += 1
             if not table_df.empty:
-                # Add a column to identify the source table
+                # add a source_table column with the table name so we can identify the source of the data
                 table_df['source_table'] = table_name
-                all_trip_results.append(table_df)
 
                 # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
                 # this regex will match the trip type
@@ -586,8 +590,7 @@ class ReplicaETL:
                     )
 
         print(
-            f"\nSuccessfully obtained data from {len(all_trip_results)} trip tables.")
-        return all_trip_results
+            f"\nSuccessfully obtained data from {results_count} trip tables.")
 
     def _prepare_query_geometry(self, geometry_series: geopandas.GeoSeries) -> str:
         """
@@ -692,10 +695,10 @@ class ReplicaETL:
 
         # create a function that can be run in parallel to execute the queries
         # and collect the results in result_dfs
-        result_dfs: list[pandas.DataFrame] = []
+        result_ldfs: list[polars.LazyFrame] = []
         logger.setLevel(logging.WARNING)
 
-        def process_query(query: str, index: int) -> None:
+        def process_query(query: str, index: int, num_queries: int) -> None:
             """Process a single query and collect the results in the external result_dfs list.
 
             Args:
@@ -708,6 +711,24 @@ class ReplicaETL:
             print(
                 f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
             try:
+                download_cache_folderpath = os.path.join(self.folder_path, 'full_area/download')
+                download_cache_filename = f'{full_table_path}__{index + 1}_{num_queries}.parquet'
+                download_cache_filepath = os.path.join(
+                    download_cache_folderpath, download_cache_filename)
+                download_cache_success_filepath = download_cache_filepath.replace(
+                    '.parquet', '.success')
+
+                # ensure the cache folder exists
+                os.makedirs(download_cache_folderpath, exist_ok=True)
+
+                # check if the a cached version is available
+                if os.path.exists(download_cache_filepath) and os.path.exists(download_cache_success_filepath):
+                    print(f'Using cached data from {download_cache_filename}')
+                    ldf = polars.scan_parquet(download_cache_filepath)
+                    result_ldfs.append(ldf)
+                    return
+
+                # otherwise, download the data from BigQuery
                 df = pandas_gbq.read_gbq(
                     query,
                     project_id=self.project_id,
@@ -716,7 +737,28 @@ class ReplicaETL:
                 )
                 if df is None:
                     df = pandas.DataFrame()
-                result_dfs.append(df)
+
+                # convert list types to csv strings (numpy arrays are not supported by parquet)
+                columns_to_convert_to_csv = ['transit_route_ids', 'network_link_ids']
+                for column in columns_to_convert_to_csv:
+                    if column in df.columns:
+                        df[column] = df[column].apply(
+                            lambda x: ','.join(map(str, x)) if isinstance(x, numpy.ndarray) else x)
+
+                # save a backup/cache of the data upon download that we can use to restore downloaded data
+                pandas.DataFrame.to_parquet(df, os.path.join(download_cache_filepath))
+
+                # once the data is saved, write an empty .success file with the same name
+                # to indicate that the download was successful
+                with open(download_cache_success_filepath, 'w') as f:
+                    f.write('')
+
+                # prepare a lazy data frame from polars
+                # so that the data does not need to be fully loaded into memory
+                # (the trip data can get REALLY large!)
+                ldf = polars.scan_parquet(download_cache_filepath)
+
+                result_ldfs.append(ldf)
             except Exception as e:
                 print('Failed to execute query')
                 raise e
@@ -737,14 +779,25 @@ class ReplicaETL:
         futures: list[Future[None]] = []
         with ThreadPoolExecutor() as executor:
             for index, query in enumerate(queries):
-                future = executor.submit(process_query, query, index)
+                future = executor.submit(process_query, query, index, len(queries))
                 future.add_done_callback(handle_query_error)
                 futures.append(future)
 
         # Merge all results
         logger.setLevel(logging.INFO)
         executor.shutdown(wait=True)  # wait for all futures to finish
-        return pandas.concat(result_dfs, ignore_index=True)
+
+        # disable parallel to reduce RAM usage - polars has to uncompress each parquet file
+        joined_ldfs = polars.concat(result_ldfs, how='vertical', rechunk=False, parallel=False)
+
+        start_time = datetime.now()
+        print('Collecting trip results...')
+        df = polars.concat(result_ldfs, how='vertical',
+                           rechunk=False, parallel=False).collect().to_pandas()
+        elapsed_time = datetime.now() - start_time
+        print('Done in ', elapsed_time, ' seconds.')
+
+        return df
 
     def _run_schema_query(self) -> pandas.DataFrame:
         """
@@ -836,6 +889,10 @@ class ReplicaETL:
         inferred_schema_rows = []
         for root, _, files in os.walk(full_area_path):
             for filename in files:
+                if root.endswith('download'):
+                    # skip the download cache folder
+                    continue
+
                 if filename.endswith('.parquet'):
 
                     # extract the table info from the file path
