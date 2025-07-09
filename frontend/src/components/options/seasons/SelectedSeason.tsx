@@ -10,7 +10,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
   return isCompareEnabled ? (
     <div>
       <label>Select Multiple Seasons:</label>
-      <SelectMany />
+      <SelectMany options={seasonsList} />
     </div>
   ) : (
     <div>

@@ -5,10 +5,8 @@ interface SelectOneProps {
 }
 
 export function SelectOne({ options }: SelectOneProps) {
-  //export function SelectOne() {
   //const { handleSeasonSelectionChange, selectedSeason } = useSelectedSeasonsState();
   //const options = ['test1', 'test2', 'test3'];
-  // pass in seasons as a property of SelectOne or SelectMany
 
   return (
     <select

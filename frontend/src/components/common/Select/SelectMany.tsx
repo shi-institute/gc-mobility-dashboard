@@ -1,7 +1,9 @@
-export function SelectMany() {
-  //const { handleSeasonSelectionChange, selectedSeason } = useSelectedSeasonsState();
-  const optionsList = ['multiple1', 'multiple2', 'multiple3', 'multiple4'];
+interface SelectManyProps {
+  options: string[];
+}
 
+export function SelectMany({ options }: SelectManyProps) {
+  //const { handleSeasonSelectionChange, selectedSeason } = useSelectedSeasonsState();
   return (
     <select
       multiple
@@ -10,7 +12,7 @@ export function SelectMany() {
       style={{ width: '100%' }}
     >
       <option key="blank" value=""></option>
-      {optionsList.map((option) => (
+      {options.map((option) => (
         <option key={option} value={option}>
           {option}
         </option>
