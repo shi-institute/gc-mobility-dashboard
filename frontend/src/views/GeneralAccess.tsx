@@ -4,8 +4,6 @@ import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
   SelectedArea,
-  SelectedComparisonAreas,
-  SelectedComparisonSeasons,
   SelectedSeason,
   useComparisonModeState,
 } from '../components/options';
@@ -64,19 +62,11 @@ function Sidebar() {
   return (
     <SidebarContent>
       <h1>Options</h1>
-
+      <h2>Compare</h2>
+      <ComparisonModeSwitch />
       <h2>Filters</h2>
       <SelectedArea areasList={areasList} />
       <SelectedSeason seasonsList={seasonsList} />
-
-      <h2>Compare</h2>
-      <ComparisonModeSwitch />
-      {isComparisonEnabled ? (
-        <>
-          <SelectedComparisonAreas areasList={areasList} />
-          <SelectedComparisonSeasons seasonsList={seasonsList} />
-        </>
-      ) : null}
     </SidebarContent>
   );
 }
