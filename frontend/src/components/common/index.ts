@@ -4,6 +4,8 @@ export { NavBar } from './NavBarItem/NavBar';
 export { NavBarItem } from './NavBarItem/NavBarItem';
 export { Section } from './Section/Section';
 export { SectionEntry } from './Section/SectionEntry';
+export { SelectMany } from './Select/SelectMany';
+export { SelectOne } from './Select/SelectOne';
 export { SidebarContent } from './SidebarContent/SidebarContent';
 export { Tab } from './Tabs/Tab';
 export { Tabs } from './Tabs/Tabs';

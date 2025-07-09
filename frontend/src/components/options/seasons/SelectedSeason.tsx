@@ -1,9 +1,11 @@
-import { SelectOne } from '../select/SelectOne';
-
+import { SelectMany, SelectOne } from '../../common';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
-import { SelectMany } from '../select/SelectMany';
 
-export function SelectedSeason() {
+interface SelectedSeasonProps {
+  seasonsList: string[];
+}
+
+export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
   const [isCompareEnabled] = useComparisonModeState();
   return isCompareEnabled ? (
     <div>
@@ -13,7 +15,7 @@ export function SelectedSeason() {
   ) : (
     <div>
       <label> Select a Single Season:</label>
-      <SelectOne />
+      <SelectOne options={seasonsList} />
     </div>
   );
 }

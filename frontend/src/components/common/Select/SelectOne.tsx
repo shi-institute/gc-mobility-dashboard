@@ -1,13 +1,14 @@
 //import { useSelectedSeasonsState } from './useSelectedSeasonsState';
-/*
+
 interface SelectOneProps {
-  optionsList: string[];
+  options: string[];
 }
-*/
-//export function SelectOne({ optionsList }: SelectOneProps) {
-export function SelectOne() {
+
+export function SelectOne({ options }: SelectOneProps) {
+  //export function SelectOne() {
   //const { handleSeasonSelectionChange, selectedSeason } = useSelectedSeasonsState();
-  const optionsList = ['test1', 'test2', 'test3'];
+  //const options = ['test1', 'test2', 'test3'];
+  // pass in seasons as a property of SelectOne or SelectMany
 
   return (
     <select
@@ -16,7 +17,7 @@ export function SelectOne() {
       style={{ width: '100%' }}
     >
       <option key="blank" value=""></option>
-      {optionsList.map((option) => (
+      {options.map((option) => (
         <option key={option} value={option}>
           {option}
         </option>
