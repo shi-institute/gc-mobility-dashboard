@@ -1,5 +1,6 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { CoreFrame, SidebarContent } from '../components';
+import { CoreFrame, Map, SidebarContent } from '../components';
+import { type GeoJSONLayerInit } from '../components/common/Map/types';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -10,9 +11,22 @@ import {
   useComparisonModeState,
 } from '../components/options';
 import { useAppData } from '../hooks';
+import { notEmpty } from '../utils';
+import { createScaledSegmentsRenderer } from '../utils/renderers';
 
 export function GeneralAccess() {
   const { data, loading, errors } = useAppData();
+
+  const networkSegments = (data || [])
+    .map(({ network_segments }) => network_segments)
+    .filter(notEmpty)
+    .map((segments) => {
+      return {
+        title: `Network Segments`,
+        data: segments,
+        renderer: createScaledSegmentsRenderer(),
+      } satisfies GeoJSONLayerInit;
+    });
 
   return (
     <CoreFrame
@@ -21,7 +35,7 @@ export function GeneralAccess() {
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
-          <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85"></arcgis-map>
+          <Map layers={networkSegments} />
         </div>
       }
       sections={[
