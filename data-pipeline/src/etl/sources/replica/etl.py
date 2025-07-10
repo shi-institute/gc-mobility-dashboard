@@ -325,7 +325,7 @@ class ReplicaETL:
                             area_name,
                             f'{region}_{year}_{quarter}{suffix}',
                             'network_segments',
-                            ['geoparquet', 'json'],
+                            ['geoparquet', 'geojson'],
                         )
 
                     print(f'  Finished processing area {area_name}.')
@@ -953,7 +953,7 @@ class ReplicaETL:
 
         return inferred_schema_df
 
-    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json'] | list[Literal['geoparquet', 'json']]) -> None:
+    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json', 'geojson'] | list[Literal['geoparquet', 'json', 'geojson']]) -> None:
         # if format is a list, call this function for each format in the list
         if isinstance(format, list):
             for fmt in format:
@@ -981,6 +981,9 @@ class ReplicaETL:
         if format == 'geoparquet':
             gdf.to_parquet(output_path + '.parquet',
                            write_covering_bbox=True, geometry_encoding='WKB', schema_version='1.1.0')
+            print(f'Saved results to {output_path}.parquet')
+        if format == 'geojson':
+            gdf.to_crs('EPSG:4326').to_file(output_path + '.geojson', driver='GeoJSON')
             print(f'Saved results to {output_path}.parquet')
         if format == 'json':
             df = pandas.DataFrame(gdf.drop(columns='geometry', errors='ignore'))

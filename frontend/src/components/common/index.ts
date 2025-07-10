@@ -1,5 +1,6 @@
 export { Button } from './Button/Button';
 export { IconButton } from './IconButton/IconButton';
+export { Map } from './Map/Map';
 export { NavBar } from './NavBarItem/NavBar';
 export { NavBarItem } from './NavBarItem/NavBarItem';
 export { Section } from './Section/Section';

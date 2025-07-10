@@ -2,7 +2,7 @@ type CensusHouseholdsTimeSeries = CensusHouseholdsValue[];
 type CensusRaceEthnicityTimeSeries = CensusRaceEthnicityValue[];
 type CensusPopulationTotalTimeSeries = CensusPopulationTotalValue[];
 type CensusEducationalAttainmentTimeSeries = CensusEducationalAttainmentValue[];
-type ReplicaNetworkSegments = ReplicaNetworkSegment[];
+type ReplicaNetworkSegments = GeoJSON<{ frequency: number; frequency_bucket: number }>;
 type ReplicaSyntheticPeople = ReplicaSyntheticPerson[];
 type ReplicaTrips = ReplicaTrip[];
 
@@ -123,4 +123,16 @@ interface ReplicaTrip {
   end_lng: number;
   end_lat: number;
   source_table: string;
+}
+
+interface GeoJSON<T = Record<string, any>> {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: string;
+      coordinates: any;
+    };
+    properties: T;
+  }>;
 }
