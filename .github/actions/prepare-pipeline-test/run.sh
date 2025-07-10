@@ -36,6 +36,8 @@ docker run --rm \
   -e REPLICA_YEARS_FILTER=2023 \
   -e REPLICA_QUARTERS_FILTER=Q4 \
   -e USE_BIGQUERY_STORAGE_API=$SHOULD_USE_BIGQUERY_STORAGE_API \
+  -e GITHUB_ACTIONS=$GITHUB_ACTIONS \
+  -e ACT=$ACT \
   gc-mobility-dashboard-data-pipeline:test --etls=$ETLS
 EXIT_CODE=$?
 if [ $EXIT_CODE -ne 0 ]; then

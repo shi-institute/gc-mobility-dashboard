@@ -327,7 +327,7 @@ class ReplicaETL:
         ]
         return expected_parquet_files
 
-    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
+    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str) -> None:
         """Loop through network segments tables and run queries to get the data.
 
         Args:
@@ -338,14 +338,16 @@ class ReplicaETL:
         Returns:
             list[pandas.DataFrame]: _description_
         """
-        result_dfs: list[pandas.DataFrame] = []
-
         # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
         schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
             'segments')]
 
         if schema_df is None or schema_df.empty:
-            return result_dfs
+            return
+
+        # check if the etl is running in GitHub Actions
+        is_running_in_workflow = os.getenv('GITHUB_ACTIONS', 'false').lower(
+        ) == 'true' or os.getenv('ACT', 'false').lower() == 'true'
 
         for table_name in schema_df['table_name']:
             # Set full_table_path be equal to the table_name column in the schema_df
@@ -353,30 +355,40 @@ class ReplicaETL:
 
             print(f'Running query for {full_table_path}...')
 
-            # run query to get network segments table
-            segments_query = f'''
-            SELECT stableEdgeId, streetName, geometry, osmid FROM {full_table_path};
-            '''
-            segments_df = pandas_gbq.read_gbq(
-                segments_query,
-                project_id=self.project_id,
-                dialect='standard',
-                use_bqstorage_api=self.use_bqstorage_api
-            )
-            if segments_df is None:
-                segments_df = pandas.DataFrame()
-            result_dfs.append(segments_df)
+            segments_gdf: geopandas.GeoDataFrame | None = None
+            if not is_running_in_workflow:
+                # run query to get network segments table
+                segments_query = f'''
+                SELECT stableEdgeId, streetName, geometry, osmid FROM {full_table_path};
+                '''
+                segments_df = pandas_gbq.read_gbq(
+                    segments_query,
+                    project_id=self.project_id,
+                    dialect='standard',
+                    use_bqstorage_api=self.use_bqstorage_api
+                )
 
-            # convert to geodataframe
-            geometry_wkt: pandas.Series = segments_df['geometry']
-            geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
-                geometry_wkt)
-            segments_gdf = geopandas.GeoDataFrame(
-                segments_df, geometry=geometry, crs="EPSG:4326")
+                if segments_df is None:
+                    segments_df = pandas.DataFrame()
+
+                # convert to geodataframe
+                geometry_wkt: pandas.Series = segments_df['geometry']
+                geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
+                    geometry_wkt)
+                segments_gdf = geopandas.GeoDataFrame(
+                    segments_df, geometry=geometry, crs="EPSG:4326")
 
             # save to file
             self._save(
-                segments_gdf,
+                segments_gdf or geopandas.GeoDataFrame(
+                    {
+                        "stableEdgeId": [],
+                        "streetName": [],
+                        "osmid": [],
+                        "geometry": [],
+                    },
+                    geometry="geometry"
+                ),
                 area_name,
                 table_name,
                 'network_segments',
@@ -384,8 +396,6 @@ class ReplicaETL:
             )
 
             print(f"\nSuccessfully obtained data from {full_table_path}.")
-
-        return result_dfs
 
     def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through population tables and run queries to get the data.

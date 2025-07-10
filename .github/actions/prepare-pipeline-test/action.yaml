@@ -47,6 +47,7 @@ runs:
           ETLS=$ETLS \
           ARTIFACT_NAME=$ARTIFACT_NAME \
           ACT=${{ env.ACT }} \
+          GITHUB_ACTIONS=${{ env.GITHUB_ACTIONS }} \
           ./run.sh
       shell: bash
 
