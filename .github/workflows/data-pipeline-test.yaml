@@ -297,7 +297,7 @@ jobs:
           LAST_PASS_HASH=$(echo "$VARS_JSON" | jq -r --arg key "$BRANCH_VAR_NAME" '.[$key]')
 
           # hash the contents of the current branch (this includes any uncommitted changes when running locally)
-          CURRENT_HASH=$(find . -type f -not -path "*/.vscode/*" -not -path "*/.git/*" \( -exec sha1sum "$PWD"/{} \; \) | awk '{print $1}' | sort | sha1sum | cut -d ' ' -f 1)
+          CURRENT_HASH=$(find . -type f -not -path "*/.vscode/*" -not -path "*/.git/*" -not -path "./data-pipeline/data/*" -not -path "./data-pipeline/env/*" -not -path "./data-pipeline/input/*" \( -exec sha1sum "$PWD"/{} \; \) | awk '{print $1}' | sort | sha1sum | cut -d ' ' -f 1)
           CURRENT_HASH="$CURRENT_HASH$TESTS_TO_RUN_HASH" # append the hash of the tests to run to the current hash
 
           # check whether it matches the current commit hash
@@ -345,6 +345,7 @@ jobs:
           sudo apt-get install -y gh
 
       - name: Update ACT_SUCCESS_COMMIT_HASH (on success)
+        if: "${{ env.ACT }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -362,7 +363,7 @@ jobs:
           BRANCH_VAR_NAME="ACT_SUCCESS_COMMIT_HASH__${SANITIZED_BRANCH_NAME}"
 
           # hash the contents of the current branch (this includes any uncommitted changes when running locally)
-          CURRENT_HASH=$(find . -type f -not -path "*/.vscode/*" -not -path "*/.git/*" \( -exec sha1sum "$PWD"/{} \; \) | awk '{print $1}' | sort | sha1sum | cut -d ' ' -f 1)
+          CURRENT_HASH=$(find . -type f -not -path "*/.vscode/*" -not -path "*/.git/*" -not -path "./data-pipeline/data/*" -not -path "./data-pipeline/env/*" -not -path "./data-pipeline/input/*" \( -exec sha1sum "$PWD"/{} \; \) | awk '{print $1}' | sort | sha1sum | cut -d ' ' -f 1)
           CURRENT_HASH="$CURRENT_HASH$TESTS_TO_RUN_HASH" # append the hash of the tests to run to the current hash
 
           echo "Setting Repository Variable: $BRANCH_VAR_NAME to $CURRENT_HASH"
