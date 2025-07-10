@@ -46,8 +46,7 @@ runs:
           INPUT_DIR=$INPUT_DIR \
           ETLS=$ETLS \
           ARTIFACT_NAME=$ARTIFACT_NAME \
-          ACT=${{ env.ACT }} \
-          GITHUB_ACTIONS=${{ env.GITHUB_ACTIONS }} \
+          IS_GH_WORKFLOW=true \
           ./run.sh
       shell: bash
 

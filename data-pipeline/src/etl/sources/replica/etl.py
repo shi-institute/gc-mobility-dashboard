@@ -346,8 +346,7 @@ class ReplicaETL:
             return
 
         # check if the etl is running in GitHub Actions
-        is_running_in_workflow = os.getenv('GITHUB_ACTIONS', 'false').lower(
-        ) == 'true' or os.getenv('ACT', 'false').lower() == 'true'
+        is_running_in_workflow = os.getenv('IS_GH_WORKFLOW', 'false').lower() == 'true'
 
         for table_name in schema_df['table_name']:
             # Set full_table_path be equal to the table_name column in the schema_df
