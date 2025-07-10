@@ -70,7 +70,7 @@ await deflateJsonFiles(publicDataDir);
 // build an index of areas and seasons
 const areaNames = await buildAreaIndex(publicDataDir + '/replica');
 if (areaNames.length) {
-  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/thursday_trip');
+  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/network_segments');
 }
 
 if (!shouldLog) {
@@ -185,6 +185,8 @@ async function buildSeasonIndex(directory) {
     if (item.includes('.json')) {
       seasonNames.push(
         item
+          .split('__')
+          .slice(0, -1)[0] // remove the part after '__'
           .replace('south_atlantic_', '')
           .replace('.json.deflate', '')
           .split('_')
