@@ -243,29 +243,40 @@ class ReplicaETL:
 
                     print(f'  Transforming data for {area_name}...')
 
-                    print(f'    ...building saturday network segments [1/2]')
-                    network_segments_filtered_saturday = count_segment_frequency(
-                        saturday_trip_filtered)
-                    print(f'    ...building thursday network segments [2/2]')
-                    network_segments_filtered_thursday = count_segment_frequency(
-                        thursday_trip_filtered)
+                    network_segments_subsets: list[tuple[str, geopandas.GeoDataFrame]] = []
+                    days = ['saturday', 'thursday']
+                    travel_modes = ['biking', 'carpool', 'commerical', 'on_demand_auto',
+                                    'other_travel_mode', 'private_auto', 'public_transit', 'walking']
+                    total_segment_exports = len(days) * (len(travel_modes) + 1)
+                    current_segment_export = 0
+                    for day in days:
+                        current_segment_export += 1
+                        print(
+                            f'    ...building {day} network segments [{current_segment_export}/{total_segment_exports}]'
+                        )
+
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        day_network_segments = count_segment_frequency(trips_gdf)
+                        network_segments_subsets.append((f'__{day}', day_network_segments))
+
+                        for travel_mode in travel_modes:
+                            current_segment_export += 1
+                            print(
+                                f'    ...building {day} network segments (commute:{travel_mode}) [{current_segment_export}/{total_segment_exports}]'
+                            )
+
+                            filter = (trips_gdf['mode'] == travel_mode.upper())\
+                                & (trips_gdf['tour_type'] == 'COMMUTE')
+                            day_travel_mode_network_segments = count_segment_frequency(
+                                trips_gdf[filter]
+                            )
+                            network_segments_subsets.append((
+                                f'__{day}__commute__{travel_mode}',
+                                day_travel_mode_network_segments
+                            ))
 
                     # save the filtered data to files
                     print(f'  Saving filtered data for {area_name}...')
-                    self._save(
-                        network_segments_filtered_saturday,
-                        area_name,
-                        f'{region}_{year}_{quarter}__saturday',
-                        'network_segments',
-                        ['geoparquet', 'json'],
-                    )
-                    self._save(
-                        network_segments_filtered_thursday,
-                        area_name,
-                        f'{region}_{year}_{quarter}__thursday',
-                        'network_segments',
-                        ['geoparquet', 'json'],
-                    )
                     self._save(
                         population_home_filtered,
                         area_name,
@@ -308,6 +319,14 @@ class ReplicaETL:
                         'thursday_trip',
                         'geoparquet',
                     )
+                    for suffix, gdf in network_segments_subsets:
+                        self._save(
+                            gdf,
+                            area_name,
+                            f'{region}_{year}_{quarter}{suffix}',
+                            'network_segments',
+                            ['geoparquet', 'json'],
+                        )
 
                     print(f'  Finished processing area {area_name}.')
 
