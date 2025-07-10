@@ -182,7 +182,7 @@ async function buildSeasonIndex(directory) {
 
   const seasonNames = [];
   for await (const item of items) {
-    if (item.includes('.json')) {
+    if (item.includes('.geojson')) {
       seasonNames.push(
         item
           .split('__')
@@ -196,8 +196,10 @@ async function buildSeasonIndex(directory) {
     }
   }
 
+  const uniqueSeasonNames = Array.from(new Set(seasonNames));
+
   // write the season quarter-year pairs to a text file
-  const seasonIndex = seasonNames.join('\n');
+  const seasonIndex = uniqueSeasonNames.join('\n');
   const seasonIndexPath = joinPath(directory, '../../season_index.txt');
   await writeFile(seasonIndexPath, seasonIndex, 'utf8');
   console.log(`Season index written to: ${seasonIndexPath}`);
