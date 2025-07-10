@@ -148,11 +148,11 @@ class ReplicaETL:
 
                 print(f'  Opening source data for season {year} {quarter}')
 
-                print(f'    ...network segments [0/5]')
-                network_segments = geopandas.read_file(os.path.join(
-                    self.folder_path,
-                    expected_parquet_files[0].format(region=region, year=year, quarter=quarter)
-                ))
+                # print(f'    ...network segments [0/5]')
+                # network_segments = geopandas.read_file(os.path.join(
+                #     self.folder_path,
+                #     expected_parquet_files[0].format(region=region, year=year, quarter=quarter)
+                # ))
                 print(f'    ...population data (home) [1/5]')
                 population_home = geopandas.read_file(os.path.join(
                     self.folder_path,
