@@ -1,4 +1,5 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
+import { useMemo } from 'react';
 import { CoreFrame, Map, SidebarContent } from '../components';
 import { type GeoJSONLayerInit } from '../components/common/Map/types';
 import { AppNavigation } from '../components/navigation';
@@ -8,6 +9,7 @@ import {
   SelectedComparisonAreas,
   SelectedComparisonSeasons,
   SelectedSeason,
+  SelectTravelMethod,
   useComparisonModeState,
 } from '../components/options';
 import { useAppData } from '../hooks';
@@ -17,16 +19,18 @@ import { createScaledSegmentsRenderer } from '../utils/renderers';
 export function GeneralAccess() {
   const { data, loading, errors } = useAppData();
 
-  const networkSegments = (data || [])
-    .map(({ network_segments }) => network_segments)
-    .filter(notEmpty)
-    .map((segments) => {
-      return {
-        title: `Network Segments`,
-        data: segments,
-        renderer: createScaledSegmentsRenderer(),
-      } satisfies GeoJSONLayerInit;
-    });
+  const networkSegments = useMemo(() => {
+    return (data || [])
+      .map(({ network_segments }) => network_segments)
+      .filter(notEmpty)
+      .map((segments) => {
+        return {
+          title: `Network Segments`,
+          data: segments,
+          renderer: createScaledSegmentsRenderer(),
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
 
   return (
     <CoreFrame
@@ -85,7 +89,7 @@ export function GeneralAccess() {
 }
 
 function Sidebar() {
-  const { areasList, seasonsList } = useAppData();
+  const { areasList, seasonsList, travelMethodList } = useAppData();
   const [isComparisonEnabled] = useComparisonModeState();
 
   return (
@@ -104,6 +108,9 @@ function Sidebar() {
           <SelectedComparisonSeasons seasonsList={seasonsList} />
         </>
       ) : null}
+
+      <h2>Work and school</h2>
+      <SelectTravelMethod travelMethodList={travelMethodList} />
     </SidebarContent>
   );
 }

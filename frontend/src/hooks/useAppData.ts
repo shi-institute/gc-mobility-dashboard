@@ -3,10 +3,21 @@ import { inflateResponse } from '../utils';
 
 export function createAppDataContext(
   areas: AppDataHookParameters['areas'],
-  seasons: AppDataHookParameters['seasons']
+  seasons: AppDataHookParameters['seasons'],
+  travelMethod: AppDataHookParameters['travelMethod']
 ) {
-  return _useAppData({ areas, seasons });
+  return _useAppData({ areas, seasons, travelMethod });
 }
+
+type TravelMethod =
+  | 'biking'
+  | 'carpool'
+  | 'commerical'
+  | 'on_demand_auto'
+  | 'other_travel_mode'
+  | 'private_auto'
+  | 'public_transit'
+  | 'walking';
 
 export type AppDataContextValue = ReturnType<typeof _useAppData>;
 export const AppDataContext = createContext<AppDataContextValue>({} as AppDataContextValue);
@@ -18,9 +29,16 @@ export function _useAppDataContext() {
 interface AppDataHookParameters {
   areas: string[];
   seasons: ['Q2' | 'Q4', number][];
+  /**
+   * Optional travel methods for filtering the data.
+   *
+   * If provided, only trips with this travel method will be included in the data.
+   * If not provided, all travel methods will be included.
+   */
+  travelMethod?: TravelMethod;
 }
 
-function _useAppData({ areas, seasons }: AppDataHookParameters) {
+function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const [areasList, setAreasList] = useState<string[]>([]);
   useEffect(() => {
     fetch('./data/replica/area_index.txt')
@@ -47,6 +65,17 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
       });
   }, [setSeasonsList]);
 
+  const travelMethodList = [
+    'biking',
+    'carpool',
+    'commerical',
+    'on_demand_auto',
+    'other_travel_mode',
+    'private_auto',
+    'public_transit',
+    'walking',
+  ];
+
   // fetch the census data, which is a static time series file for each category that
   // applies to all areas and seasons
   const censusPromises = useMemo(() => {
@@ -61,7 +90,7 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
 
   // merge the replica promises with the census promises
   const dataPromises = useMemo(() => {
-    const replicaPaths = constructReplicaPaths(areas, seasons);
+    const replicaPaths = constructReplicaPaths(areas, seasons, travelMethod);
     const replicaPromises = constructReplicaPromises(replicaPaths);
     return replicaPromises.map((promises) => {
       return {
@@ -108,7 +137,7 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
     };
   }, [dataPromises]);
 
-  return { data, loading, errors, areasList, seasonsList };
+  return { data, loading, errors, areasList, seasonsList, travelMethodList };
 }
 
 async function fetchData<T = Record<string, unknown>>(
@@ -213,16 +242,21 @@ function getCensusData() {
  */
 function constructReplicaPaths(
   areas: AppDataHookParameters['areas'],
-  seasons: AppDataHookParameters['seasons']
+  seasons: AppDataHookParameters['seasons'],
+  travelMethod?: AppDataHookParameters['travelMethod']
 ) {
   return areas.flatMap((area) => {
     return seasons.map(([quarter, year]) => {
+      let networkSegmentsSuffix = `_${year}_${quarter}__thursday`;
+      if (travelMethod) {
+        networkSegmentsSuffix += `__commute__${travelMethod}`;
+      }
+
       return {
         __area: area,
         __year: year,
         __quarter: quarter,
-
-        network_segments: `./data/replica/${area}/network_segments/south_atlantic_${year}_${quarter}__thursday.geojson.deflate`,
+        network_segments: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}.geojson.deflate`,
         population: `./data/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
       };
     });

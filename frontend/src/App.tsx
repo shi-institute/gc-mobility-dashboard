@@ -55,9 +55,13 @@ export default function App() {
     return comparisonEnabled ? seasons : seasons.slice(0, 1);
   }, [searchParams, comparisonEnabled]);
 
+  const travelMethod = useMemo(() => {
+    return searchParams.get('travelMethod') ?? undefined;
+  }, [searchParams]);
+
   return (
     <AppWrapper>
-      <AppDataContext.Provider value={createAppDataContext(areas, seasons)}>
+      <AppDataContext.Provider value={createAppDataContext(areas, seasons, travelMethod)}>
         <CoreFrameContext.Provider value={createCoreFrameContextValue()}>
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 
