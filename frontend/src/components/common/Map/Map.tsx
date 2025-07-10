@@ -1,6 +1,6 @@
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer.js';
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { GeoJSONLayerInit } from './types';
 
 interface MapProps {
@@ -10,12 +10,19 @@ interface MapProps {
 export function Map(props: MapProps) {
   const mapElem = useRef<HTMLArcgisMapElement>(null);
 
+  // track when the map is ready or is replaced
+  const [map, setMap] = useState<__esri.Map | null>(null);
   useEffect(() => {
     if (!mapElem.current) {
       return;
     }
 
-    const map = mapElem.current.map;
+    mapElem.current.addEventListener('arcgisViewReadyChange', () => {
+      setMap(mapElem.current?.map ?? null);
+    });
+  }, [mapElem.current]);
+
+  useEffect(() => {
     if (!map) {
       return;
     }
@@ -54,7 +61,7 @@ export function Map(props: MapProps) {
         URL.revokeObjectURL(url);
       });
     };
-  }, [mapElem.current, props.layers]);
+  }, [map, props.layers]);
 
   return (
     <div style={{ height: '100%' }}>
