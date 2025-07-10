@@ -41,6 +41,19 @@ export function GeneralAccess() {
                         if (Array.isArray(value)) {
                           return [key, `Array(${value.length})`];
                         }
+                        if (typeof value === 'object' && value !== null) {
+                          return [
+                            key,
+                            Object.fromEntries(
+                              Object.entries(value).map(([k, v]) => {
+                                if (Array.isArray(v)) {
+                                  return [k, `Array(${v.length})`];
+                                }
+                                return [k, v];
+                              })
+                            ),
+                          ];
+                        }
                         return [key, value];
                       })
                     )
