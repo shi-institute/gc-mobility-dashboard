@@ -279,8 +279,8 @@ class ReplicaETL:
                     print(f'  Calculating statistics for {area_name}...')
                     statistics: dict[Any, Any] = {
                         'synthetic_demographics': {},
-                        'saturday_trip': {'methods': {}},
-                        'thursday_trip': {'methods': {}},
+                        'saturday_trip': {'methods': {}, 'median_duration': {}},
+                        'thursday_trip': {'methods': {}, 'median_duration': {}},
                     }
 
                     # calculate race population estimates
@@ -311,12 +311,25 @@ class ReplicaETL:
 
                         # for each tour type (commute, undirected, etc.)
                         for tour_type in tour_types:
-                            mode_counts = trips_gdf[trips_gdf['tour_type']
-                                                    == tour_type.upper()].groupby('mode').size()
+                            filter = (trips_gdf['tour_type'] == tour_type.upper())
+                            mode_counts = trips_gdf[filter].groupby('mode').size()
                             mode_counts.index = mode_counts.index.str.lower()
                             statistics[f'{day}_trip']['methods'][tour_type] = mode_counts.to_dict()
 
                     # calculate median trip commute time
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        tour_types = trips_gdf['tour_type'].str.lower().unique()
+
+                        # for all
+                        median_trip_duration = trips_gdf['duration_minutes'].median()
+                        statistics[f'{day}_trip']['median_duration']['__all'] = median_trip_duration
+
+                        # for each tour type (commute, undirected, etc.)
+                        for tour_type in tour_types:
+                            filter = (trips_gdf['tour_type'] == tour_type.upper())
+                            median_trip_duration = trips_gdf[filter]['duration_minutes'].median()
+                            statistics[f'{day}_trip']['median_duration'][tour_type] = median_trip_duration
 
                     print(f'  Saving statistics for {area_name}...')
                     statistics_path = os.path.join(
