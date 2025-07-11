@@ -479,9 +479,8 @@ class ReplicaETL:
                 segments_gdf = geopandas.GeoDataFrame(
                     segments_df, geometry=geometry, crs="EPSG:4326")
 
-            # save to file
-            self._save(
-                segments_gdf or geopandas.GeoDataFrame(
+            if segments_gdf is None:
+                segments_gdf = geopandas.GeoDataFrame(
                     {
                         "stableEdgeId": [],
                         "streetName": [],
@@ -489,7 +488,11 @@ class ReplicaETL:
                         "geometry": [],
                     },
                     geometry="geometry"
-                ),
+                )
+
+            # save to file
+            self._save(
+                segments_gdf,
                 area_name,
                 table_name,
                 'network_segments',
