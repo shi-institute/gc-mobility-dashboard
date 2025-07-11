@@ -278,7 +278,9 @@ class ReplicaETL:
 
                     print(f'  Calculating statistics for {area_name}...')
                     statistics: dict[Any, Any] = {
-                        'synthetic_demographics': {}
+                        'synthetic_demographics': {},
+                        'saturday_trip': {'methods': {}},
+                        'thursday_trip': {'methods': {}},
                     }
 
                     # calculate race population estimates
@@ -296,6 +298,25 @@ class ReplicaETL:
                     # calculate normal communte mode population estimates
                     statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
                         'commute_mode').size().to_dict()
+
+                    # count trip travel methods
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        tour_types = trips_gdf['tour_type'].str.lower().unique()
+
+                        # for all
+                        mode_counts = trips_gdf.groupby('mode').size()
+                        mode_counts.index = mode_counts.index.str.lower()
+                        statistics[f'{day}_trip']['methods']['__all'] = mode_counts.to_dict()
+
+                        # for each tour type (commute, undirected, etc.)
+                        for tour_type in tour_types:
+                            mode_counts = trips_gdf[trips_gdf['tour_type']
+                                                    == tour_type.upper()].groupby('mode').size()
+                            mode_counts.index = mode_counts.index.str.lower()
+                            statistics[f'{day}_trip']['methods'][tour_type] = mode_counts.to_dict()
+
+                    # calculate median trip commute time
 
                     print(f'  Saving statistics for {area_name}...')
                     statistics_path = os.path.join(
