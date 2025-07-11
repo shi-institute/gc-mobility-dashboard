@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { SelectMany, SelectOne } from '../../common';
-import { SelectedOption } from '../../common/Select/SelectedOption';
+import { SelectedItem, SelectedOption } from '../../common/Select/SelectedOption';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
 
 interface SelectedSeasonProps {
@@ -12,29 +12,57 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
   const [isCompareEnabled] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Add useEffect hook to remove extra seasons from URL params
+  const getCleanSeasonsFromParams = () => {
+    const seasonsParam = searchParams.get('seasons');
+    return seasonsParam ? seasonsParam.split(',').filter((s) => s !== '') : [];
+  };
+
   useEffect(() => {
     if (!isCompareEnabled) {
-      const currentSeasons = searchParams.get('seasons')?.split(',') || [];
+      const currentSeasons = getCleanSeasonsFromParams();
       if (currentSeasons.length > 1) {
-        // If there's more than one season, keep only the first one
         searchParams.set('seasons', currentSeasons[0]);
         setSearchParams(searchParams);
       }
     }
   }, [isCompareEnabled, searchParams, setSearchParams]);
 
-  const selectSeasons = searchParams.get('seasons')?.split(',') || [];
+  const selectSeasons = getCleanSeasonsFromParams();
 
   function handleSelectionChange(selected: string[]) {
-    searchParams.set('seasons', selected.join(','));
+    if (selected.length === 0) {
+      searchParams.delete('seasons');
+    } else {
+      searchParams.set('seasons', selected.join(','));
+    }
     setSearchParams(searchParams);
   }
 
   function handleSingleSeasonChange(value: string) {
-    searchParams.set('seasons', value);
+    if (value === '') {
+      searchParams.delete('seasons');
+    } else {
+      searchParams.set('seasons', value);
+    }
     setSearchParams(searchParams);
   }
+
+  function handleRemoveSeason(seasonToRemove: string) {
+    let currentSeasons = getCleanSeasonsFromParams();
+    let updatedSeasons = currentSeasons.filter((s) => s !== seasonToRemove);
+
+    if (updatedSeasons.length === 0) {
+      searchParams.delete('seasons');
+    } else {
+      searchParams.set('seasons', updatedSeasons.join(','));
+    }
+    setSearchParams(searchParams);
+  }
+
+  const selectedItemsForDisplay: SelectedItem[] = selectSeasons.map((season) => ({
+    value: season,
+    label: season,
+  }));
 
   return isCompareEnabled ? (
     <div>
@@ -44,7 +72,10 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
         onChange={handleSelectionChange}
         selectedOptions={selectSeasons}
       />
-      <SelectedOption selectedOptions={selectSeasons} />
+      {/* CONDITIONAL RENDERING HERE: */}
+      {selectedItemsForDisplay.length > 0 && (
+        <SelectedOption selectedItems={selectedItemsForDisplay} onRemove={handleRemoveSeason} />
+      )}
     </div>
   ) : (
     <div>
