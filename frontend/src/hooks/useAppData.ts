@@ -256,6 +256,7 @@ function constructReplicaPaths(
         __area: area,
         __year: year,
         __quarter: quarter,
+        polygon: `./data/replica/${area}/polygon.geojson.deflate`,
         network_segments: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}.geojson.deflate`,
         population: `./data/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
       };
@@ -276,6 +277,8 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
       __area: async () => __area,
       __year: async () => __year,
       __quarter: async () => __quarter,
+      polygon: (abortSignal?: AbortSignal) =>
+        fetchData<ReplicaAreaPolygon>(paths.polygon, abortSignal).catch(handleError('polygon')),
       network_segments: (abortSignal?: AbortSignal) =>
         fetchData<ReplicaNetworkSegments>(paths.network_segments, abortSignal).catch(
           handleError('network_segments')
