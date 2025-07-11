@@ -3,6 +3,7 @@ type CensusRaceEthnicityTimeSeries = CensusRaceEthnicityValue[];
 type CensusPopulationTotalTimeSeries = CensusPopulationTotalValue[];
 type CensusEducationalAttainmentTimeSeries = CensusEducationalAttainmentValue[];
 type ReplicaNetworkSegments = GeoJSON<{ frequency: number; frequency_bucket: number }>;
+type ReplicaAreaPolygon = GeoJSON<{ name: string }>;
 type ReplicaSyntheticPeople = ReplicaSyntheticPerson[];
 type ReplicaTrips = ReplicaTrip[];
 

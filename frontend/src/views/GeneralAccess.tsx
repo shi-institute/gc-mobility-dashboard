@@ -14,7 +14,7 @@ import {
 } from '../components/options';
 import { useAppData } from '../hooks';
 import { notEmpty } from '../utils';
-import { createScaledSegmentsRenderer } from '../utils/renderers';
+import { createInterestAreaRenderer, createScaledSegmentsRenderer } from '../utils/renderers';
 
 export function GeneralAccess() {
   const { data, loading, errors } = useAppData();
@@ -32,6 +32,19 @@ export function GeneralAccess() {
       });
   }, [data]);
 
+  const areaPolygons = useMemo(() => {
+    return (data || [])
+      .map(({ polygon }) => polygon)
+      .filter(notEmpty)
+      .map((polygon) => {
+        return {
+          title: `Area Polygon`,
+          data: polygon,
+          renderer: createInterestAreaRenderer(),
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
@@ -39,7 +52,7 @@ export function GeneralAccess() {
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
-          <Map layers={networkSegments} />
+          <Map layers={[...networkSegments, ...areaPolygons]} />
         </div>
       }
       sections={[

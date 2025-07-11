@@ -277,6 +277,24 @@ class ReplicaETL:
 
                     # save the filtered data to files
                     print(f'  Saving filtered data for {area_name}...')
+                    area_polygon_gdf = geopandas.GeoDataFrame(
+                        {'name': [area_name], 'geometry': gdf_union},
+                        crs=gdf.crs
+                    ).to_crs('EPSG:4326')
+                    self._save(
+                        area_polygon_gdf,
+                        area_name,
+                        f'polygon',
+                        '',
+                        'geojson',
+                    )
+                    self._save(
+                        population_home_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_home',
+                        'population',
+                        'geoparquet',
+                    )
                     self._save(
                         population_home_filtered,
                         area_name,
