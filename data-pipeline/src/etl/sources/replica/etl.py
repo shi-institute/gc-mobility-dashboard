@@ -1,11 +1,12 @@
 import gc
+import json
 import logging
 import os
 import pickle
 import re
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 import geopandas
 import numpy
@@ -275,8 +276,38 @@ class ReplicaETL:
                                 day_travel_mode_network_segments
                             ))
 
+                    print(f'  Calculating statistics for {area_name}...')
+                    statistics: dict[Any, Any] = {
+                        'synthetic_demographics': {}
+                    }
+
+                    # calculate race population estimates
+                    statistics['synthetic_demographics']['race'] = population_filtered_df.groupby(
+                        'race').size().to_dict()
+
+                    # calculate ethnicity population estimates
+                    statistics['synthetic_demographics']['ethnicity'] = population_filtered_df.groupby(
+                        'ethnicity').size().to_dict()
+
+                    # calculate education attainment population estimates
+                    statistics['synthetic_demographics']['education'] = population_filtered_df.groupby(
+                        'education').size().to_dict()
+
+                    # calculate normal communte mode population estimates
+                    statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
+                        'commute_mode').size().to_dict()
+
+                    print(f'  Saving statistics for {area_name}...')
+                    statistics_path = os.path.join(
+                        self.folder_path,
+                        f'{area_name}/statistics/replica__{region}_{year}_{quarter}.json'
+                    )
+                    os.makedirs(os.path.dirname(statistics_path), exist_ok=True)
+                    with open(statistics_path, 'w') as file:
+                        json.dump(statistics, file,)
+
                     # save the filtered data to files
-                    print(f'  Saving filtered data for {area_name}...')
+                    print(f'  Saving data for {area_name}...')
                     area_polygon_gdf = geopandas.GeoDataFrame(
                         {'name': [area_name], 'geometry': gdf_union},
                         crs=gdf.crs
