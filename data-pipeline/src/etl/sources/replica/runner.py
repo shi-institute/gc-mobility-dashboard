@@ -20,5 +20,6 @@ def source_runner():
     # get replica data
     trip_columns = ['activity_id', 'person_id', 'mode',
                     'travel_purpose', 'tour_type', 'transit_route_ids',
-                    'network_link_ids', 'vehicle_type']
+                    'network_link_ids', 'vehicle_type', 'start_local_hour',
+                    'end_local_hour', 'duration_minutes']
     ReplicaETL(trip_columns, years, quarters).run()

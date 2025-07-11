@@ -1,11 +1,12 @@
 import gc
+import json
 import logging
 import os
 import pickle
 import re
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 import geopandas
 import numpy
@@ -275,8 +276,72 @@ class ReplicaETL:
                                 day_travel_mode_network_segments
                             ))
 
+                    print(f'  Calculating statistics for {area_name}...')
+                    statistics: dict[Any, Any] = {
+                        'synthetic_demographics': {},
+                        'saturday_trip': {'methods': {}, 'median_duration': {}},
+                        'thursday_trip': {'methods': {}, 'median_duration': {}},
+                    }
+
+                    # calculate race population estimates
+                    statistics['synthetic_demographics']['race'] = population_filtered_df.groupby(
+                        'race').size().to_dict()
+
+                    # calculate ethnicity population estimates
+                    statistics['synthetic_demographics']['ethnicity'] = population_filtered_df.groupby(
+                        'ethnicity').size().to_dict()
+
+                    # calculate education attainment population estimates
+                    statistics['synthetic_demographics']['education'] = population_filtered_df.groupby(
+                        'education').size().to_dict()
+
+                    # calculate normal communte mode population estimates
+                    statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
+                        'commute_mode').size().to_dict()
+
+                    # count trip travel methods
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        tour_types = trips_gdf['tour_type'].str.lower().unique()
+
+                        # for all
+                        mode_counts = trips_gdf.groupby('mode').size()
+                        mode_counts.index = mode_counts.index.str.lower()
+                        statistics[f'{day}_trip']['methods']['__all'] = mode_counts.to_dict()
+
+                        # for each tour type (commute, undirected, etc.)
+                        for tour_type in tour_types:
+                            filter = (trips_gdf['tour_type'] == tour_type.upper())
+                            mode_counts = trips_gdf[filter].groupby('mode').size()
+                            mode_counts.index = mode_counts.index.str.lower()
+                            statistics[f'{day}_trip']['methods'][tour_type] = mode_counts.to_dict()
+
+                    # calculate median trip commute time
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        tour_types = trips_gdf['tour_type'].str.lower().unique()
+
+                        # for all
+                        median_trip_duration = trips_gdf['duration_minutes'].median()
+                        statistics[f'{day}_trip']['median_duration']['__all'] = median_trip_duration
+
+                        # for each tour type (commute, undirected, etc.)
+                        for tour_type in tour_types:
+                            filter = (trips_gdf['tour_type'] == tour_type.upper())
+                            median_trip_duration = trips_gdf[filter]['duration_minutes'].median()
+                            statistics[f'{day}_trip']['median_duration'][tour_type] = median_trip_duration
+
+                    print(f'  Saving statistics for {area_name}...')
+                    statistics_path = os.path.join(
+                        self.folder_path,
+                        f'{area_name}/statistics/replica__{region}_{year}_{quarter}.json'
+                    )
+                    os.makedirs(os.path.dirname(statistics_path), exist_ok=True)
+                    with open(statistics_path, 'w') as file:
+                        json.dump(statistics, file,)
+
                     # save the filtered data to files
-                    print(f'  Saving filtered data for {area_name}...')
+                    print(f'  Saving data for {area_name}...')
                     area_polygon_gdf = geopandas.GeoDataFrame(
                         {'name': [area_name], 'geometry': gdf_union},
                         crs=gdf.crs
@@ -414,9 +479,8 @@ class ReplicaETL:
                 segments_gdf = geopandas.GeoDataFrame(
                     segments_df, geometry=geometry, crs="EPSG:4326")
 
-            # save to file
-            self._save(
-                segments_gdf or geopandas.GeoDataFrame(
+            if segments_gdf is None:
+                segments_gdf = geopandas.GeoDataFrame(
                     {
                         "stableEdgeId": [],
                         "streetName": [],
@@ -424,7 +488,11 @@ class ReplicaETL:
                         "geometry": [],
                     },
                     geometry="geometry"
-                ),
+                )
+
+            # save to file
+            self._save(
+                segments_gdf,
                 area_name,
                 table_name,
                 'network_segments',
