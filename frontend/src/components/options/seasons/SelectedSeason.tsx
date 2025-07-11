@@ -1,17 +1,28 @@
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { SelectMany, SelectOne } from '../../common';
 import { SelectedOption } from '../../common/Select/SelectedOption';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
 
 interface SelectedSeasonProps {
-  seasonsList: string[]; // This is the full list of available seasons
+  seasonsList: string[];
 }
 
 export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
   const [isCompareEnabled] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  //Add useEffect hook to remove extra seasons from URL params
+  // Add useEffect hook to remove extra seasons from URL params
+  useEffect(() => {
+    if (!isCompareEnabled) {
+      const currentSeasons = searchParams.get('seasons')?.split(',') || [];
+      if (currentSeasons.length > 1) {
+        // If there's more than one season, keep only the first one
+        searchParams.set('seasons', currentSeasons[0]);
+        setSearchParams(searchParams);
+      }
+    }
+  }, [isCompareEnabled, searchParams, setSearchParams]);
 
   const selectSeasons = searchParams.get('seasons')?.split(',') || [];
 
