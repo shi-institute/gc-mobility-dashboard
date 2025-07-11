@@ -126,6 +126,76 @@ interface ReplicaTrip {
   source_table: string;
 }
 
+interface ReplicaStatistics {
+  synthetic_demographics: ReplicaSyntheticDemographicsStatisitcs;
+  saturday_trip: ReplicaTripStatistics;
+  thursday_trip: ReplicaTripStatistics;
+}
+
+interface ReplicaSyntheticDemographicsStatisitcs {
+  race: {
+    white?: number;
+    blac_african_american?: number;
+    two_or_more_races?: number;
+    other_race_alone?: number;
+    asian?: number;
+    american_indian_alaska_native?: number;
+    hawaiian_pacific?: number;
+  };
+  ethnicity: {
+    hispanic_or_latino?: number;
+    not_hispanic_or_latino?: number;
+  };
+  education: {
+    k_12?: number;
+    high_school?: number;
+    some_college?: number;
+    bachelors_degree?: number;
+    advanced_degree?: number;
+    no_school?: number;
+    under_3?: number;
+  };
+  commute_mode: {
+    not_working?: number;
+    driving?: number;
+    carpool?: number;
+    worked_from_home?: number;
+    walking?: number;
+    transit?: number;
+    biking?: number;
+  };
+}
+
+interface ReplicaTripStatistics {
+  /** Mode statistics broken down by tour type */
+  methods: {
+    __all: ReplicaTripModeStatistics;
+    commute: ReplicaTripModeStatistics;
+    work_based: ReplicaTripModeStatistics;
+    undirected: ReplicaTripModeStatistics;
+    other_home_based: ReplicaTripModeStatistics;
+  };
+  /** The median duration in minutes broken down by tour type */
+  median_duration: {
+    __all: number;
+    commute: number;
+    work_based: number;
+    undirected: number;
+    other_home_based: number;
+  };
+}
+
+interface ReplicaTripModeStatistics {
+  private_auto?: number;
+  carpool?: number;
+  walking?: number;
+  commercial?: number;
+  other_travel_mode?: number;
+  biking?: number;
+  on_demand_auto?: number;
+  public_transit?: number;
+}
+
 interface GeoJSON<T = Record<string, any>> {
   type: 'FeatureCollection';
   features: Array<{
