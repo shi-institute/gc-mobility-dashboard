@@ -11,11 +11,9 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
   const [isCompareEnabled] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  //Add useEffect hook to remove extra seasons from URL params
+
   const selectSeasons = searchParams.get('seasons')?.split(',') || [];
-
-  const filteredSeasonsForMany = seasonsList.filter((season) => !selectSeasons.includes(season));
-
-  const optionsForSelectOne = seasonsList;
 
   function handleSelectionChange(selected: string[]) {
     searchParams.set('seasons', selected.join(','));
@@ -31,7 +29,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
     <div>
       <label>Select Multiple Seasons:</label>
       <SelectMany
-        options={filteredSeasonsForMany}
+        options={seasonsList}
         onChange={handleSelectionChange}
         selectedOptions={selectSeasons}
       />
@@ -42,7 +40,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
       <label> Select a Single Season:</label>
       <SelectOne
         onChange={handleSingleSeasonChange}
-        options={optionsForSelectOne}
+        options={seasonsList}
         value={selectSeasons[0]}
       />
     </div>
