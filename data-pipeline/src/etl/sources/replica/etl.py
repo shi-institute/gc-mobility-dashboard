@@ -31,6 +31,7 @@ class ReplicaETL:
     region = 'south_atlantic'
     input_folder_path = './input/replica_interest_area_polygons'
     folder_path = './data/replica'
+    greenlink_gtfs_folder_path = './data/greenlink_gtfs'
     columns_to_select = 'household_id'
     use_bqstorage_api = os.getenv('USE_BIGQUERY_STORAGE_API', '0') == '1'
 
@@ -154,34 +155,46 @@ class ReplicaETL:
                 #     self.folder_path,
                 #     expected_parquet_files[0].format(region=region, year=year, quarter=quarter)
                 # ))
-                print(f'    ...population data (home) [1/5]')
+                print(f'    ...population data (home) [1/7]')
                 population_home = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[1].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...population data (school) [2/5]')
+                print(f'    ...population data (school) [2/7]')
                 population_school = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[2].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...population data (work) [3/5]')
+                print(f'    ...population data (work) [3/7]')
                 population_work = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[3].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...saturday trip [4/5]')
+                print(f'    ...saturday trip [4/7]')
                 saturday_trip = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[4].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...thursday trip [5/5]')
+                print(f'    ...thursday trip [5/7]')
                 thursday_trip = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[5].format(region=region, year=year, quarter=quarter)
+                ))
+
+                print(f'    ...walking service area [6/7]')
+                walk_gdf = geopandas.read_file(os.path.join(
+                    self.greenlink_gtfs_folder_path,
+                    f'{year}/{quarter}/walk_service_area.geojson',
+                ))
+
+                print(f'    ...biking service area [7/7]')
+                bike_gdf = geopandas.read_file(os.path.join(
+                    self.greenlink_gtfs_folder_path,
+                    f'{year}/{quarter}/bike_service_area.geojson',
                 ))
 
                 for filename in geojson_filenames:
@@ -279,8 +292,8 @@ class ReplicaETL:
                     print(f'  Calculating statistics for {area_name}...')
                     statistics: dict[Any, Any] = {
                         'synthetic_demographics': {},
-                        'saturday_trip': {'methods': {}, 'median_duration': {}},
-                        'thursday_trip': {'methods': {}, 'median_duration': {}},
+                        'saturday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}},
+                        'thursday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}},
                     }
 
                     # calculate race population estimates
@@ -330,6 +343,26 @@ class ReplicaETL:
                             filter = (trips_gdf['tour_type'] == tour_type.upper())
                             median_trip_duration = trips_gdf[filter]['duration_minutes'].median()
                             statistics[f'{day}_trip']['median_duration'][tour_type] = median_trip_duration
+
+                    # count trips that could use public transit
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+
+                        # get the trips that are not public transit
+                        transit_filter = (trips_gdf['mode'] != 'PUBLIC_TRANSIT')
+                        non_public_transit_trips_gdf = trips_gdf[transit_filter]
+
+                        # get the non-public transit trips that are within the walking service area
+                        mask = non_public_transit_trips_gdf.within(walk_gdf.geometry)
+                        trips_within_walk_service_area_gdf = non_public_transit_trips_gdf[mask]
+                        statistics[f'{day}_trip']['possible_conversions']['via_walk'] = len(
+                            trips_within_walk_service_area_gdf)
+
+                        # get the non-public transit trips that are within the biking service area
+                        mask = non_public_transit_trips_gdf.within(bike_gdf.geometry)
+                        trips_within_bike_service_area_gdf = non_public_transit_trips_gdf[mask]
+                        statistics[f'{day}_trip']['possible_conversions']['via_bike'] = len(
+                            trips_within_bike_service_area_gdf)
 
                     print(f'  Saving statistics for {area_name}...')
                     statistics_path = os.path.join(
