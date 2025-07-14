@@ -72,7 +72,6 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
         onChange={handleSelectionChange}
         selectedOptions={selectSeasons}
       />
-      {/* CONDITIONAL RENDERING HERE: */}
       {selectedItemsForDisplay.length > 0 && (
         <SelectedOption selectedItems={selectedItemsForDisplay} onRemove={handleRemoveSeason} />
       )}

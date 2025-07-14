@@ -1,9 +1,9 @@
 import styled from '@emotion/styled';
-import { IconButton } from '../../common/IconButton/IconButton'; // Adjusted path
+import { IconButton } from '../../common/IconButton/IconButton';
 
 export interface SelectedItem {
   value: string;
-  label: string; // The text to display
+  label: string;
 }
 
 interface SelectedOptionProps {
@@ -11,7 +11,7 @@ interface SelectedOptionProps {
   onRemove: (value: string) => void;
 }
 
-// Define the SVG content for the DRAG icon (new d attribute)
+// Define the SVG content for the DRAG icon
 const DragIconSVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path
@@ -21,7 +21,7 @@ const DragIconSVG = (
   </svg>
 );
 
-// Define the SVG content for the CLOSE icon (your original 'X' path)
+// Define the SVG content for the CLOSE icon
 const CloseIconSVG = (
   <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path
@@ -37,11 +37,9 @@ export function SelectedOption({ selectedItems, onRemove }: SelectedOptionProps)
       {selectedItems.map((item) => (
         <SelectedItemWrapper key={item.value}>
           <ItemContent>
-            {/* Left icon: Now uses the specific DragIconSVG */}
             <StyledPlaceholderIconButton>{DragIconSVG}</StyledPlaceholderIconButton>
             <ItemValue>{item.label}</ItemValue>
           </ItemContent>
-          {/* Right icon: Uses the specific CloseIconSVG */}
           <StyledCloseButton onClick={() => onRemove(item.value)}>{CloseIconSVG}</StyledCloseButton>
         </SelectedItemWrapper>
       ))}
