@@ -3,6 +3,8 @@ from typing import Literal, Optional
 
 from etl.sources.replica.etl import ReplicaETL
 
+after = ['greenlink_gtfs']
+
 
 def source_runner():
     REPLICA_YEARS_FILTER = os.getenv('REPLICA_YEARS_FILTER') or None

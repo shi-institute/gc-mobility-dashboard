@@ -183,6 +183,10 @@ interface ReplicaTripStatistics {
     undirected: number;
     other_home_based: number;
   };
+  possible_conversions: {
+    via_walk?: number;
+    via_bike?: number;
+  };
 }
 
 interface ReplicaTripModeStatistics {
