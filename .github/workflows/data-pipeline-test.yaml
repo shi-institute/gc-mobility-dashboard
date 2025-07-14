@@ -183,7 +183,7 @@ jobs:
         with:
           bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__greenlink_gtfs"
-          etls: "replica"
+          etls: "greenlink_gtfs"
 
   test__census_acs_5year:
     name: "Test / Census ACS 5-Year Estimates"
@@ -202,7 +202,7 @@ jobs:
         with:
           bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__census_acs_5year"
-          etls: "replica"
+          etls: "census_acs_5year"
 
   test__replica:
     name: "Test / Replica"
