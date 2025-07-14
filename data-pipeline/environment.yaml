@@ -11,4 +11,5 @@ dependencies:
   - conda-forge::tqdm=4
   - conda-forge::python-dotenv
   - conda-forge::libgdal-arrow-parquet
-  - conda-forge::polars
+  - conda-forge::polars=1.31
+  - conda-forge::geographiclib=2.0
