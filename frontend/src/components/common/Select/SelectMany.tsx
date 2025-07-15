@@ -10,18 +10,17 @@ export function SelectMany({ options, onChange, selectedOptions = [] }: SelectMa
     const combinedSelection = [...selectedOptions, newSelected];
     onChange(combinedSelection);
   }
-
   return (
     <select onChange={handleAddSelectedOptions} style={{ width: '100%' }}>
       <option key="blank" value=""></option>
-      {options.map(
-        (option) =>
-          !selectedOptions.includes(option) && (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          )
-      )}
+
+      {options
+        .filter((option) => !selectedOptions.includes(option))
+        .map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
     </select>
   );
 }
