@@ -9,7 +9,7 @@ import {
   TAB_4_FRAGMENT,
   TAB_5_FRAGMENT,
 } from './components/navigation';
-import { AppDataContext, createAppDataContext } from './hooks/useAppData';
+import { AppDataContext, AppDataHookParameters, createAppDataContext } from './hooks/useAppData';
 import {
   DevModeComponentsAll,
   EssentialServicesAccess,
@@ -56,7 +56,31 @@ export default function App() {
   }, [searchParams, comparisonEnabled]);
 
   const travelMethod = useMemo(() => {
-    return searchParams.get('travelMethod') ?? undefined;
+    const found = searchParams.get('travelMethod') ?? undefined;
+
+    const validMethods = [
+      'biking',
+      'carpool',
+      'commerical',
+      'on_demand_auto',
+      'other_travel_mode',
+      'private_auto',
+      'public_transit',
+      'walking',
+    ];
+
+    if (!found) {
+      return undefined;
+    }
+
+    if (!validMethods.includes(found)) {
+      console.warn(
+        `Invalid travel method: ${found}. Valid methods are: ${validMethods.join(', ')}`
+      );
+      return undefined;
+    }
+
+    return found as AppDataHookParameters['travelMethod'];
   }, [searchParams]);
 
   return (
