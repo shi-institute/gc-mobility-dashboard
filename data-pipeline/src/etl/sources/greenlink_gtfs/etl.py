@@ -5,17 +5,24 @@ from typing import Literal, Optional
 import geopandas
 import pandas
 import requests
-from shapely import LineString
+from geographiclib.geodesic import Geodesic
+from shapely import LineString, Point, Polygon
 
 from etl.downloader import Downloader
 
 type Quarter = Literal['Q2', 'Q4']
 type Season = tuple[int, Quarter]
 
+mile_meters = 1609.344  # 1 mile in meters
+bike_speed = 15  # average bike speed in mph
+# distance in meters that can be covered in 15 minutes at average bike speed
+bike_travel_distance_meters = mile_meters * (bike_speed / 60) * 15
+
 
 class GreenlinkGtfsETL:
     gtfs_download_url = 'https://gtfs.greenlink.cadavl.com/GTA/GTFS/GTFS_GTA.zip'
     folder_path = './data/greenlink_gtfs'
+    service_area_overrides_folder = 'input/greenlink_gtfs/service_area_overrides'
 
     seasons: list[Season]
 
@@ -100,6 +107,10 @@ class GreenlinkGtfsETL:
                     shutil.copytree(folder_path, pending_folder_path)
                 # clear the pending substitutions list
                 self.pending_substitutions.clear()
+
+        for season in self.seasons:
+            # generate service areas
+            self.generate_service_areas(season)
 
     def download(self, season: Season, transitland_api_key: Optional[str] = None) -> bool:
         year, quarter = season
@@ -207,6 +218,73 @@ class GreenlinkGtfsETL:
             if filename.endswith('.csv') and filename not in to_keep:
                 os.remove(os.path.join(folder_path, filename))
 
+    def generate_service_areas(self, season: Season) -> None:
+        """Generates sevice areas (buffers) for the stops in the GTFS data.
+
+        This process generates geodesic buffers for bus stops instead of euclidean buffers.
+        The geodesic buffers are based on the WGS84 ellipsoid.
+
+        For the paratransit buffer, a euclidian buffer is used instead. The transit routes
+        are temporariliy reprojected to EPSG:6569 (NAD83 (2011) / South Carolina (meters))
+        before the buffer is applied.
+
+        An indiividual season's walk-time and bike-time service area can be overriden
+        by providing a geojson in the `input/greenlink_gtfs/service_area_overrides` folder.
+        Name walksheds as `walkshed_{year}_{quarter}.geojson` and bikesheds as
+        `bikeshed_{year}_{quarter}.geojson`.
+
+        Args:
+            season (Season): A tuple containing the year and quarter of the season to process.
+        """
+
+        year, quarter = season
+        output_folder_path = f'{self.folder_path}/{year}/{quarter}'
+        stops_geojson_file_path = f'{output_folder_path}/stops.geojson'
+        routes_geojson_file_path = f'{output_folder_path}/routes.geojson'
+
+        walkshed_override_file_path = f'{self.service_area_overrides_folder}/walkshed_{year}_{quarter}.geojson'
+        output_file_path = f'{output_folder_path}/walk_service_area.geojson'
+
+        # copy the walkshed override file to the output folder if it is provided
+        if os.path.exists(walkshed_override_file_path):
+            shutil.copy(walkshed_override_file_path, output_file_path)
+            print(f"Using walkshed override for {year} {quarter}.")
+
+        # otherwise, generate a walk-time service area
+        else:
+            walk_gdf = geopandas.read_file(stops_geojson_file_path).to_crs('EPSG:4326')
+            walk_gdf.geometry = geodesic_buffer_series(walk_gdf.geometry, mile_meters / 2)
+            walk_gdf = walk_gdf.dissolve()
+            walk_gdf.to_file(output_file_path, driver='GeoJSON')
+            print(f"Generated walk-time service area for {year} {quarter}.")
+
+        bikeshed_override_file_path = f'{self.service_area_overrides_folder}/bikeshed_{year}_{quarter}.geojson'
+        output_file_path = f'{output_folder_path}/bike_service_area.geojson'
+
+        # copy the bikeshed override file to the output folder if it is provided
+        if os.path.exists(bikeshed_override_file_path):
+            shutil.copy(bikeshed_override_file_path, output_file_path)
+            print(f"Using bikeshed override for {year} {quarter}.")
+
+        # otherwise, generate a bike-time service area
+        else:
+            bike_gdf = geopandas.read_file(stops_geojson_file_path).to_crs('EPSG:4326')
+            bike_gdf.geometry = geodesic_buffer_series(
+                bike_gdf.geometry, bike_travel_distance_meters)
+            bike_gdf = bike_gdf.dissolve()
+            bike_gdf.to_file(output_file_path, driver='GeoJSON')
+            print(f"Generated bike-time service area for {year} {quarter}.")
+
+        # generate the paratransit service area
+        output_file_path = f'{output_folder_path}/paratransit_service_area.geojson'
+        paratransit_gdf = geopandas.read_file(routes_geojson_file_path).to_crs('EPSG:6569')
+        paratransit_gdf.geometry = paratransit_gdf.geometry.buffer(
+            distance=mile_meters * 0.75, cap_style='round')
+        paratransit_gdf = paratransit_gdf.dissolve()
+        paratransit_gdf = paratransit_gdf.to_crs('EPSG:4326')
+        paratransit_gdf.to_file(output_file_path, driver='GeoJSON')
+        print(f"Generated paratransit service area for {year} {quarter}.")
+
 
 def convert_stops(stops_csv_file: str) -> str:
     # convert stops to geodataframe
@@ -306,3 +384,52 @@ def convert_routes(trips_csv_file: str, routes_csv_file: str, shapes_geojson_fil
     with open(output_path, 'w') as file:
         file.write(json)
     return output_path
+
+
+def geodesic_buffer(point: Point, distance_meters: float, num_points: int = 360) -> Polygon | None:
+    """
+    Creates a geodesic buffer around a Shapely Point using geographiclib.
+
+    Args:
+        point (shapely.geometry.Point): The central point (lon, lat in WGS84).
+        distance_meters (float): The buffer distance in meters.
+        num_points (int): Number of points to approximate the circle.
+
+    Returns:
+        shapely.geometry.Polygon: The geodesic buffer polygon.
+    """
+    geod = Geodesic.WGS84  # type: ignore
+    buffer_points = []
+
+    for i in range(num_points):
+        azimuth = i * (360 / num_points)
+        # see https://geographiclib.sourceforge.io/html/python/code.html?highlight=direct#geographiclib.geodesic.Geodesic.Direct
+        buffer_point = geod.Direct(point.y, point.x, azimuth, distance_meters)
+        # see https://geographiclib.sourceforge.io/html/python/interface.html#dict
+        buffer_points.append((buffer_point['lon2'], buffer_point['lat2']))
+
+    if buffer_points:
+        return Polygon(buffer_points)
+    else:
+        return None
+
+
+def geodesic_buffer_series(points: geopandas.GeoSeries, distance_meters: float, num_points: int = 360) -> geopandas.GeoSeries:
+    """
+    Creates a geodesic buffer around a GeoSeries of Shapely Points using geographiclib.
+
+    The input GeoSeries will be converted to WGS84 (EPSG:4326) before buffering,
+    and then it will be converted back to the original CRS. If the original CRS
+    is missing, it will default to EPSG:4326.
+
+    Args:
+        points (geopandas.GeoSeries): The points to buffer.
+        distance_meters (float): The buffer distance in meters.
+        num_points (int): Number of points to approximate the circle.
+
+    Returns:
+        geopandas.GeoSeries: The geodesic buffer polygons.
+    """
+    results = points.to_crs('EPSG:4326').map(
+        lambda point: geodesic_buffer(point, distance_meters, num_points))
+    return geopandas.GeoSeries(results, crs=points.crs).to_crs(points.crs or 'EPSG:4326')

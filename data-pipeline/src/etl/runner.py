@@ -21,6 +21,7 @@ def load_source_runners():
         are the imported 'source_runner' functions.
     """
     source_runners = {}
+    after_declarations: dict[str, list[str]] = {}
 
     # Iterate through the subdirectories in the sources directory
     for source_name in os.listdir(sources_dir):
@@ -41,6 +42,12 @@ def load_source_runners():
                     else:
                         print(
                             f"Warning: {module_name} does not have a 'source_runner' function.")
+
+                    # if the module has the after variable, load it
+                    if hasattr(module, 'after'):
+                        # an after declaration is a list of source runner names that MUST run before this source runner
+                        after_declarations[source_name] = module.after
+
                 except ImportError as e:
                     print(f"Error importing module {source_name}/runner: {e}")
                     raise
@@ -51,6 +58,10 @@ def load_source_runners():
 
     # Remove the sources directory from the system path after importing
     sys.path.remove(sources_dir)
+
+    # sort the source runners such that the ones with after declarations are run after their dependencies
+    source_runners = dict(sorted(source_runners.items(), key=lambda item: (
+        after_declarations.get(item[0], []), item[0])))
 
     return source_runners
 

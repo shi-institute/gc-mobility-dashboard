@@ -1,5 +1,7 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { CoreFrame, SidebarContent } from '../components';
+import { useMemo } from 'react';
+import { CoreFrame, Map, SidebarContent } from '../components';
+import { type GeoJSONLayerInit } from '../components/common/Map/types';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -7,12 +9,41 @@ import {
   SelectedComparisonAreas,
   SelectedComparisonSeasons,
   SelectedSeason,
+  SelectTravelMethod,
   useComparisonModeState,
 } from '../components/options';
 import { useAppData } from '../hooks';
+import { notEmpty } from '../utils';
+import { createInterestAreaRenderer, createScaledSegmentsRenderer } from '../utils/renderers';
 
 export function GeneralAccess() {
   const { data, loading, errors } = useAppData();
+
+  const networkSegments = useMemo(() => {
+    return (data || [])
+      .map(({ network_segments }) => network_segments)
+      .filter(notEmpty)
+      .map((segments) => {
+        return {
+          title: `Network Segments`,
+          data: segments,
+          renderer: createScaledSegmentsRenderer(),
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
+  const areaPolygons = useMemo(() => {
+    return (data || [])
+      .map(({ polygon }) => polygon)
+      .filter(notEmpty)
+      .map((polygon) => {
+        return {
+          title: `Area Polygon`,
+          data: polygon,
+          renderer: createInterestAreaRenderer(),
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
 
   return (
     <CoreFrame
@@ -21,7 +52,7 @@ export function GeneralAccess() {
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
-          <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85"></arcgis-map>
+          <Map layers={[...networkSegments, ...areaPolygons]} />
         </div>
       }
       sections={[
@@ -41,6 +72,19 @@ export function GeneralAccess() {
                         if (Array.isArray(value)) {
                           return [key, `Array(${value.length})`];
                         }
+                        if (typeof value === 'object' && value !== null) {
+                          return [
+                            key,
+                            Object.fromEntries(
+                              Object.entries(value).map(([k, v]) => {
+                                if (Array.isArray(v)) {
+                                  return [k, `Array(${v.length})`];
+                                }
+                                return [k, v];
+                              })
+                            ),
+                          ];
+                        }
                         return [key, value];
                       })
                     )
@@ -58,7 +102,7 @@ export function GeneralAccess() {
 }
 
 function Sidebar() {
-  const { areasList, seasonsList } = useAppData();
+  const { areasList, seasonsList, travelMethodList } = useAppData();
   const [isComparisonEnabled] = useComparisonModeState();
 
   return (
@@ -77,6 +121,9 @@ function Sidebar() {
           <SelectedComparisonSeasons seasonsList={seasonsList} />
         </>
       ) : null}
+
+      <h2>Work and school</h2>
+      <SelectTravelMethod travelMethodList={travelMethodList} />
     </SidebarContent>
   );
 }

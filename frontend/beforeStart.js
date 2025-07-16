@@ -70,7 +70,7 @@ await deflateJsonFiles(publicDataDir);
 // build an index of areas and seasons
 const areaNames = await buildAreaIndex(publicDataDir + '/replica');
 if (areaNames.length) {
-  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/thursday_trip');
+  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/network_segments');
 }
 
 if (!shouldLog) {
@@ -182,9 +182,11 @@ async function buildSeasonIndex(directory) {
 
   const seasonNames = [];
   for await (const item of items) {
-    if (item.includes('.json')) {
+    if (item.includes('.geojson')) {
       seasonNames.push(
         item
+          .split('__')
+          .slice(0, -1)[0] // remove the part after '__'
           .replace('south_atlantic_', '')
           .replace('.json.deflate', '')
           .split('_')
@@ -194,8 +196,10 @@ async function buildSeasonIndex(directory) {
     }
   }
 
+  const uniqueSeasonNames = Array.from(new Set(seasonNames));
+
   // write the season quarter-year pairs to a text file
-  const seasonIndex = seasonNames.join('\n');
+  const seasonIndex = uniqueSeasonNames.join('\n');
   const seasonIndexPath = joinPath(directory, '../../season_index.txt');
   await writeFile(seasonIndexPath, seasonIndex, 'utf8');
   console.log(`Season index written to: ${seasonIndexPath}`);

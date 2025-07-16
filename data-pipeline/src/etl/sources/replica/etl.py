@@ -1,14 +1,25 @@
+import gc
+import json
 import logging
 import os
+import pickle
 import re
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Literal, Optional
+from datetime import datetime
+from typing import Any, Literal, Optional
 
 import geopandas
+import numpy
 import pandas
 import pandas_gbq
+import polars
 import shapely
 import shapely.wkt
+
+from etl.sources.replica.transformers.count_segment_frequency import \
+    count_segment_frequency
+from etl.sources.replica.transformers.trips_as_lines import (
+    create_network_segments_lookup, trips_as_lines)
 
 logger = logging.getLogger('pandas_gbq')
 logger.setLevel(logging.INFO)
@@ -20,6 +31,7 @@ class ReplicaETL:
     region = 'south_atlantic'
     input_folder_path = './input/replica_interest_area_polygons'
     folder_path = './data/replica'
+    greenlink_gtfs_folder_path = './data/greenlink_gtfs'
     columns_to_select = 'household_id'
     use_bqstorage_api = os.getenv('USE_BIGQUERY_STORAGE_API', '0') == '1'
 
@@ -138,52 +150,51 @@ class ReplicaETL:
 
                 print(f'  Opening source data for season {year} {quarter}')
 
-                print(f'    ...network segments [1/8]')
-                network_segments = geopandas.read_parquet(os.path.join(
-                    self.folder_path,
-                    expected_parquet_files[0].format(region=region, year=year, quarter=quarter)
-                ))
-
-                print(f'    ...population data (home) [2/8]')
+                # print(f'    ...network segments [0/5]')
+                # network_segments = geopandas.read_file(os.path.join(
+                #     self.folder_path,
+                #     expected_parquet_files[0].format(region=region, year=year, quarter=quarter)
+                # ))
+                print(f'    ...population data (home) [1/7]')
                 population_home = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[1].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...population data (school) [3/8]')
+                print(f'    ...population data (school) [2/7]')
                 population_school = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[2].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...population data (work) [4/8]')
+                print(f'    ...population data (work) [3/7]')
                 population_work = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[3].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...saturday trip (dest) [5/8]')
-                saturday_trip_dest = geopandas.read_file(os.path.join(
+                print(f'    ...saturday trip [4/7]')
+                saturday_trip = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[4].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...saturday trip (origin) [6/8]')
-                saturday_trip_origin = geopandas.read_file(os.path.join(
+                print(f'    ...thursday trip [5/7]')
+                thursday_trip = geopandas.read_file(os.path.join(
                     self.folder_path,
                     expected_parquet_files[5].format(region=region, year=year, quarter=quarter)
                 ))
 
-                print(f'    ...thursday trip (dest) [7/8]')
-                thursday_trip_dest = geopandas.read_file(os.path.join(
-                    self.folder_path,
-                    expected_parquet_files[6].format(region=region, year=year, quarter=quarter)
+                print(f'    ...walking service area [6/7]')
+                walk_gdf = geopandas.read_file(os.path.join(
+                    self.greenlink_gtfs_folder_path,
+                    f'{year}/{quarter}/walk_service_area.geojson',
                 ))
 
-                print(f'    ...thursday trip (origin) [8/8]')
-                thursday_trip_origin = geopandas.read_file(os.path.join(
-                    self.folder_path,
-                    expected_parquet_files[7].format(region=region, year=year, quarter=quarter)
+                print(f'    ...biking service area [7/7]')
+                bike_gdf = geopandas.read_file(os.path.join(
+                    self.greenlink_gtfs_folder_path,
+                    f'{year}/{quarter}/bike_service_area.geojson',
                 ))
 
                 for filename in geojson_filenames:
@@ -228,46 +239,159 @@ class ReplicaETL:
 
                         return merged
 
-                    print(f'    ...network segments [1/11]')
-                    network_segments_filtered = filter_intersected(network_segments)
-                    print(f'    ...population (home) [2/11]')
+                    print(f'    ...population (home) [1/6]')
                     population_home_filtered = filter_intersected(population_home)
-                    print(f'    ...population (school) [3/11]')
+                    print(f'    ...population (school) [2/6]')
                     population_school_filtered = filter_intersected(population_school)
-                    print(f'    ...population (work) [4/11]')
+                    print(f'    ...population (work) [3/6]')
                     population_work_filtered = filter_intersected(population_work)
-                    print(f'    ...population (all) [5/11]')
+                    print(f'    ...population (all) [4/6]')
                     population_filtered_df = merge_filtered(
                         [population_home_filtered, population_school_filtered, population_work_filtered],
                         'person_id'
                     )
-                    print(f'    ...saturday trip (dest) [6/11]')
-                    saturday_trip_dest_filtered = filter_intersected(saturday_trip_dest)
-                    print(f'    ...saturday trip (origin) [7/11]')
-                    saturday_trip_origin_filtered = filter_intersected(saturday_trip_origin)
-                    print(f'    ...saturday trip (all) [8/11]')
-                    saturday_trip_filtered_df = merge_filtered(
-                        [saturday_trip_dest_filtered, saturday_trip_origin_filtered],
-                        'activity_id'
+                    print(f'    ...saturday trip [5/6]')
+                    saturday_trip_filtered = filter_intersected(saturday_trip)
+                    print(f'    ...thursday trip [6/6]')
+                    thursday_trip_filtered = filter_intersected(thursday_trip)
+
+                    print(f'  Transforming data for {area_name}...')
+
+                    network_segments_subsets: list[tuple[str, geopandas.GeoDataFrame]] = []
+                    days = ['saturday', 'thursday']
+                    travel_modes = ['biking', 'carpool', 'commerical', 'on_demand_auto',
+                                    'other_travel_mode', 'private_auto', 'public_transit', 'walking']
+                    total_segment_exports = len(days) * (len(travel_modes) + 1)
+                    current_segment_export = 0
+                    for day in days:
+                        current_segment_export += 1
+                        print(
+                            f'    ...building {day} network segments [{current_segment_export}/{total_segment_exports}]'
+                        )
+
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        day_network_segments = count_segment_frequency(trips_gdf)
+                        network_segments_subsets.append((f'__{day}', day_network_segments))
+
+                        for travel_mode in travel_modes:
+                            current_segment_export += 1
+                            print(
+                                f'    ...building {day} network segments (commute:{travel_mode}) [{current_segment_export}/{total_segment_exports}]'
+                            )
+
+                            filter = (trips_gdf['mode'] == travel_mode.upper())\
+                                & (trips_gdf['tour_type'] == 'COMMUTE')
+                            day_travel_mode_network_segments = count_segment_frequency(
+                                trips_gdf[filter]
+                            )
+                            network_segments_subsets.append((
+                                f'__{day}__commute__{travel_mode}',
+                                day_travel_mode_network_segments
+                            ))
+
+                    print(f'  Calculating statistics for {area_name}...')
+                    statistics: dict[Any, Any] = {
+                        'synthetic_demographics': {},
+                        'saturday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}},
+                        'thursday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}},
+                    }
+
+                    # calculate race population estimates
+                    statistics['synthetic_demographics']['race'] = population_filtered_df.groupby(
+                        'race').size().to_dict()
+
+                    # calculate ethnicity population estimates
+                    statistics['synthetic_demographics']['ethnicity'] = population_filtered_df.groupby(
+                        'ethnicity').size().to_dict()
+
+                    # calculate education attainment population estimates
+                    statistics['synthetic_demographics']['education'] = population_filtered_df.groupby(
+                        'education').size().to_dict()
+
+                    # calculate normal communte mode population estimates
+                    statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
+                        'commute_mode').size().to_dict()
+
+                    # count trip travel methods
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        tour_types = trips_gdf['tour_type'].str.lower().unique()
+
+                        # for all
+                        mode_counts = trips_gdf.groupby('mode').size()
+                        mode_counts.index = mode_counts.index.str.lower()
+                        statistics[f'{day}_trip']['methods']['__all'] = mode_counts.to_dict()
+
+                        # for each tour type (commute, undirected, etc.)
+                        for tour_type in tour_types:
+                            filter = (trips_gdf['tour_type'] == tour_type.upper())
+                            mode_counts = trips_gdf[filter].groupby('mode').size()
+                            mode_counts.index = mode_counts.index.str.lower()
+                            statistics[f'{day}_trip']['methods'][tour_type] = mode_counts.to_dict()
+
+                    # calculate median trip commute time
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        tour_types = trips_gdf['tour_type'].str.lower().unique()
+
+                        # for all
+                        median_trip_duration = trips_gdf['duration_minutes'].median()
+                        statistics[f'{day}_trip']['median_duration']['__all'] = median_trip_duration
+
+                        # for each tour type (commute, undirected, etc.)
+                        for tour_type in tour_types:
+                            filter = (trips_gdf['tour_type'] == tour_type.upper())
+                            median_trip_duration = trips_gdf[filter]['duration_minutes'].median()
+                            statistics[f'{day}_trip']['median_duration'][tour_type] = median_trip_duration
+
+                    # count trips that could use public transit
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+
+                        # get the trips that are not public transit
+                        transit_filter = (trips_gdf['mode'] != 'PUBLIC_TRANSIT')
+                        non_public_transit_trips_gdf = trips_gdf[transit_filter]
+
+                        # get the non-public transit trips that are within the walking service area
+                        mask = non_public_transit_trips_gdf.within(walk_gdf.geometry)
+                        trips_within_walk_service_area_gdf = non_public_transit_trips_gdf[mask]
+                        statistics[f'{day}_trip']['possible_conversions']['via_walk'] = len(
+                            trips_within_walk_service_area_gdf)
+
+                        # get the non-public transit trips that are within the biking service area
+                        mask = non_public_transit_trips_gdf.within(bike_gdf.geometry)
+                        trips_within_bike_service_area_gdf = non_public_transit_trips_gdf[mask]
+                        statistics[f'{day}_trip']['possible_conversions']['via_bike'] = len(
+                            trips_within_bike_service_area_gdf)
+
+                    print(f'  Saving statistics for {area_name}...')
+                    statistics_path = os.path.join(
+                        self.folder_path,
+                        f'{area_name}/statistics/replica__{region}_{year}_{quarter}.json'
                     )
-                    print(f'    ...thursday trip (dest) [9/11]')
-                    thursday_trip_dest_filtered = filter_intersected(thursday_trip_dest)
-                    print(f'    ...thursday trip (origin) [10/11]')
-                    thursday_trip_origin_filtered = filter_intersected(thursday_trip_origin)
-                    print(f'    ...thursday trip (all) [11/11]')
-                    thursday_trip_filtered_df = merge_filtered(
-                        [thursday_trip_dest_filtered, thursday_trip_origin_filtered],
-                        'activity_id'
-                    )
+                    os.makedirs(os.path.dirname(statistics_path), exist_ok=True)
+                    with open(statistics_path, 'w') as file:
+                        json.dump(statistics, file,)
 
                     # save the filtered data to files
-                    print(f'  Saving filtered data for {area_name}...')
+                    print(f'  Saving data for {area_name}...')
+                    area_polygon_gdf = geopandas.GeoDataFrame(
+                        {'name': [area_name], 'geometry': gdf_union},
+                        crs=gdf.crs
+                    ).to_crs('EPSG:4326')
                     self._save(
-                        network_segments_filtered,
+                        area_polygon_gdf,
                         area_name,
-                        f'{region}_{year}_{quarter}',
-                        'network_segments',
-                        ['geoparquet', 'json'],
+                        f'polygon',
+                        '',
+                        'geojson',
+                    )
+                    self._save(
+                        population_home_filtered,
+                        area_name,
+                        f'{region}_{year}_{quarter}_home',
+                        'population',
+                        'geoparquet',
                     )
                     self._save(
                         population_home_filtered,
@@ -298,47 +422,27 @@ class ReplicaETL:
                         'json',
                     )
                     self._save(
-                        saturday_trip_dest_filtered,
+                        saturday_trip_filtered,
                         area_name,
-                        f'{region}_{year}_{quarter}_saturday_trip_dest',
+                        f'{region}_{year}_{quarter}',
                         'saturday_trip',
                         'geoparquet',
                     )
                     self._save(
-                        saturday_trip_origin_filtered,
+                        thursday_trip_filtered,
                         area_name,
-                        f'{region}_{year}_{quarter}_saturday_trip_origin',
-                        'saturday_trip',
-                        'geoparquet',
-                    )
-                    self._save(
-                        saturday_trip_filtered_df,
-                        area_name,
-                        f'{region}_{year}_{quarter}_saturday_trip',
-                        'saturday_trip',
-                        'json',
-                    )
-                    self._save(
-                        thursday_trip_dest_filtered,
-                        area_name,
-                        f'{region}_{year}_{quarter}_thursday_trip_dest',
+                        f'{region}_{year}_{quarter}',
                         'thursday_trip',
                         'geoparquet',
                     )
-                    self._save(
-                        thursday_trip_origin_filtered,
-                        area_name,
-                        f'{region}_{year}_{quarter}_thursday_trip_origin',
-                        'thursday_trip',
-                        'geoparquet',
-                    )
-                    self._save(
-                        thursday_trip_filtered_df,
-                        area_name,
-                        f'{region}_{year}_{quarter}_thursday_trip',
-                        'thursday_trip',
-                        'json',
-                    )
+                    for suffix, gdf in network_segments_subsets:
+                        self._save(
+                            gdf,
+                            area_name,
+                            f'{region}_{year}_{quarter}{suffix}',
+                            'network_segments',
+                            ['geoparquet', 'geojson'],
+                        )
 
                     print(f'  Finished processing area {area_name}.')
 
@@ -353,14 +457,12 @@ class ReplicaETL:
             'full_area/population/{region}_{year}_{quarter}_home.parquet',
             'full_area/population/{region}_{year}_{quarter}_school.parquet',
             'full_area/population/{region}_{year}_{quarter}_work.parquet',
-            'full_area/saturday_trip/{region}_{year}_{quarter}_dest.parquet',
-            'full_area/saturday_trip/{region}_{year}_{quarter}_origin.parquet',
-            'full_area/thursday_trip/{region}_{year}_{quarter}_dest.parquet',
-            'full_area/thursday_trip/{region}_{year}_{quarter}_origin.parquet',
+            'full_area/saturday_trip/{region}_{year}_{quarter}.parquet',
+            'full_area/thursday_trip/{region}_{year}_{quarter}.parquet',
         ]
         return expected_parquet_files
 
-    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
+    def _run_for_network_segments(self, gdf: geopandas.GeoDataFrame, area_name: str) -> None:
         """Loop through network segments tables and run queries to get the data.
 
         Args:
@@ -371,50 +473,55 @@ class ReplicaETL:
         Returns:
             list[pandas.DataFrame]: _description_
         """
-        result_dfs: list[pandas.DataFrame] = []
-
         # Filter schema_df to only inclue the tables where the table_name column ends with 'segments'
         schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
             'segments')]
 
         if schema_df is None or schema_df.empty:
-            return result_dfs
+            return
+
+        # check if the etl is running in GitHub Actions
+        is_running_in_workflow = os.getenv('IS_GH_WORKFLOW', 'false').lower() == 'true'
 
         for table_name in schema_df['table_name']:
             # Set full_table_path be equal to the table_name column in the schema_df
             full_table_path = f"{self.project_id}.{self.region}.{table_name}"
 
             print(f'Running query for {full_table_path}...')
-            geoseries = geopandas.GeoSeries(gdf['geometry'], crs="EPSG:4326")
-            query_geometry = self._prepare_query_geometry(geoseries)
 
-            # run query to get network segments table
-            segments_query = f'''
-            SELECT * FROM {full_table_path}
-            WHERE EXISTS( -- ensure that the subquery returns at least one row
-                SELECT 1 -- check for at least one row that satisifes the spatial condition (stop after 1 row for efficiency)
-                FROM {query_geometry}
-                WHERE
-                    ST_COVERS(query_geometry, ST_GEOGPOINT(startLon, startLat))
-                    OR ST_COVERS(query_geometry, ST_GEOGPOINT(endLon, endLat))
-            );
-            '''
-            segments_df = pandas_gbq.read_gbq(
-                segments_query,
-                project_id=self.project_id,
-                dialect='standard',
-                use_bqstorage_api=self.use_bqstorage_api
-            )
-            if segments_df is None:
-                segments_df = pandas.DataFrame()
-            result_dfs.append(segments_df)
+            segments_gdf: geopandas.GeoDataFrame | None = None
+            if not is_running_in_workflow:
+                # run query to get network segments table
+                segments_query = f'''
+                SELECT stableEdgeId, streetName, geometry, osmid FROM {full_table_path};
+                '''
+                segments_df = pandas_gbq.read_gbq(
+                    segments_query,
+                    project_id=self.project_id,
+                    dialect='standard',
+                    use_bqstorage_api=self.use_bqstorage_api
+                )
 
-            # convert to geodataframe
-            geometry_wkt: pandas.Series = segments_df['geometry']
-            geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
-                geometry_wkt)
-            segments_gdf = geopandas.GeoDataFrame(
-                segments_df, geometry=geometry, crs="EPSG:4326")
+                if segments_df is None:
+                    segments_df = pandas.DataFrame()
+
+                # convert to geodataframe
+                geometry_wkt: pandas.Series = segments_df['geometry']
+                geometry: geopandas.GeoSeries = geopandas.GeoSeries.from_wkt(
+                    geometry_wkt)
+                segments_gdf = geopandas.GeoDataFrame(
+                    segments_df, geometry=geometry, crs="EPSG:4326")
+
+            if segments_gdf is None:
+                segments_gdf = geopandas.GeoDataFrame(
+                    {
+                        "stableEdgeId": [],
+                        "streetName": [],
+                        "osmid": [],
+                        "geometry": [],
+                    },
+                    geometry="geometry"
+                )
 
             # save to file
             self._save(
@@ -426,8 +533,6 @@ class ReplicaETL:
             )
 
             print(f"\nSuccessfully obtained data from {full_table_path}.")
-
-        return result_dfs
 
     def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through population tables and run queries to get the data.
@@ -507,7 +612,7 @@ class ReplicaETL:
 
         return result_dfs
 
-    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
+    def _run_for_trips(self, gdf: geopandas.GeoDataFrame, area_name: str) -> None:
         """Loop through trip tables and run queries to get the data. This gets trip data for thursday and saturday trips.
 
         Args:
@@ -518,16 +623,18 @@ class ReplicaETL:
         Returns:
             list[pandas.DataFrame]: _description_
         """
-        all_trip_results: list[pandas.DataFrame] = []
+        results_count = 0
 
         # Filter schema_df to only inclue the tables where the table_name column ends with 'trip'
         schema_df = self.tables_to_download_df[self.tables_to_download_df['table_name'].str.endswith(
             'trip')]
 
         if schema_df is None or schema_df.empty:
-            return all_trip_results
+            return
 
-        for table_name in schema_df['table_name']:
+        for season in schema_df.itertuples():
+            table_name = str(season.table_name)
+
             # Set full_table_path be equal to the table_name column in the schema_df
             full_table_path = f"{self.project_id}.{self.region}.{table_name}"
             # Determine which columns to use based on the table name
@@ -546,10 +653,11 @@ class ReplicaETL:
                 origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
                 dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
             )
+            print('Obtained data for table:', table_name)
+            results_count += 1
             if not table_df.empty:
-                # Add a column to identify the source table
+                # add a source_table column with the table name so we can identify the source of the data
                 table_df['source_table'] = table_name
-                all_trip_results.append(table_df)
 
                 # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
                 # this regex will match the trip type
@@ -560,34 +668,36 @@ class ReplicaETL:
                 trip_type = trip_type_match.group(
                     0)[1:] if trip_type_match else 'other_trip'
 
-                # for each case, convert the lat-lng to a geometry column
-                # and save to file
-                trip_cases = [
-                    ['origin', origin_lat_col, origin_lng_col],
-                    ['dest', dest_lat_col, dest_lng_col],
-                ]
-                for [case, lat_column, lng_column] in trip_cases:
-                    print(
-                        f'Converting geoemtry for {trip_type} {case} coordinates...')
-                    trip_gdf = geopandas.GeoDataFrame(
-                        table_df,
-                        geometry=geopandas.points_from_xy(
-                            table_df[lng_column], table_df[lat_column]),
-                        crs="EPSG:4326"
-                    )
+                print(f'Forming trip lines for {table_name}...')
 
-                    print(f'Saving geometry for {trip_type} ({case})...')
-                    self._save(
-                        trip_gdf,
-                        area_name,
-                        table_name + case,
-                        trip_type,
-                        'geoparquet'
-                    )
+                print(f'  Creating a lookup table for network segments...')
+                network_segments_path = os.path.join(
+                    self.folder_path,
+                    f'full_area/network_segments/{self.region}_{season.year}_{season.quarter}.parquet'
+                )
+                network_segments_df = geopandas.read_parquet(network_segments_path)
+                network_segments_lookup = create_network_segments_lookup(network_segments_df)
+                del network_segments_df
+                gc.collect()
+                print(f'  Processing...')
+                trips_gdf = trips_as_lines(table_df, network_segments_lookup, 'EPSG:4326')
+                del table_df
+                del network_segments_lookup
+                gc.collect()
+
+                print(f'Saving {trip_type} data for {table_name}...')
+                self._save(
+                    trips_gdf,
+                    area_name,
+                    table_name,
+                    trip_type,
+                    'geoparquet'
+                )
+                del trips_gdf
+                gc.collect()
 
         print(
-            f"\nSuccessfully obtained data from {len(all_trip_results)} trip tables.")
-        return all_trip_results
+            f"\nSuccessfully obtained data from {results_count} trip tables.")
 
     def _prepare_query_geometry(self, geometry_series: geopandas.GeoSeries) -> str:
         """
@@ -692,10 +802,10 @@ class ReplicaETL:
 
         # create a function that can be run in parallel to execute the queries
         # and collect the results in result_dfs
-        result_dfs: list[pandas.DataFrame] = []
+        result_ldfs: list[polars.LazyFrame] = []
         logger.setLevel(logging.WARNING)
 
-        def process_query(query: str, index: int) -> None:
+        def process_query(query: str, index: int, num_queries: int) -> None:
             """Process a single query and collect the results in the external result_dfs list.
 
             Args:
@@ -708,6 +818,24 @@ class ReplicaETL:
             print(
                 f'Retrieving data for chunk {index + 1} of table {full_table_path}. [{index + 1}/{len(queries)}]')
             try:
+                download_cache_folderpath = os.path.join(self.folder_path, 'full_area/download')
+                download_cache_filename = f'{full_table_path}__{index + 1}_{num_queries}.parquet'
+                download_cache_filepath = os.path.join(
+                    download_cache_folderpath, download_cache_filename)
+                download_cache_success_filepath = download_cache_filepath.replace(
+                    '.parquet', '.success')
+
+                # ensure the cache folder exists
+                os.makedirs(download_cache_folderpath, exist_ok=True)
+
+                # check if the a cached version is available
+                if os.path.exists(download_cache_filepath) and os.path.exists(download_cache_success_filepath):
+                    print(f'Using cached data from {download_cache_filename}')
+                    ldf = polars.scan_parquet(download_cache_filepath)
+                    result_ldfs.append(ldf)
+                    return
+
+                # otherwise, download the data from BigQuery
                 df = pandas_gbq.read_gbq(
                     query,
                     project_id=self.project_id,
@@ -716,7 +844,28 @@ class ReplicaETL:
                 )
                 if df is None:
                     df = pandas.DataFrame()
-                result_dfs.append(df)
+
+                # convert list types to csv strings (numpy arrays are not supported by parquet)
+                columns_to_convert_to_csv = ['transit_route_ids', 'network_link_ids']
+                for column in columns_to_convert_to_csv:
+                    if column in df.columns:
+                        df[column] = df[column].apply(
+                            lambda x: ','.join(map(str, x)) if isinstance(x, numpy.ndarray) else x)
+
+                # save a backup/cache of the data upon download that we can use to restore downloaded data
+                pandas.DataFrame.to_parquet(df, os.path.join(download_cache_filepath))
+
+                # once the data is saved, write an empty .success file with the same name
+                # to indicate that the download was successful
+                with open(download_cache_success_filepath, 'w') as f:
+                    f.write('')
+
+                # prepare a lazy data frame from polars
+                # so that the data does not need to be fully loaded into memory
+                # (the trip data can get REALLY large!)
+                ldf = polars.scan_parquet(download_cache_filepath)
+
+                result_ldfs.append(ldf)
             except Exception as e:
                 print('Failed to execute query')
                 raise e
@@ -737,14 +886,25 @@ class ReplicaETL:
         futures: list[Future[None]] = []
         with ThreadPoolExecutor() as executor:
             for index, query in enumerate(queries):
-                future = executor.submit(process_query, query, index)
+                future = executor.submit(process_query, query, index, len(queries))
                 future.add_done_callback(handle_query_error)
                 futures.append(future)
 
         # Merge all results
         logger.setLevel(logging.INFO)
         executor.shutdown(wait=True)  # wait for all futures to finish
-        return pandas.concat(result_dfs, ignore_index=True)
+
+        # disable parallel to reduce RAM usage - polars has to uncompress each parquet file
+        joined_ldfs = polars.concat(result_ldfs, how='vertical', rechunk=False, parallel=False)
+
+        start_time = datetime.now()
+        print('Collecting trip results...')
+        df = polars.concat(result_ldfs, how='vertical',
+                           rechunk=False, parallel=False).collect().to_pandas()
+        elapsed_time = datetime.now() - start_time
+        print('Done in ', elapsed_time, ' seconds.')
+
+        return df
 
     def _run_schema_query(self) -> pandas.DataFrame:
         """
@@ -836,6 +996,10 @@ class ReplicaETL:
         inferred_schema_rows = []
         for root, _, files in os.walk(full_area_path):
             for filename in files:
+                if root.endswith('download'):
+                    # skip the download cache folder
+                    continue
+
                 if filename.endswith('.parquet'):
 
                     # extract the table info from the file path
@@ -908,7 +1072,7 @@ class ReplicaETL:
 
         return inferred_schema_df
 
-    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json'] | list[Literal['geoparquet', 'json']]) -> None:
+    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json', 'geojson'] | list[Literal['geoparquet', 'json', 'geojson']]) -> None:
         # if format is a list, call this function for each format in the list
         if isinstance(format, list):
             for fmt in format:
@@ -936,6 +1100,9 @@ class ReplicaETL:
         if format == 'geoparquet':
             gdf.to_parquet(output_path + '.parquet',
                            write_covering_bbox=True, geometry_encoding='WKB', schema_version='1.1.0')
+            print(f'Saved results to {output_path}.parquet')
+        if format == 'geojson':
+            gdf.to_crs('EPSG:4326').to_file(output_path + '.geojson', driver='GeoJSON')
             print(f'Saved results to {output_path}.parquet')
         if format == 'json':
             df = pandas.DataFrame(gdf.drop(columns='geometry', errors='ignore'))

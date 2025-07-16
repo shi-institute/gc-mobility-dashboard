@@ -17,8 +17,7 @@ if __name__ == "__main__":
         docker = True
 
     # check if the script is running in GitHub Actions
-    is_running_in_github_actions = os.getenv(
-        'GITHUB_ACTIONS', 'false').lower() == 'true'
+    is_running_in_workflow = os.getenv('IS_GH_WORKFLOW', 'false').lower() == 'true'
 
     # configure arguments
     parser = argparse.ArgumentParser(
@@ -91,7 +90,7 @@ if __name__ == "__main__":
             print("-" * 78 + '\n\n')
 
             # wait for 10 seconds before continuing
-            if not is_running_in_github_actions:
+            if not is_running_in_workflow:
                 time.sleep(10)
 
     # run the ETL pipeline
