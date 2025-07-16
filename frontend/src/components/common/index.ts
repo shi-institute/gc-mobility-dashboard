@@ -6,5 +6,6 @@ export { NavBarItem } from './NavBarItem/NavBarItem';
 export { Section } from './Section/Section';
 export { SectionEntry } from './Section/SectionEntry';
 export { SidebarContent } from './SidebarContent/SidebarContent';
+export { Statistic } from './Statistic';
 export { Tab } from './Tabs/Tab';
 export { Tabs } from './Tabs/Tabs';
