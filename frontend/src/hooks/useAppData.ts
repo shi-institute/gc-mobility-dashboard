@@ -26,7 +26,7 @@ export function _useAppDataContext() {
   return useContext(AppDataContext);
 }
 
-interface AppDataHookParameters {
+export interface AppDataHookParameters {
   areas: string[];
   seasons: ['Q2' | 'Q4', number][];
   /**
