@@ -187,6 +187,16 @@ interface ReplicaTripStatistics {
     via_walk?: number;
     via_bike?: number;
   };
+  destination_building_use?: {
+    via_walk: {
+      type_counts: ReplicaDesinationUseTypeStatistics;
+      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
+    };
+    via_bike: {
+      type_counts: ReplicaDesinationUseTypeStatistics;
+      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
+    };
+  };
 }
 
 interface ReplicaTripModeStatistics {
@@ -198,6 +208,30 @@ interface ReplicaTripModeStatistics {
   biking?: number;
   on_demand_auto?: number;
   public_transit?: number;
+}
+
+interface ReplicaDesinationUseTypeStatistics {
+  residential?: number;
+  commercial?: number;
+  civic_institutional?: number;
+  industrial?: number;
+  transportation_utilities?: number;
+  open_space?: number;
+  unknown?: number;
+  agriculture?: number;
+  other?: number;
+}
+
+interface ReplicaDesinationUseSubTypeStatistics {
+  single_family?: number;
+  retail?: number;
+  education?: number;
+  office?: number;
+  multi_family?: number;
+  civic_institutional?: number;
+  industrial?: number;
+  non_retail_attraction?: number;
+  healthcare?: number;
 }
 
 interface GeoJSON<T = Record<string, any>> {
