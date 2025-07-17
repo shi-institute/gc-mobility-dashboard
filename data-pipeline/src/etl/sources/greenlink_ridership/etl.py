@@ -9,7 +9,7 @@ Input columns include Period, Stop Point, and ridership counts.
 Output file: ./data/greenlink_ridership/ridership_data.json
 """
 
-import pandas as pd
+import pandas
 from pathlib import Path
 import os
 
@@ -19,25 +19,25 @@ class GreenlinkRidershipETL:
         self.output_file = Path('./data/greenlink_ridership/ridership_data.json')
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
 
-    def run(self):
+    def run(self) -> bool:
         """Process all CSV files and export to JSON"""
-        
+
         if not self.input_folder.exists():
             print(f"⚠ ERROR. Input folder {self.input_folder} does not exist.")
             return False
-        
-        all_data = []
-        processed_files = 0
-    
+
+        all_data: list[pandas.DataFrame] = []
+        processed_files: int = 0
+
         for file in self.input_folder.glob("*.csv"):
             print(f"Reading {file.name}...")
             try:
-                df = pd.read_csv(file, on_bad_lines='skip')
-                print(f"✔︎ Succesfully read {file.name} containing {len(df)} rows")
-                
+                df = pandas.read_csv(file, on_bad_lines='skip')
+                print(f"✔︎ Successfully read {file.name} containing {len(df)} rows")
+
                 df.columns = df.columns.str.strip()
                 df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-                
+
                 required_columns = [
                     'Period',
                     'Stop Point',
@@ -48,24 +48,24 @@ class GreenlinkRidershipETL:
                 if not all(col in df.columns for col in required_columns):
                     print(f"⚠ ERROR.{file.name}: Missing required columns")
                     continue
-                
+
                 df = df.rename(columns={
-                'Stop Point': 'StopPoint',
-                'Ridership - Boarding - APC': 'Boarding',
-                'Ridership - Alighting - APC': 'Alighting'
+                    'Stop Point': 'StopPoint',
+                    'Ridership - Boarding - APC': 'Boarding',
+                    'Ridership - Alighting - APC': 'Alighting'
                 })
-                
+
                 # Parse dates
-                df['Period'] = pd.to_datetime(df['Period'], errors='coerce')
+                df['Period'] = pandas.to_datetime(df['Period'], errors='coerce')
                 invalid_dates = df['Period'].isna()
                 if invalid_dates.any():
                     print(f"⚠ ERROR.{file.name}: Dropped {invalid_dates.sum()} invalid dates.")
                     df = df[~invalid_dates]
                 df['Period'] = df['Period'].dt.strftime('%Y-%m-%d')
-                
+
                 # Clean numeric columns
                 for col in ['StopPoint', 'Boarding', 'Alighting']:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = pandas.to_numeric(df[col], errors='coerce')
                     invalid_values = df[col].isna()
                     if invalid_values.any():
                         print(f"⚠ ALERT.{file.name}: Dropped {invalid_values.sum()} invalid rows with empty or non-numeric values from '{col}' column.")
@@ -85,13 +85,12 @@ class GreenlinkRidershipETL:
                 continue
 
         if processed_files > 0:
-            final_df = pd.concat(all_data, ignore_index=True)
-            
+            final_df = pandas.concat(all_data, ignore_index=True)
+
             try:
                 final_df.to_json(
                     self.output_file,
-                    orient='records',
-                    indent=1
+                    orient='records'
                 )
                 print(f"✔︎ ALL DATA FILES PROCESSED SUCCESSFULLY. {processed_files} files processed. Output saved to {os.path.abspath(self.output_file)} under file name {self.output_file.name}.")
                 return True
