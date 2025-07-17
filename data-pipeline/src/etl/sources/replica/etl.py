@@ -16,6 +16,7 @@ import polars
 import shapely
 import shapely.wkt
 
+from etl.sources.replica.transformers.as_points import as_points
 from etl.sources.replica.transformers.count_segment_frequency import \
     count_segment_frequency
 from etl.sources.replica.transformers.trips_as_lines import (
@@ -292,8 +293,8 @@ class ReplicaETL:
                     print(f'  Calculating statistics for {area_name}...')
                     statistics: dict[Any, Any] = {
                         'synthetic_demographics': {},
-                        'saturday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}},
-                        'thursday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}},
+                        'saturday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}, 'destination_building_use': {}},
+                        'thursday_trip': {'methods': {}, 'median_duration': {}, 'possible_conversions': {}, 'destination_building_use': {}},
                     }
 
                     # calculate race population estimates
@@ -363,6 +364,45 @@ class ReplicaETL:
                         trips_within_bike_service_area_gdf = non_public_transit_trips_gdf[mask]
                         statistics[f'{day}_trip']['possible_conversions']['via_bike'] = len(
                             trips_within_bike_service_area_gdf)
+
+                    # get destination building uses for trips that use or could use public transit
+                    for day in days:
+                        trips_gdf = saturday_trip_filtered if day == 'saturday' else thursday_trip_filtered
+                        end_points = as_points(trips_gdf, 'end_lng', 'end_lat')
+
+                        # get the trips that are within the walking service area
+                        mask = end_points.within(walk_gdf.geometry.union_all()).reindex(
+                            trips_gdf.index, fill_value=False)
+                        print(len(trips_gdf))
+                        print(len(end_points))
+                        print(len(mask))
+                        print(len(trips_gdf))
+                        distinations_within_walk_service_area_gdf = trips_gdf[mask]
+
+                        # get the trips that are within the biking service area
+                        mask = end_points.within(bike_gdf.geometry.union_all()).reindex(
+                            trips_gdf.index, fill_value=False)
+                        destinations_within_bike_service_area_gdf = trips_gdf[mask]
+
+                        # count the destination building use occurrences
+                        type_counts__walk = distinations_within_walk_service_area_gdf\
+                            .groupby('destination_building_use_l1').size()
+                        subtype_counts__walk = distinations_within_walk_service_area_gdf\
+                            .groupby('destination_building_use_l2').size()
+                        type_counts__bike = destinations_within_bike_service_area_gdf\
+                            .groupby('destination_building_use_l1').size()
+                        subtype_counts__bike = destinations_within_bike_service_area_gdf\
+                            .groupby('destination_building_use_l2').size()
+
+                        # store the counts in the statistics dictionary
+                        statistics[f'{day}_trip']['destination_building_use']['via_walk'] = {
+                            'type_counts': type_counts__walk.to_dict(),
+                            'subtype_counts': subtype_counts__walk.to_dict(),
+                        }
+                        statistics[f'{day}_trip']['destination_building_use']['via_bike'] = {
+                            'type_counts': type_counts__bike.to_dict(),
+                            'subtype_counts': subtype_counts__bike.to_dict(),
+                        }
 
                     print(f'  Saving statistics for {area_name}...')
                     statistics_path = os.path.join(
