@@ -115,32 +115,34 @@ async function deleteEmptyDirectories(directory) {
 async function deflateJsonFiles(directory) {
   const fileNames = await readdir(directory);
 
-  const promises = fileNames.map(async (fileName) => {
-    const filePath = joinPath(directory, fileName);
-    const deflatedFilePath = filePath
-      .replace('.json', '.json.deflate')
-      .replace('.geojson', '.geojson.deflate');
-    const stats = await stat(filePath);
+  for await (const fileName of fileNames) {
+    try {
+      const filePath = joinPath(directory, fileName);
+      const deflatedFilePath = filePath
+        .replace('.json', '.json.deflate')
+        .replace('.geojson', '.geojson.deflate');
+      const stats = await stat(filePath);
 
-    if (stats.isDirectory()) {
-      await deflateJsonFiles(filePath);
-      return;
+      if (stats.isDirectory()) {
+        await deflateJsonFiles(filePath);
+        continue;
+      }
+
+      if (!['.json', '.geojson'].some((ext) => fileName.endsWith(ext))) {
+        continue;
+      }
+
+      const json = await readFile(filePath, 'utf8');
+      const data = JSON.parse(json);
+
+      const deflatedData = await deflate(data);
+      await writeFile(deflatedFilePath, deflatedData).catch(console.error);
+      await unlink(filePath); // delete the original file
+      console.log(`Deflated JSON file: ${deflatedFilePath}`);
+    } catch (error) {
+      console.error(`Error processing file ${fileName} in directory ${directory}:`, error);
     }
-
-    if (!['.json', '.geojson'].some((ext) => fileName.endsWith(ext))) {
-      return;
-    }
-
-    const json = await readFile(filePath, 'utf8');
-    const data = JSON.parse(json);
-
-    const deflatedData = await deflate(data);
-    await writeFile(deflatedFilePath, deflatedData).catch(console.error);
-    await unlink(filePath); // delete the original file
-    console.log(`Deflated JSON file: ${deflatedFilePath}`);
-  });
-
-  await Promise.allSettled(promises);
+  }
 }
 
 /**
