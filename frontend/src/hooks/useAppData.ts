@@ -92,10 +92,15 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const dataPromises = useMemo(() => {
     const replicaPaths = constructReplicaPaths(areas, seasons, travelMethod);
     const replicaPromises = constructReplicaPromises(replicaPaths);
-    return replicaPromises.map((promises) => {
+    const greenlinkPromises = getGreenlinkPromises(seasons);
+    return replicaPromises.map(({ year, quarter, promises }) => {
+      const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter] || {};
+
+      // merge all promises into a single object
       return {
         ...promises,
         ...censusPromises,
+        ...greenlinkPromisesForSeason,
       };
     });
   }, [areas, seasons]);
@@ -194,7 +199,7 @@ async function resolveArrayOfPromiseRecords<T extends DataPromises>(
   );
 }
 
-function handleError(key: string) {
+function handleError(key: string, shouldThrow = true) {
   return (error: Error) => {
     // ignore errors that are caused by the cleanup of the useAppData effect
     if (error.message?.includes('useAppData is being cleaned up')) {
@@ -202,11 +207,16 @@ function handleError(key: string) {
       return null;
     }
 
-    throw new Error(
-      `Error fetching ${key} data: ` +
-        (error.message || error) +
-        `. See the console for more details.`
-    );
+    if (shouldThrow !== false) {
+      throw new Error(
+        `Error fetching ${key} data: ` +
+          (error.message || error) +
+          `. See the console for more details.`
+      );
+    }
+
+    console.error(`Error fetching ${key} data:`, error);
+    return null;
   };
 }
 
@@ -235,6 +245,59 @@ function getCensusData() {
   ).catch(handleError('educational_attainment'));
 
   return { households, race_ethnicity, population_total, educational_attainment };
+}
+
+/**
+ * Provides promises that fetch the data related to Greenlink service.
+ */
+function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
+  const allPromises = seasons.map(([__quarter, __year]) => {
+    const gtfsFolder = `./data/greenlink_gtfs/${__year}/${__quarter}`;
+    const ridershipFolder = `./data/greenlink_ridership/${__year}/${__quarter}`;
+
+    return {
+      year: __year,
+      quarter: __quarter,
+      promises: {
+        routes: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.Routes>(`${gtfsFolder}/routes.geojson.deflate`, abortSignal).catch(
+            handleError('greenlink_routes')
+          ),
+        stops: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.Stops>(`${gtfsFolder}/stops.geojson.deflate`, abortSignal).catch(
+            handleError('greenlink_stops')
+          ),
+        walk_service_area: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.WalkServiceArea>(
+            `${gtfsFolder}/walk_service_area.geojson.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_walk_service_area')),
+        bike_service_area: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.BikeServiceArea>(
+            `${gtfsFolder}/bike_service_area.geojson.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_bike_service_area')),
+        paratransit_service_area: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.ParatransitServiceArea>(
+            `${gtfsFolder}/paratransit_service_area.geojson.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_paratransit_service_area')),
+        ridership: (abortSignal?: AbortSignal) =>
+          fetchData<StopRidership[]>(
+            `${ridershipFolder}/ridership.json.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_ridership', false)),
+      },
+    };
+  });
+
+  const groupedPromises: Record<string, (typeof allPromises)[number]['promises']> = {};
+  for (const { year, quarter, promises } of allPromises) {
+    const key = `${year}_${quarter}`;
+    groupedPromises[key] = promises;
+  }
+
+  return groupedPromises;
 }
 
 /**
@@ -275,23 +338,28 @@ function constructReplicaPaths(
 function constructReplicaPromises(replicaPaths: ReturnType<typeof constructReplicaPaths>) {
   return replicaPaths.map(({ __area, __year, __quarter, ...paths }) => {
     return {
-      __area: async () => __area,
-      __year: async () => __year,
-      __quarter: async () => __quarter,
-      polygon: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaAreaPolygon>(paths.polygon, abortSignal).catch(handleError('polygon')),
-      statistics: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaStatistics>(paths.statistics, abortSignal).catch(
-          handleError('statistics')
-        ),
-      network_segments: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaNetworkSegments>(paths.network_segments, abortSignal).catch(
-          handleError('network_segments')
-        ),
-      population: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
-          handleError('population')
-        ),
+      area: __area,
+      year: __year,
+      quarter: __quarter,
+      promises: {
+        __area: async () => __area,
+        __year: async () => __year,
+        __quarter: async () => __quarter,
+        polygon: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaAreaPolygon>(paths.polygon, abortSignal).catch(handleError('polygon')),
+        statistics: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaStatistics>(paths.statistics, abortSignal).catch(
+            handleError('statistics')
+          ),
+        network_segments: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaNetworkSegments>(paths.network_segments, abortSignal).catch(
+            handleError('network_segments')
+          ),
+        population: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
+            handleError('population')
+          ),
+      },
     };
   });
 }

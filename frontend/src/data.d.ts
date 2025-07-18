@@ -234,14 +234,45 @@ interface ReplicaDesinationUseSubTypeStatistics {
   healthcare?: number;
 }
 
-interface GeoJSON<T = Record<string, any>> {
+interface GeoJSON<T = Record<string, any>, K = string> {
   type: 'FeatureCollection';
   features: Array<{
     type: 'Feature';
     geometry: {
-      type: string;
+      type: K;
       coordinates: any;
     };
     properties: T;
   }>;
+}
+
+namespace GTFS {
+  interface RouteProperties {
+    ID: string;
+    Name?: string | null;
+    route_url?: string | null;
+    Color?: string | null;
+    TextColor?: string | null;
+  }
+
+  interface StopProperties {
+    ID: string;
+    Name?: string | null;
+    stop_url?: string | null;
+    stop_timezone?: string | null;
+  }
+
+  export type Routes = GeoJSON<RouteProperties, 'LineString' | 'MultiLineString'>;
+  export type Stops = GeoJSON<StopProperties, 'Point'>;
+  export type WalkServiceArea = GeoJSON<StopProperties, 'Polygon' | 'MultiPolygon'>;
+  export type BikeServiceArea = GeoJSON<StopProperties, 'Polygon' | 'MultiPolygon'>;
+  export type ParatransitServiceArea = GeoJSON<RouteProperties, 'Polygon' | 'MultiPolygon'>;
+}
+
+interface StopRidership {
+  period: string;
+  stop_point: number;
+  boarding: number;
+  alighting: number;
+  areas: string[] | null;
 }
