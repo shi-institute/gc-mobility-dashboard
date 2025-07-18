@@ -64,6 +64,7 @@ jobs:
       output_hash: ${{ steps.check_changed_dirs.outputs.output_hash }}
       no_changes: ${{ steps.check_changed_dirs.outputs.no_changes }}
       run_greenlink_gtfs: ${{ steps.check_changed_dirs.outputs.run_greenlink_gtfs }}
+      run_greenlink_ridership: ${{ steps.check_changed_dirs.outputs.run_greenlink_ridership }}
       run_census_acs_5year: ${{ steps.check_changed_dirs.outputs.run_census_acs_5year }}
       run_replica: ${{ steps.check_changed_dirs.outputs.run_replica }}
       run_generic_src: ${{ steps.check_changed_dirs.outputs.run_generic_src }}
@@ -104,6 +105,8 @@ jobs:
             for file in $CHANGED_FILES; do
               if [[ "$file" == "data-pipeline/src/etl/sources/greenlink_gtfs/"* ]]; then
                 RUN_GREENLINK_GTFS_TEST="true"
+              elif [[ "$file" == "data-pipeline/src/etl/sources/greenlink_ridership/"* ]]; then
+                RUN_GREENLINK_RIDERSHIP_TEST="true"
               elif [[ "$file" == "data-pipeline/src/etl/sources/census_acs_5year/"* ]]; then
                 RUN_CENSUS_ACS_5YEAR_TEST="true"
               elif [[ "$file" == "data-pipeline/src/etl/sources/replica/"* ]]; then
@@ -117,6 +120,7 @@ jobs:
             # because the generic test will cover them
             if [ "$RUN_GENERIC_SRC_TEST" == "true" ]; then
                 RUN_GREENLINK_GTFS_TEST="false"
+                RUN_GREENLINK_RIDERSHIP_TEST="false"
                 RUN_CENSUS_ACS_5YEAR_TEST="false"
                 RUN_REPLICA_TEST="false"
             fi
@@ -129,6 +133,7 @@ jobs:
 
           echo "no_changes=$NO_CHANGES" >> "$GITHUB_OUTPUT"
           echo "run_greenlink_gtfs=$RUN_GREENLINK_GTFS_TEST" >> "$GITHUB_OUTPUT"
+          echo "run_greenlink_ridership=$RUN_GREENLINK_RIDERSHIP_TEST" >> "$GITHUB_OUTPUT"
           echo "run_census_acs_5year=$RUN_CENSUS_ACS_5YEAR_TEST" >> "$GITHUB_OUTPUT"
           echo "run_replica=$RUN_REPLICA_TEST" >> "$GITHUB_OUTPUT"
           echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
@@ -140,6 +145,7 @@ jobs:
           # print the results
           echo "no_changes: $RUN_GREENLINK_GTFS_TEST"
           echo "Run Greenlink GTFS: $RUN_GREENLINK_GTFS_TEST"
+          echo "Run Greenlink Ridership: $RUN_GREENLINK_RIDERSHIP_TEST"
           echo "Run Census ACS 5-Year: $RUN_CENSUS_ACS_5YEAR_TEST"
           echo "Run Replica: $RUN_REPLICA_TEST"
           echo "Run all: $RUN_GENERIC_SRC_TEST"
@@ -181,9 +187,50 @@ jobs:
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
         with:
-          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__greenlink_gtfs"
           etls: "greenlink_gtfs"
+
+  test__greenlink_ridership:
+    name: "Test / Greenlink Ridership"
+    runs-on: ubuntu-latest
+    needs: [build, determine_tests_to_run]
+    if: needs.determine_tests_to_run.outputs.run_greenlink_ridership == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create sample input data
+        env:
+          CSV1_CONTENT: |
+            ,Period,Stop Point,Ridership - Boarding - APC,Ridership - Alighting - APC
+            1,7/1/2024,1000,1287,1291
+            2,7/2/2024,1000,1238,1250
+            2,7/4/2024,1010,
+            3,7/3/2024,1000,1403,1353
+            2,7/5/2024,1010,"non-numeric value",1234
+            2,7/6/2024,1010,1234,"2"
+          CSV2_CONTENT: |
+            ,Period,Stop Point,Ridership - Boarding - APC,Ridership - Alighting - APC,extra column
+            1,1/2/2025,1000,1354,1333,extra value
+            2,1/3/2025,1000,1384,1306,"extra value with ""quotes"""
+        run: |
+          mkdir -p ${{ github.workspace }}/pipeline-input/greenlink_ridership
+
+          cat <<EOF > "${{ github.workspace }}/pipeline-input/greenlink_ridership/file1.csv"
+          ${{ env.CSV1_CONTENT }}
+          EOF
+
+          cat <<EOF > "${{ github.workspace }}/pipeline-input/greenlink_ridership/file2.csv"
+          ${{ env.CSV2_CONTENT }}
+          EOF
+
+      - name: Run test
+        uses: ./.github/actions/prepare-pipeline-test
+        with:
+          artifact_name: "data__greenlink_ridership"
+          etls: "greenlink_gtfs,greenlink_ridership"
+          input_dir: "${{ github.workspace }}/pipeline-input"
 
   test__census_acs_5year:
     name: "Test / Census ACS 5-Year Estimates"
@@ -247,17 +294,37 @@ jobs:
         env:
           GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
           AREA_GEOJSON: '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-82.4,34.852],[-82.4,34.85],[-82.398,34.85],[-82.398,34.852],[-82.4,34.852]]]}}]}'
+          CSV1_CONTENT: |
+            ,Period,Stop Point,Ridership - Boarding - APC,Ridership - Alighting - APC
+            1,7/1/2024,1000,1287,1291
+            2,7/2/2024,1000,1238,1250
+            3,7/3/2024,1000,1403,1353
+          CSV2_CONTENT: |
+            ,Period,Stop Point,Ridership - Boarding - APC,Ridership - Alighting - APC,extra column
+            1,1/2/2025,1000,1354,1333,extra value
+            2,1/3/2025,1000,1384,1306,"extra value with ""quotes"""
         run: |
-          mkdir -p ${{ github.workspace }}/replica-input/replica_interest_area_polygons
-          echo $AREA_GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/full_area.geojson
-          echo $GEOJSON > ${{ github.workspace }}/replica-input/replica_interest_area_polygons/sample.geojson
+          mkdir -p ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons
+          mkdir -p ${{ github.workspace }}/pipeline-input/greenlink_ridership
+
+          # write sample data for replica
+          echo $AREA_GEOJSON > ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons/full_area.geojson
+          echo $GEOJSON > ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons/sample.geojson
+
+          # write sample data for greenlink ridership
+          cat <<EOF > "${{ github.workspace }}/pipeline-input/greenlink_ridership/file1.csv"
+          ${{ env.CSV1_CONTENT }}
+          EOF
+          cat <<EOF > "${{ github.workspace }}/pipeline-input/greenlink_ridership/file2.csv"
+          ${{ env.CSV2_CONTENT }}
+          EOF
 
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
         with:
           bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__all"
-          input_dir: "${{ github.workspace }}/replica-input"
+          input_dir: "${{ github.workspace }}/pipeline-input"
 
   check_previous_pass:
     name: Check Previous Pass
@@ -323,6 +390,7 @@ jobs:
         check_previous_pass,
         build,
         test__greenlink_gtfs,
+        test__greenlink_ridership,
         test__census_acs_5year,
         test__replica,
         test__all,
