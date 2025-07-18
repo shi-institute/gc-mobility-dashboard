@@ -1,5 +1,4 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { useMemo } from 'react';
 import { useLocation } from 'react-router';
 import {
   Button,
@@ -11,7 +10,6 @@ import {
   SidebarContent,
   Statistic,
 } from '../components';
-import { type GeoJSONLayerInit } from '../components/common/Map/types';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -22,38 +20,20 @@ import {
   SelectTravelMethod,
   useComparisonModeState,
 } from '../components/options';
-import { useAppData } from '../hooks';
+import { useAppData, useMapData } from '../hooks';
 import { notEmpty } from '../utils';
-import { createInterestAreaRenderer, createScaledSegmentsRenderer } from '../utils/renderers';
 
 export function GeneralAccess() {
   const { data } = useAppData();
-
-  const networkSegments = useMemo(() => {
-    return (data || [])
-      .map(({ network_segments }) => network_segments)
-      .filter(notEmpty)
-      .map((segments) => {
-        return {
-          title: `Network Segments`,
-          data: segments,
-          renderer: createScaledSegmentsRenderer(),
-        } satisfies GeoJSONLayerInit;
-      });
-  }, [data]);
-
-  const areaPolygons = useMemo(() => {
-    return (data || [])
-      .map(({ polygon }) => polygon)
-      .filter(notEmpty)
-      .map((polygon) => {
-        return {
-          title: `Area Polygon`,
-          data: polygon,
-          renderer: createInterestAreaRenderer(),
-        } satisfies GeoJSONLayerInit;
-      });
-  }, [data]);
+  const {
+    networkSegments,
+    areaPolygons,
+    routes,
+    stops,
+    // walkServiceAreas,
+    // cyclingServiceAreas,
+    paratransitServiceAreas,
+  } = useMapData(data);
 
   return (
     <CoreFrame
@@ -62,7 +42,9 @@ export function GeneralAccess() {
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
-          <Map layers={[...networkSegments, ...areaPolygons]} />
+          <Map
+            layers={[...networkSegments, paratransitServiceAreas, routes, stops, ...areaPolygons]}
+          />
         </div>
       }
       sections={Sections()}

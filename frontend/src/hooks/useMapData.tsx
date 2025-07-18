@@ -1,0 +1,237 @@
+import { CustomContent } from '@arcgis/core/popup/content';
+import PopupTemplate from '@arcgis/core/PopupTemplate.js';
+import { SimpleRenderer } from '@arcgis/core/renderers';
+import { SimpleFillSymbol } from '@arcgis/core/symbols';
+import { useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
+import { useAppData } from '.';
+import { GeoJSONLayerInit } from '../components/common/Map/types';
+import { notEmpty } from '../utils';
+import {
+  createBusStopRenderer,
+  createInterestAreaRenderer,
+  createScaledSegmentsRenderer,
+} from '../utils/renderers';
+
+type AppData = ReturnType<typeof useAppData>['data'];
+
+export function useMapData(data: AppData) {
+  const networkSegments = useMemo(() => {
+    const validSegmentsByAreaAndSeason = (data || [])
+      .map(({ network_segments }) => network_segments)
+      .filter(notEmpty);
+
+    return validSegmentsByAreaAndSeason.map((segments) => {
+      return {
+        title: `Network Segments`,
+        data: segments,
+        renderer: createScaledSegmentsRenderer(),
+      } satisfies GeoJSONLayerInit;
+    });
+  }, [data]);
+
+  const areaPolygons = useMemo(() => {
+    const groupedByArea = Object.groupBy(data || [], (resolved) => resolved.__area);
+
+    const uniqueAreaPolygons = Object.values(groupedByArea).flatMap((areaSeasonSeries) => {
+      return (
+        areaSeasonSeries
+          ?.map(({ polygon }) => polygon)
+          .filter(notEmpty)
+          .slice(0, 1) || []
+      );
+    });
+
+    return uniqueAreaPolygons.map((polygon) => {
+      return {
+        title: `Area Polygon`,
+        data: polygon,
+        renderer: createInterestAreaRenderer(),
+      } satisfies GeoJSONLayerInit;
+    });
+  }, [data]);
+
+  const selectedAreasAndSeasonsRidership = useMemo(() => {
+    const filteredData = (data || [])
+      .map(({ ridership, __year, __quarter }) => ({ ridership, __year, __quarter }))
+      .reduce((acc, curr) => {
+        const currentYear = curr.__year;
+        const currentQuarter = curr.__quarter;
+        const ridershipData = (curr.ridership || []).map((r) => {
+          return {
+            ...r,
+            __year: currentYear,
+            __quarter: currentQuarter,
+          };
+        });
+
+        return [...acc, ...ridershipData];
+      }, [] as (NonNullable<NonNullable<AppData>[0]['ridership']>[0] & { __year: number; __quarter: 'Q2' | 'Q4' })[])
+      .map((ridershipData) => {
+        const season = `${ridershipData.__quarter}:${ridershipData.__year}`;
+        return { season, ...ridershipData };
+      });
+
+    const groupedByStop = Object.groupBy(filteredData, (r) => r.stop_point);
+
+    const groupedByStopAndSeason = Object.fromEntries(
+      Object.entries(groupedByStop).map(([stopPoint, ridershipData]) => {
+        const ridershipBySeason = Object.groupBy(ridershipData || [], (r) => r.season);
+        return [stopPoint, ridershipBySeason] as const;
+      })
+    );
+
+    return groupedByStopAndSeason;
+  }, [data]);
+
+  const routes = useMemo(() => {
+    return (
+      (data || [])
+        .map(({ routes }) => routes)
+        .filter(notEmpty)
+        // only keep the first occurrence because it would be confusing to show routes on top of each other over time
+        .slice(0, 1)
+        .map((routes) => {
+          return {
+            title: `Routes`,
+            data: routes,
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  type ResolvedWithStops = Omit<NonNullable<typeof data>[0], 'stops'> & {
+    stops: NonNullable<NonNullable<typeof data>[0]['stops']>;
+  };
+
+  const stops = useMemo(() => {
+    return (
+      (data || [])
+        // ensure stops data are present
+        .filter((resolved): resolved is ResolvedWithStops => resolved.stops !== null)
+        // only keep the first occurrence
+        .slice(0, 1)
+        .map(({ __quarter, __year, stops }) => {
+          return {
+            title: `Stops (${__year} ${__quarter})`,
+            data: stops,
+            renderer: createBusStopRenderer(),
+            minScale: 240000, // do not show bus stops at scales larger than 1:240,000
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `{Name} (${__year} ${__quarter})`,
+              content: [
+                new CustomContent({
+                  outFields: ['*'],
+                  creator: (event) => {
+                    const stopRidership = Object.entries(
+                      selectedAreasAndSeasonsRidership[event?.graphic.attributes.ID]
+                    ).map(([season, ridership]) => {
+                      return [
+                        season,
+                        {
+                          alightings:
+                            ridership?.reduce((acc, r) => acc + (r.alighting || 0), 0) || 0,
+                          boardings: ridership?.reduce((acc, r) => acc + (r.boarding || 0), 0) || 0,
+                        },
+                      ] as const;
+                    });
+
+                    const rootElem = document.createElement('div');
+                    createRoot(rootElem).render(
+                      <div>
+                        {stopRidership.map(([season, stats]) => {
+                          return (
+                            <div key={season}>
+                              <h3>{season}</h3>
+                              <p>Boardings: {stats.boardings}</p>
+                              <p>Alightings: {stats.alightings}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                    return rootElem;
+                  },
+                }),
+              ],
+            }),
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  const walkServiceAreas = useMemo(() => {
+    return (
+      (data || [])
+        .map(({ walk_service_area }) => walk_service_area)
+        .filter(notEmpty)
+        // only keep the first occurrence because it would be confusing to show
+        // the service areas top of each other for each selected season
+        .slice(0, 1)
+        .map((walk_service_area) => {
+          return {
+            title: `0.5-Mile Walking Radius from Stops`,
+            data: walk_service_area,
+            renderer: serviceAreaRenderer,
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  const cyclingServiceAreas = useMemo(() => {
+    return (
+      (data || [])
+        .map(({ bike_service_area }) => bike_service_area)
+        .filter(notEmpty)
+        // only keep the first occurrence because it would be confusing to show
+        // the service areas top of each other for each selected season
+        .slice(0, 1)
+        .map((bike_service_area) => {
+          return {
+            title: `15-Minute Cycling Radius from Stops (at 15 mph)`,
+            data: bike_service_area,
+            renderer: serviceAreaRenderer,
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  const paratransitServiceAreas = useMemo(() => {
+    return (
+      (data || [])
+        .map(({ paratransit_service_area }) => paratransit_service_area)
+        .filter(notEmpty)
+        // only keep the first occurrence because it would be confusing to show
+        // the buffers top of each other for each selected season
+        .slice(0, 1)
+        .map((paratransit_service_area) => {
+          return {
+            title: `Paratransit Service Area`,
+            data: paratransit_service_area,
+            renderer: serviceAreaRenderer,
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  return {
+    networkSegments,
+    areaPolygons,
+    routes,
+    stops,
+    walkServiceAreas,
+    cyclingServiceAreas,
+    paratransitServiceAreas,
+  };
+}
+
+const serviceAreaRenderer = new SimpleRenderer({
+  symbol: new SimpleFillSymbol({
+    color: [255, 255, 255, 0.32],
+    outline: {
+      color: [0, 0, 0, 0.36],
+      width: 1,
+    },
+  }),
+});
