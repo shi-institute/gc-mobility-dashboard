@@ -187,7 +187,6 @@ jobs:
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
         with:
-          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__greenlink_gtfs"
           etls: "greenlink_gtfs"
 
@@ -230,7 +229,7 @@ jobs:
         uses: ./.github/actions/prepare-pipeline-test
         with:
           artifact_name: "data__greenlink_ridership"
-          etls: "greenlink_ridership"
+          etls: "greenlink_gtfs,greenlink_ridership"
           input_dir: "${{ github.workspace }}/pipeline-input"
 
   test__census_acs_5year:
