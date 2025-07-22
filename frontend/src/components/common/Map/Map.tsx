@@ -1,6 +1,11 @@
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer.js';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer.js';
+import '@arcgis/map-components/components/arcgis-expand';
+import '@arcgis/map-components/components/arcgis-layer-list';
+import '@arcgis/map-components/components/arcgis-legend';
+import '@arcgis/map-components/components/arcgis-placement';
+import '@arcgis/map-components/components/arcgis-scale-range-slider';
 import '@arcgis/map-components/dist/components/arcgis-map';
 import { useEffect, useRef, useState } from 'react';
 import { notEmpty } from '../../../utils';
@@ -73,7 +78,43 @@ export function Map(props: MapProps) {
   return (
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
-      <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85" ref={mapElem} />
+      <arcgis-map basemap="gray-vector" zoom={12} center="-82.4, 34.85" ref={mapElem}>
+        <arcgis-expand
+          close-on-esc
+          position="bottom-left"
+          mode="floating"
+          expandIcon="legend"
+          collapseIcon="chevrons-right"
+          expandTooltip="View Legend"
+          collapseTooltip="Hide Legend"
+        >
+          <arcgis-placement>
+            <div style={{ width: '300px' }}>
+              <h2
+                style={{
+                  fontSize: 'var(--calcite-font-size-0)',
+                  fontWeight: 'var(--calcite-font-weight-medium)',
+                  padding: '8px 8px 0px',
+                  margin: 8,
+                }}
+              >
+                Legend
+              </h2>
+              <arcgis-legend position="manual" />
+              <arcgis-expand label="Layers">
+                <arcgis-layer-list
+                  position="manual"
+                  drag-enabled
+                  show-errors
+                  show-filter
+                  show-temporary-layer-indicators
+                  visibility-appearance="checkbox"
+                />
+              </arcgis-expand>
+            </div>
+          </arcgis-placement>
+        </arcgis-expand>
+      </arcgis-map>
     </div>
   );
 }
