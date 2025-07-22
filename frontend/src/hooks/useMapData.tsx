@@ -128,28 +128,24 @@ export function useMapData(data: AppData) {
   const routes = useMemo(() => {
     return (
       (data || [])
-        .map(({ routes }) => routes)
         .filter(notEmpty)
+        .filter(requireKey('routes'))
         // only keep the first occurrence because it would be confusing to show routes on top of each other over time
         .slice(0, 1)
-        .map((routes) => {
+        .map(({ routes, __quarter, __year }) => {
           return {
-            title: `Routes`,
+            title: `Routes (${__year} ${__quarter})`,
             data: routes,
           } satisfies GeoJSONLayerInit;
         })[0]
     );
   }, [data]);
 
-  type ResolvedWithStops = Omit<NonNullable<typeof data>[0], 'stops'> & {
-    stops: NonNullable<NonNullable<typeof data>[0]['stops']>;
-  };
-
   const stops = useMemo(() => {
     return (
       (data || [])
-        // ensure stops data are present
-        .filter((resolved): resolved is ResolvedWithStops => resolved.stops !== null)
+        .filter(notEmpty)
+        .filter(requireKey('stops'))
         // only keep the first occurrence
         .slice(0, 1)
         .map(({ __quarter, __year, stops }) => {
@@ -205,14 +201,14 @@ export function useMapData(data: AppData) {
   const walkServiceAreas = useMemo(() => {
     return (
       (data || [])
-        .map(({ walk_service_area }) => walk_service_area)
         .filter(notEmpty)
+        .filter(requireKey('walk_service_area'))
         // only keep the first occurrence because it would be confusing to show
         // the service areas top of each other for each selected season
         .slice(0, 1)
-        .map((walk_service_area) => {
+        .map(({ walk_service_area, __quarter, __year }) => {
           return {
-            title: `0.5-Mile Walking Radius from Stops`,
+            title: `0.5-Mile Walking Radius from Stops (${__year} ${__quarter})`,
             data: walk_service_area,
             renderer: serviceAreaRenderer,
           } satisfies GeoJSONLayerInit;
@@ -223,14 +219,14 @@ export function useMapData(data: AppData) {
   const cyclingServiceAreas = useMemo(() => {
     return (
       (data || [])
-        .map(({ bike_service_area }) => bike_service_area)
         .filter(notEmpty)
+        .filter(requireKey('bike_service_area'))
         // only keep the first occurrence because it would be confusing to show
         // the service areas top of each other for each selected season
         .slice(0, 1)
-        .map((bike_service_area) => {
+        .map(({ bike_service_area, __quarter, __year }) => {
           return {
-            title: `15-Minute Cycling Radius from Stops (at 15 mph)`,
+            title: `15-Minute Cycling Radius from Stops (at 15 mph) (${__year} ${__quarter})`,
             data: bike_service_area,
             renderer: serviceAreaRenderer,
           } satisfies GeoJSONLayerInit;
@@ -241,14 +237,14 @@ export function useMapData(data: AppData) {
   const paratransitServiceAreas = useMemo(() => {
     return (
       (data || [])
-        .map(({ paratransit_service_area }) => paratransit_service_area)
+        .filter(requireKey('paratransit_service_area'))
         .filter(notEmpty)
         // only keep the first occurrence because it would be confusing to show
         // the buffers top of each other for each selected season
         .slice(0, 1)
-        .map((paratransit_service_area) => {
+        .map(({ paratransit_service_area, __quarter, __year }) => {
           return {
-            title: `Paratransit Service Area`,
+            title: `Paratransit Service Area (${__year} ${__quarter})`,
             data: paratransit_service_area,
             renderer: serviceAreaRenderer,
           } satisfies GeoJSONLayerInit;
