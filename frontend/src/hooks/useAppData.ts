@@ -169,6 +169,10 @@ async function fetchData<T = Record<string, unknown>>(
       return inflateResponse(response);
     })
     .then((text) => {
+      if (text.startsWith('<!DOCTYPE')) {
+        throw new Error('Received HTML response instead of JSON. This may indicate a 404 error.');
+      }
+
       return JSON.parse(text);
     });
 }
@@ -206,11 +210,24 @@ async function resolveArrayOfPromiseRecords<T extends DataPromises>(
   );
 }
 
-function handleError(key: string, shouldThrow = true) {
-  return (error: Error) => {
+function handleError(key: string, shouldThrow = true, supressIncorrectHeaderCheck = false) {
+  return (error: Error | string) => {
+    const errorMessage = typeof error === 'string' ? error : error.message || 'Unknown error';
+
     // ignore errors that are caused by the cleanup of the useAppData effect
-    if (error.message?.includes('useAppData is being cleaned up')) {
+    if (errorMessage?.includes('useAppData is being cleaned up')) {
       console.debug(`Ignoring cleanup error for ${key}:`, error);
+      return null;
+    }
+
+    if (supressIncorrectHeaderCheck && errorMessage === 'incorrect header check') {
+      console.debug(`Ignoring incorrect header check error for ${key}:`, error);
+      return null;
+    }
+
+    // if the data was not found (404), return null instead of throwing an error
+    if (errorMessage === 'Received HTML response instead of JSON. This may indicate a 404 error.') {
+      console.warn(`Data for ${key} not found:`, error);
       return null;
     }
 
@@ -219,7 +236,7 @@ function handleError(key: string, shouldThrow = true) {
     if (shouldThrow !== false) {
       throw new Error(
         `Error fetching ${key} data: ` +
-          (error.message || error) +
+          (errorMessage || error) +
           `. See the console for more details.`
       );
     }
@@ -294,7 +311,7 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
           fetchData<StopRidership[]>(
             `${ridershipFolder}/ridership.json.deflate`,
             abortSignal
-          ).catch(handleError('greenlink_ridership', false)),
+          ).catch(handleError('greenlink_ridership', true, true)),
       },
     };
   });
@@ -383,12 +400,8 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
                   return { ...layer, minzoom: undefined, maxzoom: undefined };
                 }),
               };
-
-              // resolve the source URLS
-
-              return style;
             })
-            .catch(handleError('network_segments_style')),
+            .catch(handleError('network_segments_style', true, true)),
         population: (abortSignal?: AbortSignal) =>
           fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
             handleError('population')
