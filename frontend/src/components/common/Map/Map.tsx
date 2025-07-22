@@ -163,7 +163,7 @@ export function Map(props: MapProps) {
   return (
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
-      <arcgis-map basemap="gray-vector" zoom={12} center="-82.4, 34.85" ref={mapElem}>
+      <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85" ref={mapElem}>
         {serviceAreaLayers.walk ? (
           <arcgis-placement position="top-left">
             <IconButton
