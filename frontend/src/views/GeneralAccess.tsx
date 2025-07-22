@@ -30,8 +30,8 @@ export function GeneralAccess() {
     areaPolygons,
     routes,
     stops,
-    // walkServiceAreas,
-    // cyclingServiceAreas,
+    walkServiceAreas,
+    cyclingServiceAreas,
     paratransitServiceAreas,
   } = useMapData(data);
 
@@ -43,7 +43,15 @@ export function GeneralAccess() {
       map={
         <div style={{ height: '100%' }}>
           <Map
-            layers={[...networkSegments, paratransitServiceAreas, routes, stops, ...areaPolygons]}
+            layers={[
+              ...networkSegments,
+              paratransitServiceAreas,
+              cyclingServiceAreas,
+              walkServiceAreas,
+              routes,
+              stops,
+              ...areaPolygons,
+            ]}
           />
         </div>
       }

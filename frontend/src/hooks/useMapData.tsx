@@ -66,6 +66,7 @@ export function useMapData(data: AppData) {
 
       return new VectorTileLayer({
         title: `Network Segments (${data.__area} ${data.__year} ${data.__quarter})`,
+        id: `network-segments__${data.__area}_${data.__year}_${data.__quarter}`,
         style: modifiedStyle,
       });
     });
@@ -74,22 +75,33 @@ export function useMapData(data: AppData) {
   const areaPolygons = useMemo(() => {
     const groupedByArea = Object.groupBy(data || [], (resolved) => resolved.__area);
 
-    const uniqueAreaPolygons = Object.values(groupedByArea).flatMap((areaSeasonSeries) => {
-      return (
-        areaSeasonSeries
-          ?.map(({ polygon }) => polygon)
-          .filter(notEmpty)
-          .slice(0, 1) || []
-      );
-    });
+    const uniqueAreaPolygons = Object.entries(groupedByArea).flatMap(
+      ([areaName, areaSeasonSeries]) => {
+        return {
+          areaName,
+          polygon: areaSeasonSeries
+            ?.filter(notEmpty)
+            ?.map(({ polygon }) => polygon)
+            .filter(notEmpty)
+            .slice(0, 1)?.[0],
+        };
+      }
+    );
 
-    return uniqueAreaPolygons.map((polygon) => {
-      return {
-        title: `Area Polygon`,
-        data: polygon,
-        renderer: createInterestAreaRenderer(),
-      } satisfies GeoJSONLayerInit;
-    });
+    return uniqueAreaPolygons
+      .map(({ areaName, polygon }) => {
+        if (!polygon) {
+          return null;
+        }
+
+        return {
+          title: `${areaName} Boundary`,
+          id: `area-polygon__${areaName}`,
+          data: polygon,
+          renderer: createInterestAreaRenderer(),
+        } satisfies GeoJSONLayerInit;
+      })
+      .filter(notEmpty);
   }, [data]);
 
   const selectedAreasAndSeasonsRidership = useMemo(() => {
@@ -135,6 +147,7 @@ export function useMapData(data: AppData) {
         .map(({ routes, __quarter, __year }) => {
           return {
             title: `Routes (${__year} ${__quarter})`,
+            id: `routes__${__year}_${__quarter}`,
             data: routes,
           } satisfies GeoJSONLayerInit;
         })[0]
@@ -209,8 +222,10 @@ export function useMapData(data: AppData) {
         .map(({ walk_service_area, __quarter, __year }) => {
           return {
             title: `0.5-Mile Walking Radius from Stops (${__year} ${__quarter})`,
+            id: `walk-service-area__${__year}_${__quarter}`,
             data: walk_service_area,
             renderer: serviceAreaRenderer,
+            visible: false,
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -227,8 +242,10 @@ export function useMapData(data: AppData) {
         .map(({ bike_service_area, __quarter, __year }) => {
           return {
             title: `15-Minute Cycling Radius from Stops (at 15 mph) (${__year} ${__quarter})`,
+            id: `bike-service-area__${__year}_${__quarter}`,
             data: bike_service_area,
             renderer: serviceAreaRenderer,
+            visible: false,
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -245,8 +262,10 @@ export function useMapData(data: AppData) {
         .map(({ paratransit_service_area, __quarter, __year }) => {
           return {
             title: `Paratransit Service Area (${__year} ${__quarter})`,
+            id: `paratransit-service-area__${__year}_${__quarter}`,
             data: paratransit_service_area,
             renderer: serviceAreaRenderer,
+            visible: false,
           } satisfies GeoJSONLayerInit;
         })[0]
     );
