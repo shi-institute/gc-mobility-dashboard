@@ -1,3 +1,4 @@
+import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
 import { CustomContent } from '@arcgis/core/popup/content';
 import PopupTemplate from '@arcgis/core/PopupTemplate.js';
 import { SimpleRenderer } from '@arcgis/core/renderers';
@@ -6,27 +7,67 @@ import { useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useAppData } from '.';
 import { GeoJSONLayerInit } from '../components/common/Map/types';
-import { notEmpty } from '../utils';
-import {
-  createBusStopRenderer,
-  createInterestAreaRenderer,
-  createScaledSegmentsRenderer,
-} from '../utils/renderers';
+import { notEmpty, requireKey } from '../utils';
+import { createBusStopRenderer, createInterestAreaRenderer } from '../utils/renderers';
 
 type AppData = ReturnType<typeof useAppData>['data'];
 
 export function useMapData(data: AppData) {
   const networkSegments = useMemo(() => {
-    const validSegmentsByAreaAndSeason = (data || [])
-      .map(({ network_segments }) => network_segments)
-      .filter(notEmpty);
+    const validSegmentsStylesByAreaAndSeason = (data || [])
+      .filter(notEmpty)
+      .filter(requireKey('network_segments_style'));
 
-    return validSegmentsByAreaAndSeason.map((segments) => {
-      return {
-        title: `Network Segments`,
-        data: segments,
-        renderer: createScaledSegmentsRenderer(),
-      } satisfies GeoJSONLayerInit;
+    interface InterpolateInput {
+      minbound: number;
+      maxbound: number;
+      minboundvalue: number;
+      maxboundvalue: number;
+    }
+
+    function interpolate(input: InterpolateInput) {
+      return [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        input.minbound,
+        input.minboundvalue,
+        input.maxbound,
+        input.maxboundvalue,
+      ];
+    }
+
+    return validSegmentsStylesByAreaAndSeason.map((data) => {
+      const modifiedStyle = {
+        ...data.network_segments_style,
+        layers: [
+          {
+            ...data.network_segments_style.layers[0],
+            paint: {
+              'line-color': 'rgb(0, 102, 255)',
+              'line-width': [
+                'case',
+                ['<=', ['get', 'frequency_bucket'], 2],
+                interpolate({ minbound: 9, minboundvalue: 0.1, maxbound: 15, maxboundvalue: 1 }),
+                ['<=', ['get', 'frequency_bucket'], 4],
+                interpolate({ minbound: 9, minboundvalue: 1, maxbound: 15, maxboundvalue: 2 }),
+                ['<=', ['get', 'frequency_bucket'], 6],
+                interpolate({ minbound: 9, minboundvalue: 2, maxbound: 15, maxboundvalue: 3 }),
+                ['<=', ['get', 'frequency_bucket'], 8],
+                interpolate({ minbound: 9, minboundvalue: 3, maxbound: 15, maxboundvalue: 4 }),
+                ['<=', ['get', 'frequency_bucket'], 10],
+                interpolate({ minbound: 9, minboundvalue: 4, maxbound: 15, maxboundvalue: 5 }),
+                0.1,
+              ],
+            } satisfies mapboxgl.LinePaint,
+          },
+        ],
+      };
+
+      return new VectorTileLayer({
+        title: `Network Segments (${data.__area} ${data.__year} ${data.__quarter})`,
+        style: modifiedStyle,
+      });
     });
   }, [data]);
 

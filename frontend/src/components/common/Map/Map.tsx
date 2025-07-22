@@ -1,10 +1,13 @@
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer.js';
+import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
+import WebTileLayer from '@arcgis/core/layers/WebTileLayer.js';
 import '@arcgis/map-components/dist/components/arcgis-map';
 import { useEffect, useRef, useState } from 'react';
+import { notEmpty } from '../../../utils';
 import type { GeoJSONLayerInit } from './types';
 
 interface MapProps {
-  layers: GeoJSONLayerInit[];
+  layers: (GeoJSONLayerInit | WebTileLayer | VectorTileLayer)[];
 }
 
 export function Map(props: MapProps) {
@@ -29,7 +32,11 @@ export function Map(props: MapProps) {
 
     // process each layer initializer
     const objectUrls: string[] = [];
-    const layersToAdd = props.layers.map((layerInit) => {
+    const layersToAdd = props.layers.filter(notEmpty).map((layerInit) => {
+      if (layerInit instanceof WebTileLayer || layerInit instanceof VectorTileLayer) {
+        return layerInit;
+      }
+
       if (layerInit.data instanceof URL) {
         return new GeoJSONLayer({
           ...layerInit,

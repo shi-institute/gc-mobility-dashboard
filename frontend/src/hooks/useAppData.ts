@@ -1,3 +1,4 @@
+import type { Style as MapboxStyle, VectorSource as MapboxVectorSource } from 'mapbox-gl';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { inflateResponse } from '../utils';
 
@@ -147,7 +148,8 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
 
 async function fetchData<T = Record<string, unknown>>(
   input: RequestInfo | URL,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  skipInflate = false
 ): Promise<T> {
   return fetch(input, {
     signal: abortSignal,
@@ -160,7 +162,12 @@ async function fetchData<T = Record<string, unknown>>(
       }
       return response;
     })
-    .then(inflateResponse)
+    .then((response) => {
+      if (skipInflate) {
+        return response.text();
+      }
+      return inflateResponse(response);
+    })
     .then((text) => {
       return JSON.parse(text);
     });
@@ -207,6 +214,8 @@ function handleError(key: string, shouldThrow = true) {
       return null;
     }
 
+    console.error(`Error fetching ${key} data:`, error);
+
     if (shouldThrow !== false) {
       throw new Error(
         `Error fetching ${key} data: ` +
@@ -215,7 +224,6 @@ function handleError(key: string, shouldThrow = true) {
       );
     }
 
-    console.error(`Error fetching ${key} data:`, error);
     return null;
   };
 }
@@ -321,7 +329,7 @@ function constructReplicaPaths(
         __quarter: quarter,
         polygon: `./data/replica/${area}/polygon.geojson.deflate`,
         statistics: `./data/replica/${area}/statistics/replica__south_atlantic_${year}_${quarter}.json.deflate`,
-        network_segments: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}.geojson.deflate`,
+        network_segments_style: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}/VectorTileServer/resources/styles/root.json`,
         population: `./data/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
       };
     });
@@ -351,10 +359,36 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
           fetchData<ReplicaStatistics>(paths.statistics, abortSignal).catch(
             handleError('statistics')
           ),
-        network_segments: (abortSignal?: AbortSignal) =>
-          fetchData<ReplicaNetworkSegments>(paths.network_segments, abortSignal).catch(
-            handleError('network_segments')
-          ),
+        network_segments_style: (abortSignal?: AbortSignal) =>
+          fetchData<Omit<MapboxStyle, 'sources'> & { sources: Record<string, MapboxVectorSource> }>(
+            paths.network_segments_style,
+            abortSignal,
+            true
+          )
+            .then((style) => {
+              return {
+                ...style,
+                sources: {
+                  ...style.sources,
+                  esri: {
+                    ...style.sources.esri,
+                    // resolve the relative URL to a complete path
+                    url: new URL(
+                      paths.network_segments_style + '/../' + style.sources.esri.url,
+                      window.location.origin
+                    ).href,
+                  },
+                },
+                layers: style.layers.map((layer) => {
+                  return { ...layer, minzoom: undefined, maxzoom: undefined };
+                }),
+              };
+
+              // resolve the source URLS
+
+              return style;
+            })
+            .catch(handleError('network_segments_style')),
         population: (abortSignal?: AbortSignal) =>
           fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
             handleError('population')
