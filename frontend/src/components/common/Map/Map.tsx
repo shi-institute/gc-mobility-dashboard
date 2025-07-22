@@ -1,3 +1,4 @@
+import esriConfig from '@arcgis/core/config.js';
 import * as reactiveUtils from '@arcgis/core/core/reactiveUtils.js';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer.js';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
@@ -39,27 +40,44 @@ export function Map(props: MapProps) {
 
     // process each layer initializer
     const objectUrls: string[] = [];
-    const layersToAdd = props.layers.filter(notEmpty).map((layerInit) => {
-      if (layerInit instanceof WebTileLayer || layerInit instanceof VectorTileLayer) {
-        return layerInit;
-      }
+    const layersToAdd = props.layers
+      .filter(notEmpty)
+      .map((layerInit) => {
+        if (layerInit instanceof WebTileLayer || layerInit instanceof VectorTileLayer) {
+          return layerInit;
+        }
 
-      if (layerInit.data instanceof URL) {
+        if (layerInit.data instanceof URL) {
+          return new GeoJSONLayer({
+            ...layerInit,
+            url: layerInit.data.toString(),
+          });
+        }
+
+        // if the data is a GeoJSON object, we need to create a blob URL
+        const blob = new Blob([JSON.stringify(layerInit.data)], { type: 'application/json' });
+        const objectUrl = URL.createObjectURL(blob);
+        objectUrls.push(objectUrl);
+
         return new GeoJSONLayer({
           ...layerInit,
-          url: layerInit.data.toString(),
+          url: objectUrl,
         });
+      })
+      .filter(notEmpty);
+
+    esriConfig.log.interceptors.push((level, module, ...args) => {
+      // supress messages due to stale blob URLs
+      if (level === 'error' && module === 'esri.layers.GeoJSONLayer') {
+        const error = args[2].error;
+        const isStaleBlobError =
+          error.name === 'request:server' &&
+          error.details.url.startsWith('blob:') &&
+          error.message === 'Failed to fetch';
+        return isStaleBlobError; // true = supress
       }
 
-      // if the data is a GeoJSON object, we need to create a blob URL
-      const blob = new Blob([JSON.stringify(layerInit.data)], { type: 'application/json' });
-      const objectUrl = URL.createObjectURL(blob);
-      objectUrls.push(objectUrl);
-
-      return new GeoJSONLayer({
-        ...layerInit,
-        url: objectUrl,
-      });
+      return false;
     });
 
     // add the provided layers to the map
