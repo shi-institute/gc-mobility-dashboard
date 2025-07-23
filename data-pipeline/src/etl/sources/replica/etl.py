@@ -2,8 +2,8 @@ import gc
 import json
 import logging
 import os
-import pickle
 import re
+import shutil
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Literal, Optional
@@ -19,6 +19,7 @@ import shapely.wkt
 from etl.sources.replica.transformers.as_points import as_points
 from etl.sources.replica.transformers.count_segment_frequency import \
     count_segment_frequency
+from etl.sources.replica.transformers.to_vector_tiles import to_vector_tiles
 from etl.sources.replica.transformers.trips_as_lines import (
     create_network_segments_lookup, trips_as_lines)
 
@@ -476,13 +477,40 @@ class ReplicaETL:
                         'geoparquet',
                     )
                     for suffix, gdf in network_segments_subsets:
+                        full_table_name = f'{region}_{year}_{quarter}{suffix}'
                         self._save(
                             gdf,
                             area_name,
-                            f'{region}_{year}_{quarter}{suffix}',
+                            full_table_name,
                             'network_segments',
-                            ['geoparquet', 'geojson'],
+                            ['geoparquet'],
                         )
+
+                        # try to generate tiles for the network segments
+                        print(
+                            f'Generating tiles for {area_name} ({region}_{year}_{quarter}{suffix})...')
+                        tile_folder_path = os.path.join(
+                            self.folder_path, area_name, 'network_segments', full_table_name
+                        )
+                        try:
+                            to_vector_tiles(
+                                gdf, f'Network Segments ({area_name}) ({quarter} {year})', full_table_name, tile_folder_path, 16)
+
+                            # zip (no compression) the tiles folder
+                            zip_filename = f'{tile_folder_path}.vectortiles'
+                            if os.path.exists(zip_filename):
+                                os.remove(zip_filename)
+
+                            os.system(
+                                f'cd {tile_folder_path} && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
+
+                        except Exception:
+                            # this will happen if the geojson file is empty
+                            continue
+
+                        finally:
+                            # remove the tiles folder
+                            shutil.rmtree(tile_folder_path)
 
                     print(f'  Finished processing area {area_name}.')
 

@@ -23,4 +23,9 @@ export default defineConfig({
   ],
   appType: 'spa',
   base: './',
+  server: {
+    watch: {
+      ignored: ['**/node_modules/**', '**/public/data/**'],
+    },
+  },
 });

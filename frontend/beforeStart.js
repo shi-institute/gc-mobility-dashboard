@@ -1,10 +1,11 @@
+import AdmZip from 'adm-zip';
 import { cp, readdir, readFile, rmdir, stat, unlink, writeFile } from 'fs/promises';
 import { join as joinPath, resolve as resolvePath } from 'path';
 import { promisify } from 'util';
 import { deflate as _deflate } from 'zlib';
 // import { deflate as _deflate } from 'pako';
 
-const fileExtensionsToMove = ['.json', '.geojson', '.deflate'];
+const fileExtensionsToMove = ['.json', '.geojson', '.deflate', '.vectortiles'];
 const pipelineDataDir = resolvePath(import.meta.dirname, '../data-pipeline/data');
 const publicDataDir = resolvePath(import.meta.dirname, './public/data');
 const shouldLog = true;
@@ -67,10 +68,13 @@ await deleteEmptyDirectories(publicDataDir);
 // compress JSON files in public/data
 await deflateJsonFiles(publicDataDir);
 
+// unzip .vectortiles files in public/data
+await unzipVectorTiles(publicDataDir);
+
 // build an index of areas and seasons
 const areaNames = await buildAreaIndex(publicDataDir + '/replica');
 if (areaNames.length) {
-  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/network_segments');
+  await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/statistics');
 }
 
 if (!shouldLog) {
@@ -128,7 +132,10 @@ async function deflateJsonFiles(directory) {
         continue;
       }
 
-      if (!['.json', '.geojson'].some((ext) => fileName.endsWith(ext))) {
+      if (
+        !['.json', '.geojson'].some((ext) => fileName.endsWith(ext)) ||
+        directory.includes('VectorTileServer')
+      ) {
         continue;
       }
 
@@ -145,6 +152,42 @@ async function deflateJsonFiles(directory) {
   }
 }
 
+/**
+ * Recurisvely look for .vectortiles files in a directory and its subdirectories.
+ *
+ * If found, unzip them (they are zip files) and move them to the same directory.
+ */
+async function unzipVectorTiles(directory) {
+  const fileNames = await readdir(directory);
+
+  for await (const fileName of fileNames) {
+    try {
+      const filePath = joinPath(directory, fileName);
+      const stats = await stat(filePath);
+
+      if (stats.isDirectory()) {
+        await unzipVectorTiles(filePath);
+        continue;
+      }
+
+      if (!fileName.endsWith('.vectortiles')) {
+        continue;
+      }
+
+      // extract to a folder with the same name as the file (without .vectortiles)
+      const zip = new AdmZip(filePath);
+      const unzipPath = filePath.replace('.vectortiles', '');
+      zip.extractAllTo(unzipPath, true);
+
+      // delete the original .vectortiles file
+      await unlink(filePath);
+
+      console.log(`Extracted vector tiles to: ${unzipPath}`);
+    } catch (error) {
+      console.error(`Error processing file ${fileName} in directory ${directory}:`, error);
+    }
+  }
+}
 /**
  * Builds an index of areas from the list of folder names in data/replica.
  *
@@ -183,13 +226,14 @@ async function buildSeasonIndex(directory) {
   const items = await readdir(directory);
 
   const seasonNames = [];
-  for await (const item of items) {
-    if (item.includes('.geojson')) {
+  for await (const item of items.filter((item) => !!item)) {
+    if (item.includes('.geojson') || item.includes('.json')) {
       seasonNames.push(
         item
-          .split('__')
-          .slice(0, -1)[0] // remove the part after '__'
+          .replace('replica__', '')
+          .split('__')[0]
           .replace('south_atlantic_', '')
+          .replace('.geojson.deflate', '')
           .replace('.json.deflate', '')
           .split('_')
           .reverse()

@@ -10,6 +10,10 @@ interface IconButtonProps {
   /** whether the button is disabled */
   disabled?: boolean;
   className?: string;
+  /**
+   * A tooltip for the icon button, which is shown on mouse hover by the browser.
+   */
+  title?: string;
 }
 
 /**
@@ -18,14 +22,24 @@ interface IconButtonProps {
 export function IconButton(props: IconButtonProps) {
   if (props.href && !props.disabled) {
     return (
-      <StyledAnchorButton href={props.href} onClick={props.onClick} className={props.className}>
+      <StyledAnchorButton
+        href={props.href}
+        onClick={props.onClick}
+        className={props.className}
+        title={props.title}
+      >
         {props.children}
       </StyledAnchorButton>
     );
   }
 
   return (
-    <StyledButton onClick={props.onClick} disabled={props.disabled} className={props.className}>
+    <StyledButton
+      onClick={props.onClick}
+      disabled={props.disabled}
+      className={props.className}
+      title={props.title}
+    >
       {props.children}
     </StyledButton>
   );
@@ -47,6 +61,7 @@ const StyledButton = styled.button`
   background-color: #fff;
   flex-wrap: nowrap;
   transition: 120ms;
+  ${(props) => props.title && `cursor: help;`}
 
   &.active {
     box-shadow: inset 0 2px 0 var(--color-primary);

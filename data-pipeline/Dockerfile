@@ -6,13 +6,25 @@ WORKDIR /home/pipeline
 ENV HOME=/home/pipeline
 
 # install os dependencies
-RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y sudo zip && rm -rf /var/lib/apt/lists/*
 
 # install application dependencies
 COPY environment.yaml ./
 RUN conda env create --file environment.yaml --prefix ./env && \
     conda clean --all --yes
 ENV CONDA_DEFAULT_ENV=/home/pipeline/env
+
+# install tippecanoe (for generating vector tiles)
+RUN apt-get update && sudo apt-get install -y gcc g++ make libsqlite3-dev zlib1g-dev && rm -rf /var/lib/apt/lists/*
+RUN git clone --single-branch https://github.com/felt/tippecanoe.git && cd tippecanoe && make -j && make install
+RUN cp tippecanoe/tippecanoe /usr/local/bin/tippecanoe
+RUN cp tippecanoe/tippecanoe-decode /usr/local/bin/tippecanoe-decode
+RUN cp tippecanoe/tippecanoe-enumerate /usr/local/bin/tippecanoe-enumerate
+RUN cp tippecanoe/tippecanoe-json-tool /usr/local/bin/tippecanoe-json-tool
+RUN cp tippecanoe/tippecanoe-overzoom /usr/local/bin/tippecanoe-overzoom
+RUN cp tippecanoe/unit /usr/local/bin/unit
+RUN cp tippecanoe/tile-join /usr/local/bin/tile-join
+RUN rm -rf tippecanoe
 
 # allow mounting volumes
 RUN mkdir -p /data && ln -s /data /home/pipeline/data
