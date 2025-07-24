@@ -15,6 +15,8 @@ interface MyButtonProps {
   onClick?: (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
 
   disabled?: boolean;
+
+  style?: React.CSSProperties;
 }
 
 /**
@@ -29,6 +31,7 @@ export function Button(props: MyButtonProps) {
         className={props.disabled ? 'disabled' : ''}
         onClick={props.onClick}
         title={props.href}
+        style={props.style}
       >
         {props.iconLeft}
         <span className="label">{props.children}</span>
@@ -43,6 +46,7 @@ export function Button(props: MyButtonProps) {
       onClick={props.onClick}
       title={props.href}
       disabled={props.disabled}
+      style={props.style}
     >
       {props.iconLeft}
       <span className="label">{props.children}</span>

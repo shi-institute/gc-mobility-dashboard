@@ -1,3 +1,5 @@
+import styled from '@emotion/styled';
+import { Button } from '../Button/Button';
 import { SelectedOption } from './SelectedOption';
 import { SelectOne } from './SelectOne';
 
@@ -40,6 +42,12 @@ export function SelectMany({
         value={''}
       />
 
+      <SelectionActions>
+        <Button style={{ height: '30px', fontWeight: 400 }} onClick={() => onChange([])}>
+          Clear all
+        </Button>
+      </SelectionActions>
+
       {selectedOptions.map((selectedOption) => {
         return (
           <SelectedOption
@@ -53,3 +61,10 @@ export function SelectMany({
     </>
   );
 }
+
+const SelectionActions = styled.div`
+  display: flex;
+  flex-direction: row;
+  padding: 0.75rem 0 0;
+  gap: 0.625rem;
+`;
