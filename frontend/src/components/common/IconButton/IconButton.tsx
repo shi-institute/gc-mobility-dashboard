@@ -76,6 +76,7 @@ const StyledButton = styled.button`
   &:active {
     background-color: var(--subtle-fill-tertiary);
     color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--control-stroke-default);
   }
 
   &:disabled {
