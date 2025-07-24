@@ -1,4 +1,5 @@
 import { SelectedOption } from './SelectedOption';
+import { SelectOne } from './SelectOne';
 
 interface SelectManyProps {
   options: string[];
@@ -17,10 +18,9 @@ export function SelectMany({
   selectedOptions = [],
   showId = true,
 }: SelectManyProps) {
-  function handleAddSelectedOptions(evt: React.ChangeEvent<HTMLSelectElement>) {
-    const newSelected = Array.from(evt.target.selectedOptions, (option) => option.value)[0];
-    const combinedSelection = [...selectedOptions, newSelected];
-    onChange(combinedSelection);
+  function addOption(value: string) {
+    const updatedSelection = [...selectedOptions, value];
+    onChange(updatedSelection);
   }
 
   function removeOption(value: string) {
@@ -30,17 +30,15 @@ export function SelectMany({
 
   return (
     <>
-      <select onChange={handleAddSelectedOptions} style={{ width: '100%' }}>
-        <option key="blank" value=""></option>
-
-        {options
-          .filter((option) => !selectedOptions.includes(option))
-          .map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-      </select>
+      <SelectOne
+        options={options.filter((option) => !selectedOptions.includes(option))}
+        onChange={(value) => {
+          if (value) {
+            addOption(value);
+          }
+        }}
+        value={selectedOptions[0] || ''}
+      />
 
       {selectedOptions.map((selectedOption) => {
         return (
