@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { SelectMany, SelectOne } from '../../common';
-import { SelectedItem, SelectedOption } from '../../common/Select/SelectedOption';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
 
 interface SelectedSeasonProps {
@@ -47,23 +46,6 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
     setSearchParams(searchParams);
   }
 
-  function handleRemoveSeason(seasonToRemove: string) {
-    let currentSeasons = getCleanSeasonsFromParams();
-    let updatedSeasons = currentSeasons.filter((s) => s !== seasonToRemove);
-
-    if (updatedSeasons.length === 0) {
-      searchParams.delete('seasons');
-    } else {
-      searchParams.set('seasons', updatedSeasons.join(','));
-    }
-    setSearchParams(searchParams);
-  }
-
-  const selectedItemsForDisplay: SelectedItem[] = selectSeasons.map((season) => ({
-    value: season,
-    label: season,
-  }));
-
   return isCompareEnabled ? (
     <div>
       <label>Select Multiple Seasons:</label>
@@ -72,9 +54,6 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
         onChange={handleSelectionChange}
         selectedOptions={selectSeasons}
       />
-      {selectedItemsForDisplay.length > 0 && (
-        <SelectedOption selectedItems={selectedItemsForDisplay} onRemove={handleRemoveSeason} />
-      )}
     </div>
   ) : (
     <div>

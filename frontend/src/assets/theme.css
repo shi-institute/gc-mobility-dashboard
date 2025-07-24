@@ -14,6 +14,19 @@
 
   --button-radius: 3px;
   --surface-radius: 6px;
+
+  --card-background-default: hsla(0, 0%, 100%, 70%);
+  --control-stroke-default: hsla(0, 0%, 0%, 5.78%);
+
+  --text-primary: hsla(0, 0%, 0%, 89.56%);
+  --text-secondary: hsla(0, 0%, 0%, 60.63%);
+  --text-tertiary: hsla(0, 0%, 0%, 44.58%);
+  --text-disabled: hsla(0, 0%, 0%, 36.14%);
+
+  --subtle-fill-transparent: transparent;
+  --subtle-fill-secondary: hsla(0, 0%, 0%, 3.73%);
+  --subtle-fill-tertiary: hsla(0, 0%, 0%, 2.41%);
+  --subtle-fill-disabled: var(--fds-subtle-fill-transparent);
 }
 
 :host {

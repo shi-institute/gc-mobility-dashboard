@@ -51,8 +51,8 @@ const StyledButton = styled.button`
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.25rem;
   box-sizing: border-box;
   border: 1px solid lightgray;
   border-radius: var(--button-radius);
@@ -68,16 +68,17 @@ const StyledButton = styled.button`
   }
 
   &:hover {
-    background-color: #f4f4f4;
+    background-color: var(--subtle-fill-secondary);
   }
 
   &:active {
-    background-color: #ededed;
+    background-color: var(--subtle-fill-tertiary);
+    color: var(--text-secondary);
   }
 
   &:disabled {
-    background-color: #f4f4f4;
-    color: #a0a0a0;
+    background-color: var(--subtle-fill-disabled);
+    color: var(--text-disabled);
     cursor: not-allowed;
   }
 

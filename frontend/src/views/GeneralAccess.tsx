@@ -16,7 +16,6 @@ import {
   SelectedArea,
   SelectedSeason,
   SelectTravelMethod,
-  useComparisonModeState,
 } from '../components/options';
 import { useAppData, useMapData } from '../hooks';
 import { notEmpty } from '../utils';

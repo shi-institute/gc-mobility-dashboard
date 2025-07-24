@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { SelectMany, SelectOne } from '../../common';
-import { SelectedItem, SelectedOption } from '../../common/Select/SelectedOption';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
 
 interface SelectedAreaProps {
@@ -45,21 +44,6 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
     }
     setSearchParams(searchParams);
   }
-  function handleRemoveArea(areaToRemove: string) {
-    let currentAreas = getCleanAreasFromParams();
-    let updatedAreas = currentAreas.filter((s) => s !== areaToRemove);
-
-    if (updatedAreas.length === 0) {
-      searchParams.delete('areas');
-    } else {
-      searchParams.set('areas', updatedAreas.join(','));
-    }
-    setSearchParams(searchParams);
-  }
-  const selectedItemsForDisplay: SelectedItem[] = selectAreas.map((area) => ({
-    value: area,
-    label: area,
-  }));
 
   return isCompareEnabled ? (
     <div>
@@ -69,9 +53,6 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
         onChange={handleSelectionChange}
         selectedOptions={selectAreas}
       />
-      {selectedItemsForDisplay.length > 0 && (
-        <SelectedOption selectedItems={selectedItemsForDisplay} onRemove={handleRemoveArea} />
-      )}
     </div>
   ) : (
     <div>
