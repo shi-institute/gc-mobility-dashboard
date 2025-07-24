@@ -83,21 +83,23 @@ function Sections() {
   return [
     <DeveloperDetails data={data} />,
     <Section title="Service Statistics">
-      <Statistic.Number wrap label="Miles of service"></Statistic.Number>
-      <Statistic.Number wrap label="Number of stops"></Statistic.Number>
-      <Statistic.Number wrap label="Local funding per capita"></Statistic.Number>
-      <Statistic.Number wrap label="Boardings"></Statistic.Number>
-      <Statistic.Number wrap label="Alightings"></Statistic.Number>
-      <Statistic.Number wrap label="Service coverage (area)"></Statistic.Number>
-      <Statistic.Number
-        wrap
-        label="Service coverage (estimated households covered)"
-      ></Statistic.Number>
+      <Statistic.Number wrap label="Miles of service" data={[]} />
+      <Statistic.Number wrap label="Number of stops" data={[]} />
+      <Statistic.Number wrap label="Local funding per capita" data={[]} />
+      <Statistic.Number wrap label="Boardings" data={[]} />
+      <Statistic.Number wrap label="Alightings" data={[]} />
+      <Statistic.Number wrap label="Service coverage (area)" data={[]} />
+      <Statistic.Number wrap label="Service coverage (estimated households covered)" data={[]} />
     </Section>,
     <Section title="Area Demographics">
-      <Statistic.Number wrap label="Population total">
-        {data?.map((area) => area.population_total?.[0].population__total || 0)?.[0]?.toString()}
-      </Statistic.Number>
+      <Statistic.Number
+        wrap
+        label="Population total"
+        data={data?.map((area) => ({
+          label: area.__label,
+          value: area.population_total?.[0].population__total || 0,
+        }))}
+      />
       <SectionEntry>
         <div>
           <div>Population by race and ethnicity</div>
@@ -166,39 +168,48 @@ function Sections() {
           <SelectTravelMethod travelMethodList={travelMethodList} />
         </div>
       </SectionEntry>
-      <Statistic.Percent wrap label="Trips using public transit">
-        {
-          data?.map((area) => {
-            const publicTransitTrips =
-              area.statistics?.thursday_trip.methods.commute.public_transit || 0;
-            const allTrips = Object.values(
-              area.statistics?.thursday_trip.methods.commute || {}
-            ).reduce((sum, value) => sum + (value || 0), 0);
-            return (publicTransitTrips / allTrips).toFixed(2);
-          })?.[0]
-        }
-      </Statistic.Percent>
-      <Statistic.Number wrap label="Trips that could use public transit">
-        {
-          data?.map((area) => {
-            const possibleConversions =
-              area.statistics?.thursday_trip.possible_conversions.via_walk || 0;
-            const allTrips = Object.values(
-              area.statistics?.thursday_trip.methods.commute || {}
-            ).reduce((sum, value) => sum + (value || 0), 0);
-            return (possibleConversions / allTrips).toFixed(2);
-          })?.[0]
-        }
-      </Statistic.Number>
-      <Statistic.Percent wrap label="Households without a vehicle (ACS)"></Statistic.Percent>
-      <Statistic.Number wrap label="Median commute time (all modes)">
-        {
-          data?.map((area) => {
-            const medianDuration = area.statistics?.thursday_trip.median_duration.commute || 0;
-            return medianDuration.toFixed(2);
-          })?.[0]
-        }
-      </Statistic.Number>
+      <Statistic.Percent
+        wrap
+        label="Trips using public transit"
+        data={data?.map((area) => {
+          const publicTransitTrips =
+            area.statistics?.thursday_trip.methods.commute.public_transit || 0;
+          const allTrips = Object.values(
+            area.statistics?.thursday_trip.methods.commute || {}
+          ).reduce((sum, value) => sum + (value || 0), 0);
+
+          return {
+            label: area.__label,
+            value: (publicTransitTrips / allTrips).toFixed(2),
+          };
+        })}
+      />
+      <Statistic.Percent
+        wrap
+        label="Trips that could use public transit"
+        data={data?.map((area) => {
+          const possibleConversions =
+            area.statistics?.thursday_trip.possible_conversions.via_walk || 0;
+          const allTrips = Object.values(
+            area.statistics?.thursday_trip.methods.commute || {}
+          ).reduce((sum, value) => sum + (value || 0), 0);
+
+          return {
+            label: area.__label,
+            value: (possibleConversions / allTrips).toFixed(2),
+          };
+        })}
+      />
+      <Statistic.Percent wrap label="Households without a vehicle (ACS)" data={[]} />
+      <Statistic.Number
+        wrap
+        label="Median commute time (all modes)"
+        unit="minutes"
+        data={data?.map((area) => {
+          const medianDuration = area.statistics?.thursday_trip.median_duration.commute || 0;
+          return { label: area.__label, value: medianDuration.toFixed(2) };
+        })}
+      />
       <SectionEntry
         s={{ gridColumn: '1 / 3' }}
         m={{ gridColumn: '1 / 4' }}

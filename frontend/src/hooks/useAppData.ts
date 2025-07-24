@@ -344,6 +344,7 @@ function constructReplicaPaths(
         __area: area,
         __year: year,
         __quarter: quarter,
+        __label: `${area}${seasons.length > 1 ? ` (${year} ${quarter})` : ''}`,
         polygon: `./data/replica/${area}/polygon.geojson.deflate`,
         statistics: `./data/replica/${area}/statistics/replica__south_atlantic_${year}_${quarter}.json.deflate`,
         network_segments_style: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}/VectorTileServer/resources/styles/root.json`,
@@ -361,7 +362,7 @@ function constructReplicaPaths(
  * @param replicaPaths - the returned value of `constructReplicaPaths`
  */
 function constructReplicaPromises(replicaPaths: ReturnType<typeof constructReplicaPaths>) {
-  return replicaPaths.map(({ __area, __year, __quarter, ...paths }) => {
+  return replicaPaths.map(({ __area, __year, __quarter, __label, ...paths }) => {
     return {
       area: __area,
       year: __year,
@@ -370,6 +371,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
         __area: async () => __area,
         __year: async () => __year,
         __quarter: async () => __quarter,
+        __label: async () => __label,
         polygon: (abortSignal?: AbortSignal) =>
           fetchData<ReplicaAreaPolygon>(paths.polygon, abortSignal).catch(handleError('polygon')),
         statistics: (abortSignal?: AbortSignal) =>

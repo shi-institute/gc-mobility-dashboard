@@ -38,6 +38,7 @@ const SectionComponent = styled.section`
     grid-template-columns: [left] repeat(4, 1fr) [right];
     grid-auto-rows: minmax(3rem, min-content);
     grid-auto-flow: dense;
+    gap: 0.5rem;
 
     @container section (max-width: 899px) {
       grid-template-columns: [left] repeat(3, 1fr) [right];
