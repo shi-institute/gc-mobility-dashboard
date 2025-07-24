@@ -37,7 +37,7 @@ export function SelectMany({
             addOption(value);
           }
         }}
-        value={selectedOptions[0] || ''}
+        value={''}
       />
 
       {selectedOptions.map((selectedOption) => {
