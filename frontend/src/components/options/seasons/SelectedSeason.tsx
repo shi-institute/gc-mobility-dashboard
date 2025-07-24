@@ -8,7 +8,7 @@ interface SelectedSeasonProps {
 }
 
 export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
-  const [isCompareEnabled] = useComparisonModeState();
+  const [isComparing] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const currentSelectedSeasons = searchParams.get('seasons')?.split(',').filter(notEmpty) || [];
@@ -50,15 +50,14 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
     setSearchParams(searchParams);
   }
 
-  return isCompareEnabled ? (
+  return (
     <div>
-      <label>Select Multiple Seasons:</label>
-      <SelectMany options={options} onChange={handleChange} selectedOptions={selectedOptions} />
-    </div>
-  ) : (
-    <div>
-      <label> Select a Single Season:</label>
-      <SelectOne options={options} onChange={handleChange} value={selectedOptions[0]?.value} />
+      <label htmlFor="">Season{isComparing ? 's' : ''}</label>
+      {isComparing ? (
+        <SelectMany options={options} onChange={handleChange} selectedOptions={selectedOptions} />
+      ) : (
+        <SelectOne onChange={handleChange} options={options} value={selectedOptions[0]?.value} />
+      )}
     </div>
   );
 }

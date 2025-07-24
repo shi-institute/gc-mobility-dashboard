@@ -8,7 +8,7 @@ interface SelectedAreaProps {
 }
 
 export function SelectedArea({ areasList }: SelectedAreaProps) {
-  const [isCompareEnabled] = useComparisonModeState();
+  const [isComparing] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const currentSelectedAreas = searchParams.get('areas')?.split(',').filter(notEmpty) || [];
@@ -30,20 +30,19 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
     setSearchParams(searchParams);
   }
 
-  return isCompareEnabled ? (
+  return (
     <div>
-      <label>Select Multiple Areas:</label>
-      <SelectMany
-        options={areasList}
-        onChange={handleChange}
-        selectedOptions={currentSelectedAreas}
-        showId={false}
-      />
-    </div>
-  ) : (
-    <div>
-      <label> Select a Single Area:</label>
-      <SelectOne onChange={handleChange} options={areasList} value={currentSelectedAreas[0]} />
+      <label htmlFor="">Area{isComparing ? 's' : ''}</label>
+      {isComparing ? (
+        <SelectMany
+          options={areasList}
+          onChange={handleChange}
+          selectedOptions={currentSelectedAreas}
+          showId={false}
+        />
+      ) : (
+        <SelectOne onChange={handleChange} options={areasList} value={currentSelectedAreas[0]} />
+      )}
     </div>
   );
 }
