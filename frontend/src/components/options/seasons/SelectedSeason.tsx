@@ -52,7 +52,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
 
   return (
     <div>
-      <label htmlFor="">Season{isComparing ? 's' : ''}</label>
+      <label>Season{isComparing ? 's' : ''}</label>
       {isComparing ? (
         <SelectMany options={options} onChange={handleChange} selectedOptions={selectedOptions} />
       ) : (

@@ -32,7 +32,7 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
 
   return (
     <div>
-      <label htmlFor="">Area{isComparing ? 's' : ''}</label>
+      <label>Area{isComparing ? 's' : ''}</label>
       {isComparing ? (
         <SelectMany
           options={areasList}
