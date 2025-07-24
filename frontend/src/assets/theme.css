@@ -27,7 +27,7 @@
   --subtle-fill-transparent: transparent;
   --subtle-fill-secondary: hsla(0, 0%, 0%, 3.73%);
   --subtle-fill-tertiary: hsla(0, 0%, 0%, 2.41%);
-  --subtle-fill-disabled: var(--fds-subtle-fill-transparent);
+  --subtle-fill-disabled: var(--subtle-fill-transparent);
 }
 
 :host {
