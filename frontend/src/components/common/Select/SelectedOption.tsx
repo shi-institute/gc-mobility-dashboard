@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { IconButton } from '../../common/IconButton/IconButton';
+import { IconButton } from '../IconButton/IconButton';
 
 interface SelectedOptionProps {
   /**
