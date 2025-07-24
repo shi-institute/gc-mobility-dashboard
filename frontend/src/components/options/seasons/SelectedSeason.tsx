@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
+import { notEmpty } from '../../../utils';
 import { SelectMany, SelectOne } from '../../common';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
 
@@ -46,22 +47,42 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
     setSearchParams(searchParams);
   }
 
+  const options = seasonsList.map((season) => {
+    const quarter = season.split(':')[0] as 'Q2' | 'Q4';
+    const year = season.split(':')[1];
+    const label = `${year} ${quarter}`;
+
+    const monthRanges = {
+      Q2: 'April-June',
+      Q4: 'October-December',
+    };
+
+    const subLabel = `${monthRanges[quarter]}, ${year}`;
+
+    return { label, value: season, id: subLabel };
+  });
+  const selectedOptions = selectSeasons
+    .map((season) => {
+      return options.find((option) => option.value === season);
+    })
+    .filter(notEmpty);
+
   return isCompareEnabled ? (
     <div>
       <label>Select Multiple Seasons:</label>
       <SelectMany
-        options={seasonsList}
+        options={options}
         onChange={handleSelectionChange}
-        selectedOptions={selectSeasons}
+        selectedOptions={selectedOptions}
       />
     </div>
   ) : (
     <div>
       <label> Select a Single Season:</label>
       <SelectOne
+        options={options}
         onChange={handleSingleSeasonChange}
-        options={seasonsList}
-        value={selectSeasons[0]}
+        value={selectedOptions[0]?.value}
       />
     </div>
   );
