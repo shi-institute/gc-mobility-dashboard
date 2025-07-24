@@ -1,18 +1,11 @@
 import styled from '@emotion/styled';
 import { IconButton } from '../../common/IconButton/IconButton';
 
-export interface SelectedOption {
-  value: string;
-  label: string;
-  /** By default, this is value. If you want to show something else, specify it here. */
-  id?: string;
-}
-
 interface SelectedOptionProps {
   /**
    * The selected option to display. This should be an object with `label` and `value` properties.
    */
-  selectedOption: SelectedOption;
+  selectedOption: SelectOption;
   /**
    * Fires when the remove button is clicked.
    */

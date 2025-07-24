@@ -1,12 +1,12 @@
 import styled from '@emotion/styled';
 import { Button } from '../Button/Button';
-import { SelectedOption } from './SelectedOption';
 import { SelectOne } from './SelectOne';
+import { SelectedOption } from './SelectedOption';
 
 interface SelectManyProps {
-  options: string[];
+  options: string[] | SelectOption[];
   onChange: (selectedValues: string[]) => void;
-  selectedOptions: string[];
+  selectedOptions: string[] | SelectOption[];
   /**
    * If true, the ID will be shown for selected options
    * Defaults to true;
@@ -20,20 +20,32 @@ export function SelectMany({
   selectedOptions = [],
   showId = true,
 }: SelectManyProps) {
+  const toOptValue = (option: string | SelectOption) =>
+    typeof option === 'string' ? option : option.value;
+
+  const toOptObject = (option: string | SelectOption) =>
+    typeof option === 'string' ? { label: option, value: option } : option;
+
+  const derivedSelectedOptions = selectedOptions.map(toOptObject);
+
   function addOption(value: string) {
-    const updatedSelection = [...selectedOptions, value];
+    const updatedSelection = [...derivedSelectedOptions.map(toOptValue), value];
     onChange(updatedSelection);
   }
 
   function removeOption(value: string) {
-    const updatedSelection = selectedOptions.filter((option) => option !== value);
+    const updatedSelection = derivedSelectedOptions
+      .map(toOptValue)
+      .filter((option) => option !== value);
     onChange(updatedSelection);
   }
 
   return (
     <>
       <SelectOne
-        options={options.filter((option) => !selectedOptions.includes(option))}
+        options={options
+          .map(toOptObject)
+          .filter((option) => !derivedSelectedOptions.map(toOptValue).includes(option.value))}
         onChange={(value) => {
           if (value) {
             addOption(value);
@@ -48,11 +60,11 @@ export function SelectMany({
         </Button>
       </SelectionActions>
 
-      {selectedOptions.map((selectedOption) => {
+      {derivedSelectedOptions.map((selectedOption) => {
         return (
           <SelectedOption
-            key={selectedOption}
-            selectedOption={{ label: selectedOption, value: selectedOption }}
+            key={selectedOption.value}
+            selectedOption={selectedOption}
             onRemove={removeOption}
             showId={showId}
           />
