@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { notEmpty } from '../../../utils';
 import { SelectMany, SelectOne } from '../../common';
@@ -12,40 +11,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
   const [isCompareEnabled] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const getCleanSeasonsFromParams = () => {
-    const seasonsParam = searchParams.get('seasons');
-    return seasonsParam ? seasonsParam.split(',').filter((s) => s !== '') : [];
-  };
-
-  useEffect(() => {
-    if (!isCompareEnabled) {
-      const currentSeasons = getCleanSeasonsFromParams();
-      if (currentSeasons.length > 1) {
-        searchParams.set('seasons', currentSeasons[0]);
-        setSearchParams(searchParams);
-      }
-    }
-  }, [isCompareEnabled, searchParams, setSearchParams]);
-
-  const selectSeasons = getCleanSeasonsFromParams();
-
-  function handleSelectionChange(selected: string[]) {
-    if (selected.length === 0) {
-      searchParams.delete('seasons');
-    } else {
-      searchParams.set('seasons', selected.join(','));
-    }
-    setSearchParams(searchParams);
-  }
-
-  function handleSingleSeasonChange(value: string) {
-    if (value === '') {
-      searchParams.delete('seasons');
-    } else {
-      searchParams.set('seasons', value);
-    }
-    setSearchParams(searchParams);
-  }
+  const currentSelectedSeasons = searchParams.get('seasons')?.split(',').filter(notEmpty) || [];
 
   const options = seasonsList.map((season) => {
     const quarter = season.split(':')[0] as 'Q2' | 'Q4';
@@ -61,29 +27,38 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
 
     return { label, value: season, id: subLabel };
   });
-  const selectedOptions = selectSeasons
+  const selectedOptions = currentSelectedSeasons
     .map((season) => {
       return options.find((option) => option.value === season);
     })
     .filter(notEmpty);
 
+  function handleChange(value: string | string[]) {
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        searchParams.delete('seasons');
+      } else {
+        searchParams.set('seasons', value.join(','));
+      }
+    } else {
+      if (value === '') {
+        searchParams.delete('seasons');
+      } else {
+        searchParams.set('seasons', value);
+      }
+    }
+    setSearchParams(searchParams);
+  }
+
   return isCompareEnabled ? (
     <div>
       <label>Select Multiple Seasons:</label>
-      <SelectMany
-        options={options}
-        onChange={handleSelectionChange}
-        selectedOptions={selectedOptions}
-      />
+      <SelectMany options={options} onChange={handleChange} selectedOptions={selectedOptions} />
     </div>
   ) : (
     <div>
       <label> Select a Single Season:</label>
-      <SelectOne
-        options={options}
-        onChange={handleSingleSeasonChange}
-        value={selectedOptions[0]?.value}
-      />
+      <SelectOne options={options} onChange={handleChange} value={selectedOptions[0]?.value} />
     </div>
   );
 }

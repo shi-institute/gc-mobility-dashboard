@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
+import { notEmpty } from '../../../utils';
 import { SelectMany, SelectOne } from '../../common';
 import { useComparisonModeState } from '../compare/useComparisonModeState';
 
@@ -11,36 +11,21 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
   const [isCompareEnabled] = useComparisonModeState();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const getCleanAreasFromParams = () => {
-    const areasParam = searchParams.get('areas');
-    return areasParam ? areasParam.split(',').filter((s) => s !== '') : [];
-  };
+  const currentSelectedAreas = searchParams.get('areas')?.split(',').filter(notEmpty) || [];
 
-  useEffect(() => {
-    if (!isCompareEnabled) {
-      const currentAreas = getCleanAreasFromParams();
-      if (currentAreas.length > 1) {
-        searchParams.set('areas', currentAreas[0]);
-        setSearchParams(searchParams);
+  function handleChange(value: string | string[]) {
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        searchParams.delete('areas');
+      } else {
+        searchParams.set('areas', value.join(','));
       }
-    }
-  }, [isCompareEnabled, searchParams, setSearchParams]);
-
-  const selectAreas = getCleanAreasFromParams();
-
-  function handleSelectionChange(selected: string[]) {
-    if (selected.length === 0) {
-      searchParams.delete('areas');
     } else {
-      searchParams.set('areas', selected.join(','));
-    }
-    setSearchParams(searchParams);
-  }
-  function handleSingleAreaChange(value: string) {
-    if (value === '') {
-      searchParams.delete('areas');
-    } else {
-      searchParams.set('areas', value);
+      if (value === '') {
+        searchParams.delete('areas');
+      } else {
+        searchParams.set('areas', value);
+      }
     }
     setSearchParams(searchParams);
   }
@@ -50,15 +35,15 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
       <label>Select Multiple Areas:</label>
       <SelectMany
         options={areasList}
-        onChange={handleSelectionChange}
-        selectedOptions={selectAreas}
+        onChange={handleChange}
+        selectedOptions={currentSelectedAreas}
         showId={false}
       />
     </div>
   ) : (
     <div>
       <label> Select a Single Area:</label>
-      <SelectOne onChange={handleSingleAreaChange} options={areasList} value={selectAreas[0]} />
+      <SelectOne onChange={handleChange} options={areasList} value={currentSelectedAreas[0]} />
     </div>
   );
 }
