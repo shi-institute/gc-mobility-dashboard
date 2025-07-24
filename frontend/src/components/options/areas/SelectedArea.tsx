@@ -52,6 +52,7 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
         options={areasList}
         onChange={handleSelectionChange}
         selectedOptions={selectAreas}
+        showId={false}
       />
     </div>
   ) : (
