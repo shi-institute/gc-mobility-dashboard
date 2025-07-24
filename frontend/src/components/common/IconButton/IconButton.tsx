@@ -25,7 +25,7 @@ export function IconButton(props: IconButtonProps) {
       <StyledAnchorButton
         href={props.href}
         onClick={props.onClick}
-        className={props.className}
+        className={props.disabled ? 'disabled ' + props.className : props.className}
         title={props.title}
       >
         {props.children}
@@ -37,7 +37,7 @@ export function IconButton(props: IconButtonProps) {
     <StyledButton
       onClick={props.onClick}
       disabled={props.disabled}
-      className={props.className}
+      className={props.disabled ? 'disabled ' + props.className : props.className}
       title={props.title}
     >
       {props.children}
@@ -51,10 +51,12 @@ const StyledButton = styled.button`
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.25rem;
   box-sizing: border-box;
-  border: 1px solid lightgray;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--control-stroke-default),
+    inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
   border-radius: var(--button-radius);
   color: inherit;
   user-select: none;
@@ -67,17 +69,19 @@ const StyledButton = styled.button`
     box-shadow: inset 0 2px 0 var(--color-primary);
   }
 
-  &:hover {
-    background-color: #f4f4f4;
+  &:hover:not(.disabled) {
+    background-color: var(--subtle-fill-secondary);
   }
 
-  &:active {
-    background-color: #ededed;
+  &:active:not(.disabled) {
+    background-color: var(--subtle-fill-tertiary);
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--control-stroke-default);
   }
 
-  &:disabled {
-    background-color: #f4f4f4;
-    color: #a0a0a0;
+  &.disabled {
+    background-color: var(--subtle-fill-disabled);
+    color: var(--text-disabled);
     cursor: not-allowed;
   }
 

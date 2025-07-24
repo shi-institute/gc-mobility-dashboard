@@ -14,11 +14,8 @@ import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
   SelectedArea,
-  SelectedComparisonAreas,
-  SelectedComparisonSeasons,
   SelectedSeason,
   SelectTravelMethod,
-  useComparisonModeState,
 } from '../components/options';
 import { useAppData, useMapData } from '../hooks';
 import { notEmpty } from '../utils';
@@ -225,7 +222,6 @@ function Sections() {
 
 function Sidebar() {
   const { areasList, seasonsList, travelMethodList } = useAppData();
-  const [isComparisonEnabled] = useComparisonModeState();
 
   return (
     <SidebarContent>
@@ -237,12 +233,6 @@ function Sidebar() {
 
       <h2>Compare</h2>
       <ComparisonModeSwitch />
-      {isComparisonEnabled ? (
-        <>
-          <SelectedComparisonAreas areasList={areasList} />
-          <SelectedComparisonSeasons seasonsList={seasonsList} />
-        </>
-      ) : null}
 
       <h2>Work and school</h2>
       <SelectTravelMethod travelMethodList={travelMethodList} />

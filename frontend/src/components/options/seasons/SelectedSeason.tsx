@@ -1,30 +1,63 @@
-import { useSelectedSeasonsState } from './useSelectedSeasonsState';
+import { useSearchParams } from 'react-router';
+import { notEmpty } from '../../../utils';
+import { SelectMany, SelectOne } from '../../common';
+import { useComparisonModeState } from '../compare/useComparisonModeState';
 
 interface SelectedSeasonProps {
   seasonsList: string[];
 }
 
 export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
-  const { handleSeasonSelectionChange, selectedSeason } = useSelectedSeasonsState();
+  const [isComparing] = useComparisonModeState();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentSelectedSeasons = searchParams.get('seasons')?.split(',').filter(notEmpty) || [];
+
+  const options = seasonsList.map((season) => {
+    const quarter = season.split(':')[0] as 'Q2' | 'Q4';
+    const year = season.split(':')[1];
+    const label = `${year} ${quarter}`;
+
+    const monthRanges = {
+      Q2: 'April-June',
+      Q4: 'October-December',
+    };
+
+    const subLabel = `${monthRanges[quarter]}, ${year}`;
+
+    return { label, value: season, id: subLabel };
+  });
+  const selectedOptions = currentSelectedSeasons
+    .map((season) => {
+      return options.find((option) => option.value === season);
+    })
+    .filter(notEmpty);
+
+  function handleChange(value: string | string[]) {
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        searchParams.delete('seasons');
+      } else {
+        searchParams.set('seasons', value.join(','));
+      }
+    } else {
+      if (value === '') {
+        searchParams.delete('seasons');
+      } else {
+        searchParams.set('seasons', value);
+      }
+    }
+    setSearchParams(searchParams);
+  }
 
   return (
-    <label>
-      Reporting Period
-      <select
-        onChange={handleSeasonSelectionChange}
-        value={selectedSeason ?? ''}
-        style={{ width: '100%' }}
-      >
-        {!selectedSeason ? <option key="blank" value=""></option> : null}
-        {seasonsList.map((season) => {
-          const [quarter, year] = season.split(':');
-          return (
-            <option key={season} value={season}>
-              {year} {quarter}
-            </option>
-          );
-        })}
-      </select>
-    </label>
+    <div>
+      <label>Season{isComparing ? 's' : ''}</label>
+      {isComparing ? (
+        <SelectMany options={options} onChange={handleChange} selectedOptions={selectedOptions} />
+      ) : (
+        <SelectOne onChange={handleChange} options={options} value={selectedOptions[0]?.value} />
+      )}
+    </div>
   );
 }

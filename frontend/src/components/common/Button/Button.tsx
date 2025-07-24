@@ -15,6 +15,8 @@ interface MyButtonProps {
   onClick?: (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
 
   disabled?: boolean;
+
+  style?: React.CSSProperties;
 }
 
 /**
@@ -29,6 +31,7 @@ export function Button(props: MyButtonProps) {
         className={props.disabled ? 'disabled' : ''}
         onClick={props.onClick}
         title={props.href}
+        style={props.style}
       >
         {props.iconLeft}
         <span className="label">{props.children}</span>
@@ -43,6 +46,8 @@ export function Button(props: MyButtonProps) {
       onClick={props.onClick}
       title={props.href}
       disabled={props.disabled}
+      className={props.disabled ? 'disabled' : ''}
+      style={props.style}
     >
       {props.iconLeft}
       <span className="label">{props.children}</span>
@@ -63,13 +68,16 @@ const StyledButton = styled.button`
   padding: 0 1rem;
   height: 2.25rem;
   box-sizing: border-box;
-  border: 1px solid lightgray;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--control-stroke-default),
+    inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
   border-radius: var(--button-radius);
   text-decoration: none;
   color: inherit;
   user-select: none;
   background-color: #fff;
   flex-wrap: nowrap;
+  transition: 120ms;
 
   .label {
     white-space: nowrap;
@@ -79,17 +87,19 @@ const StyledButton = styled.button`
     box-shadow: inset 0 2px 0 var(--color-primary);
   }
 
-  &:hover {
-    background-color: #f4f4f4;
+  &:hover:not(.disabled) {
+    background-color: var(--subtle-fill-secondary);
   }
 
-  &:active {
-    background-color: #ededed;
+  &:active:not(.disabled) {
+    background-color: var(--subtle-fill-tertiary);
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--control-stroke-default);
   }
 
-  &:disabled {
-    background-color: #f4f4f4;
-    color: #a0a0a0;
+  &.disabled {
+    background-color: var(--subtle-fill-disabled);
+    color: var(--text-disabled);
     cursor: not-allowed;
   }
 
