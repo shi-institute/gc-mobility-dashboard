@@ -261,7 +261,7 @@ class ReplicaETL:
 
                     network_segments_subsets: list[tuple[str, geopandas.GeoDataFrame]] = []
                     days = ['saturday', 'thursday']
-                    travel_modes = ['biking', 'carpool', 'commerical', 'on_demand_auto',
+                    travel_modes = ['biking', 'carpool', 'commercial', 'on_demand_auto',
                                     'other_travel_mode', 'private_auto', 'public_transit', 'walking']
                     total_segment_exports = len(days) * (len(travel_modes) + 1)
                     current_segment_export = 0

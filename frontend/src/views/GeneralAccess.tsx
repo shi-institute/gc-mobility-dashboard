@@ -234,7 +234,7 @@ function Sidebar() {
       <h2>Compare</h2>
       <ComparisonModeSwitch />
 
-      <h2>Work and school</h2>
+      <h2>Work & School</h2>
       <SelectTravelMethod travelMethodList={travelMethodList} />
     </SidebarContent>
   );
