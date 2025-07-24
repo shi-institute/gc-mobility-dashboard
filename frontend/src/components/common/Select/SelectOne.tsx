@@ -86,6 +86,12 @@ const SelectOneComponent = styled.select`
     background-color: var(--subtle-fill-secondary);
   }
 
+  &:disabled {
+    background-color: var(--subtle-fill-disabled);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+
   option {
     background-color: white;
     color: var(--text-primary);

@@ -46,6 +46,7 @@ export function Button(props: MyButtonProps) {
       onClick={props.onClick}
       title={props.href}
       disabled={props.disabled}
+      className={props.disabled ? 'disabled' : ''}
       style={props.style}
     >
       {props.iconLeft}
@@ -86,17 +87,17 @@ const StyledButton = styled.button`
     box-shadow: inset 0 2px 0 var(--color-primary);
   }
 
-  &:hover {
+  &:hover:not(.disabled) {
     background-color: var(--subtle-fill-secondary);
   }
 
-  &:active {
+  &:active:not(.disabled) {
     background-color: var(--subtle-fill-tertiary);
     color: var(--text-secondary);
     box-shadow: inset 0 0 0 1px var(--control-stroke-default);
   }
 
-  &:disabled {
+  &.disabled {
     background-color: var(--subtle-fill-disabled);
     color: var(--text-disabled);
     cursor: not-allowed;
