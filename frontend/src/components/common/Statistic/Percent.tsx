@@ -9,7 +9,7 @@ interface PercentProps {
   /** The optional SVG icon to show with the statisitc(s) */
   icon?: React.ReactElement<SVGSVGElement>;
   /** The data to show. If multiple data objects are provided, a table will be displayed instead of a single value. */
-  data: NumericalDataInput[] | NumericalDataInput['value'];
+  data?: NumericalDataInput[] | NumericalDataInput['value'];
   /** If true, the statisitic container will be wrapped in a `<SectionEntry>` */
   wrap?: boolean;
 }
@@ -35,7 +35,7 @@ export function Percent(props: PercentProps) {
       }
       return parsedInputs;
     }
-    const parsed = typeof props.data === 'number' ? props.data : parseFloat(props.data);
+    const parsed = typeof props.data === 'number' ? props.data : parseFloat(props.data || 'NaN');
     if (isNaN(parsed)) {
       return '-';
     }
