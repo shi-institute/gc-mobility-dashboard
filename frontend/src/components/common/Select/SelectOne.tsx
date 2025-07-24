@@ -8,6 +8,10 @@ interface SelectOneProps {
    * The text that shows when no option is selected.
    */
   placeholder?: string;
+  /**
+   * The text that shows when no options are available AND no option is selected.
+   */
+  noOptionsPlaceholder?: string;
 }
 
 export function SelectOne({
@@ -15,6 +19,7 @@ export function SelectOne({
   onChange,
   value,
   placeholder = 'Select an option',
+  noOptionsPlaceholder = 'No options available',
 }: SelectOneProps) {
   function handleSelectionChange(evt: React.ChangeEvent<HTMLSelectElement>) {
     const newSelected = Array.from(evt.target.selectedOptions, (option) => option.value)[0];
@@ -26,10 +31,11 @@ export function SelectOne({
       onChange={handleSelectionChange}
       value={value ?? ''}
       style={{ color: !value ? 'var(--text-secondary)' : 'inherit' }}
+      disabled={options.length === 0}
     >
       {!value ? (
         <option key="blank" value="" disabled>
-          {placeholder}
+          {options.length > 0 ? placeholder : noOptionsPlaceholder}
         </option>
       ) : null}
       {options.map((option) => (
@@ -74,7 +80,7 @@ const SelectOneComponent = styled.select`
   background-position-x: calc(100% - 9px);
   background-position-y: 9px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--subtle-fill-secondary);
   }
 
