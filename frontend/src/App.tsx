@@ -61,7 +61,7 @@ export default function App() {
     const validMethods = [
       'biking',
       'carpool',
-      'commerical',
+      'commercial',
       'on_demand_auto',
       'other_travel_mode',
       'private_auto',

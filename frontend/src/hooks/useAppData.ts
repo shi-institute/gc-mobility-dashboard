@@ -13,7 +13,7 @@ export function createAppDataContext(
 type TravelMethod =
   | 'biking'
   | 'carpool'
-  | 'commerical'
+  | 'commercial'
   | 'on_demand_auto'
   | 'other_travel_mode'
   | 'private_auto'
@@ -69,7 +69,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const travelMethodList = [
     'biking',
     'carpool',
-    'commerical',
+    'commercial',
     'on_demand_auto',
     'other_travel_mode',
     'private_auto',
