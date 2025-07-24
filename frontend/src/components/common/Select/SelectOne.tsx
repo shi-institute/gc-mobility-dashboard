@@ -65,6 +65,7 @@ const SelectOneComponent = styled.select`
   user-select: none;
   background-color: #fff;
   flex-wrap: nowrap;
+  transition: 120ms;
   width: 100%;
 
   /* add a down chevron icon */
@@ -73,7 +74,12 @@ const SelectOneComponent = styled.select`
   background-position-x: calc(100% - 9px);
   background-position-y: 9px;
 
-  &::after {
-    content: '▼';
+  &:hover {
+    background-color: var(--subtle-fill-secondary);
+  }
+
+  option {
+    background-color: white;
+    color: var(--text-primary);
   }
 `;
