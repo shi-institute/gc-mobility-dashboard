@@ -15,9 +15,15 @@ interface SelectedOptionProps {
    * Defaults to true;
    */
   showId?: boolean;
+  disabled?: boolean;
 }
 
-export function SelectedOption({ selectedOption, onRemove, showId = true }: SelectedOptionProps) {
+export function SelectedOption({
+  selectedOption,
+  onRemove,
+  showId = true,
+  disabled,
+}: SelectedOptionProps) {
   return (
     <SelectedItemWrapper key={selectedOption.value}>
       <div className="select-item-detail">
@@ -27,7 +33,7 @@ export function SelectedOption({ selectedOption, onRemove, showId = true }: Sele
         ) : null}
       </div>
       {onRemove ? (
-        <StyledCloseButton onClick={() => onRemove(selectedOption.value)}>
+        <StyledCloseButton onClick={() => onRemove(selectedOption.value)} disabled={disabled}>
           {CloseIcon}
         </StyledCloseButton>
       ) : null}

@@ -12,6 +12,7 @@ interface SelectManyProps {
    * Defaults to true;
    */
   showId?: boolean;
+  disabled?: boolean;
 }
 
 export function SelectMany({
@@ -19,6 +20,7 @@ export function SelectMany({
   onChange,
   selectedOptions = [],
   showId = true,
+  disabled,
 }: SelectManyProps) {
   const toOptValue = (option: string | SelectOption) =>
     typeof option === 'string' ? option : option.value;
@@ -52,10 +54,15 @@ export function SelectMany({
           }
         }}
         value={''}
+        disabled={disabled}
       />
 
       <SelectionActions>
-        <Button style={{ height: '30px', fontWeight: 400 }} onClick={() => onChange([])}>
+        <Button
+          style={{ height: '30px', fontWeight: 400 }}
+          onClick={() => onChange([])}
+          disabled={disabled}
+        >
           Clear all
         </Button>
       </SelectionActions>
@@ -67,6 +74,7 @@ export function SelectMany({
             selectedOption={selectedOption}
             onRemove={removeOption}
             showId={showId}
+            disabled={disabled}
           />
         );
       })}
