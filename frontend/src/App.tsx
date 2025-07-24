@@ -9,7 +9,7 @@ import {
   TAB_4_FRAGMENT,
   TAB_5_FRAGMENT,
 } from './components/navigation';
-import { AppDataContext, createAppDataContext } from './hooks/useAppData';
+import { AppDataContext, AppDataHookParameters, createAppDataContext } from './hooks/useAppData';
 import {
   DevModeComponentsAll,
   EssentialServicesAccess,
@@ -55,9 +55,37 @@ export default function App() {
     return comparisonEnabled ? seasons : seasons.slice(0, 1);
   }, [searchParams, comparisonEnabled]);
 
+  const travelMethod = useMemo(() => {
+    const found = searchParams.get('travelMethod') ?? undefined;
+
+    const validMethods = [
+      'biking',
+      'carpool',
+      'commerical',
+      'on_demand_auto',
+      'other_travel_mode',
+      'private_auto',
+      'public_transit',
+      'walking',
+    ];
+
+    if (!found) {
+      return undefined;
+    }
+
+    if (!validMethods.includes(found)) {
+      console.warn(
+        `Invalid travel method: ${found}. Valid methods are: ${validMethods.join(', ')}`
+      );
+      return undefined;
+    }
+
+    return found as AppDataHookParameters['travelMethod'];
+  }, [searchParams]);
+
   return (
     <AppWrapper>
-      <AppDataContext.Provider value={createAppDataContext(areas, seasons)}>
+      <AppDataContext.Provider value={createAppDataContext(areas, seasons, travelMethod)}>
         <CoreFrameContext.Provider value={createCoreFrameContextValue()}>
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 

@@ -1,12 +1,24 @@
+import type { Style as MapboxStyle, VectorSource as MapboxVectorSource } from 'mapbox-gl';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { inflateResponse } from '../utils';
 
 export function createAppDataContext(
   areas: AppDataHookParameters['areas'],
-  seasons: AppDataHookParameters['seasons']
+  seasons: AppDataHookParameters['seasons'],
+  travelMethod: AppDataHookParameters['travelMethod']
 ) {
-  return _useAppData({ areas, seasons });
+  return _useAppData({ areas, seasons, travelMethod });
 }
+
+type TravelMethod =
+  | 'biking'
+  | 'carpool'
+  | 'commerical'
+  | 'on_demand_auto'
+  | 'other_travel_mode'
+  | 'private_auto'
+  | 'public_transit'
+  | 'walking';
 
 export type AppDataContextValue = ReturnType<typeof _useAppData>;
 export const AppDataContext = createContext<AppDataContextValue>({} as AppDataContextValue);
@@ -15,12 +27,19 @@ export function _useAppDataContext() {
   return useContext(AppDataContext);
 }
 
-interface AppDataHookParameters {
+export interface AppDataHookParameters {
   areas: string[];
   seasons: ['Q2' | 'Q4', number][];
+  /**
+   * Optional travel methods for filtering the data.
+   *
+   * If provided, only trips with this travel method will be included in the data.
+   * If not provided, all travel methods will be included.
+   */
+  travelMethod?: TravelMethod;
 }
 
-function _useAppData({ areas, seasons }: AppDataHookParameters) {
+function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const [areasList, setAreasList] = useState<string[]>([]);
   useEffect(() => {
     fetch('./data/replica/area_index.txt')
@@ -47,6 +66,17 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
       });
   }, [setSeasonsList]);
 
+  const travelMethodList = [
+    'biking',
+    'carpool',
+    'commerical',
+    'on_demand_auto',
+    'other_travel_mode',
+    'private_auto',
+    'public_transit',
+    'walking',
+  ];
+
   // fetch the census data, which is a static time series file for each category that
   // applies to all areas and seasons
   const censusPromises = useMemo(() => {
@@ -61,12 +91,17 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
 
   // merge the replica promises with the census promises
   const dataPromises = useMemo(() => {
-    const replicaPaths = constructReplicaPaths(areas, seasons);
+    const replicaPaths = constructReplicaPaths(areas, seasons, travelMethod);
     const replicaPromises = constructReplicaPromises(replicaPaths);
-    return replicaPromises.map((promises) => {
+    const greenlinkPromises = getGreenlinkPromises(seasons);
+    return replicaPromises.map(({ year, quarter, promises }) => {
+      const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter] || {};
+
+      // merge all promises into a single object
       return {
         ...promises,
         ...censusPromises,
+        ...greenlinkPromisesForSeason,
       };
     });
   }, [areas, seasons]);
@@ -108,12 +143,13 @@ function _useAppData({ areas, seasons }: AppDataHookParameters) {
     };
   }, [dataPromises]);
 
-  return { data, loading, errors, areasList, seasonsList };
+  return { data, loading, errors, areasList, seasonsList, travelMethodList };
 }
 
 async function fetchData<T = Record<string, unknown>>(
   input: RequestInfo | URL,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  skipInflate = false
 ): Promise<T> {
   return fetch(input, {
     signal: abortSignal,
@@ -126,8 +162,17 @@ async function fetchData<T = Record<string, unknown>>(
       }
       return response;
     })
-    .then(inflateResponse)
+    .then((response) => {
+      if (skipInflate) {
+        return response.text();
+      }
+      return inflateResponse(response);
+    })
     .then((text) => {
+      if (text.startsWith('<!DOCTYPE')) {
+        throw new Error('Received HTML response instead of JSON. This may indicate a 404 error.');
+      }
+
       return JSON.parse(text);
     });
 }
@@ -165,19 +210,38 @@ async function resolveArrayOfPromiseRecords<T extends DataPromises>(
   );
 }
 
-function handleError(key: string) {
-  return (error: Error) => {
+function handleError(key: string, shouldThrow = true, supressIncorrectHeaderCheck = false) {
+  return (error: Error | string) => {
+    const errorMessage = typeof error === 'string' ? error : error.message || 'Unknown error';
+
     // ignore errors that are caused by the cleanup of the useAppData effect
-    if (error.message?.includes('useAppData is being cleaned up')) {
+    if (errorMessage?.includes('useAppData is being cleaned up')) {
       console.debug(`Ignoring cleanup error for ${key}:`, error);
       return null;
     }
 
-    throw new Error(
-      `Error fetching ${key} data: ` +
-        (error.message || error) +
-        `. See the console for more details.`
-    );
+    if (supressIncorrectHeaderCheck && errorMessage === 'incorrect header check') {
+      console.debug(`Ignoring incorrect header check error for ${key}:`, error);
+      return null;
+    }
+
+    // if the data was not found (404), return null instead of throwing an error
+    if (errorMessage === 'Received HTML response instead of JSON. This may indicate a 404 error.') {
+      console.warn(`Data for ${key} not found:`, error);
+      return null;
+    }
+
+    console.error(`Error fetching ${key} data:`, error);
+
+    if (shouldThrow !== false) {
+      throw new Error(
+        `Error fetching ${key} data: ` +
+          (errorMessage || error) +
+          `. See the console for more details.`
+      );
+    }
+
+    return null;
   };
 }
 
@@ -209,23 +273,82 @@ function getCensusData() {
 }
 
 /**
+ * Provides promises that fetch the data related to Greenlink service.
+ */
+function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
+  const allPromises = seasons.map(([__quarter, __year]) => {
+    const gtfsFolder = `./data/greenlink_gtfs/${__year}/${__quarter}`;
+    const ridershipFolder = `./data/greenlink_ridership/${__year}/${__quarter}`;
+
+    return {
+      year: __year,
+      quarter: __quarter,
+      promises: {
+        routes: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.Routes>(`${gtfsFolder}/routes.geojson.deflate`, abortSignal).catch(
+            handleError('greenlink_routes')
+          ),
+        stops: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.Stops>(`${gtfsFolder}/stops.geojson.deflate`, abortSignal).catch(
+            handleError('greenlink_stops')
+          ),
+        walk_service_area: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.WalkServiceArea>(
+            `${gtfsFolder}/walk_service_area.geojson.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_walk_service_area')),
+        bike_service_area: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.BikeServiceArea>(
+            `${gtfsFolder}/bike_service_area.geojson.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_bike_service_area')),
+        paratransit_service_area: (abortSignal?: AbortSignal) =>
+          fetchData<GTFS.ParatransitServiceArea>(
+            `${gtfsFolder}/paratransit_service_area.geojson.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_paratransit_service_area')),
+        ridership: (abortSignal?: AbortSignal) =>
+          fetchData<StopRidership[]>(
+            `${ridershipFolder}/ridership.json.deflate`,
+            abortSignal
+          ).catch(handleError('greenlink_ridership', true, true)),
+      },
+    };
+  });
+
+  const groupedPromises: Record<string, (typeof allPromises)[number]['promises']> = {};
+  for (const { year, quarter, promises } of allPromises) {
+    const key = `${year}_${quarter}`;
+    groupedPromises[key] = promises;
+  }
+
+  return groupedPromises;
+}
+
+/**
  * Constructs paths for the replica data based on the areas and seasons.
  */
 function constructReplicaPaths(
   areas: AppDataHookParameters['areas'],
-  seasons: AppDataHookParameters['seasons']
+  seasons: AppDataHookParameters['seasons'],
+  travelMethod?: AppDataHookParameters['travelMethod']
 ) {
   return areas.flatMap((area) => {
     return seasons.map(([quarter, year]) => {
+      let networkSegmentsSuffix = `_${year}_${quarter}__thursday`;
+      if (travelMethod) {
+        networkSegmentsSuffix += `__commute__${travelMethod}`;
+      }
+
       return {
         __area: area,
         __year: year,
         __quarter: quarter,
-
-        network_segments: `./data/replica/${area}/network_segments/south_atlantic_${year}_${quarter}.json.deflate`,
+        __label: `${area}${seasons.length > 1 ? ` (${year} ${quarter})` : ''}`,
+        polygon: `./data/replica/${area}/polygon.geojson.deflate`,
+        statistics: `./data/replica/${area}/statistics/replica__south_atlantic_${year}_${quarter}.json.deflate`,
+        network_segments_style: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}/VectorTileServer/resources/styles/root.json`,
         population: `./data/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
-        saturday_trip: `./data/replica/${area}/saturday_trip/south_atlantic_${year}_${quarter}.json.deflate`,
-        thursday_trip: `./data/replica/${area}/thursday_trip/south_atlantic_${year}_${quarter}.json.deflate`,
       };
     });
   });
@@ -239,27 +362,53 @@ function constructReplicaPaths(
  * @param replicaPaths - the returned value of `constructReplicaPaths`
  */
 function constructReplicaPromises(replicaPaths: ReturnType<typeof constructReplicaPaths>) {
-  return replicaPaths.map(({ __area, __year, __quarter, ...paths }) => {
+  return replicaPaths.map(({ __area, __year, __quarter, __label, ...paths }) => {
     return {
-      __area: async () => __area,
-      __year: async () => __year,
-      __quarter: async () => __quarter,
-      network_segments: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaNetworkSegments>(paths.network_segments, abortSignal).catch(
-          handleError('network_segments')
-        ),
-      population: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
-          handleError('population')
-        ),
-      saturday_trips: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaTrips>(paths.saturday_trip, abortSignal).catch(
-          handleError('saturday_trip')
-        ),
-      thursday_trips: (abortSignal?: AbortSignal) =>
-        fetchData<ReplicaTrips>(paths.thursday_trip, abortSignal).catch(
-          handleError('thursday_trip')
-        ),
+      area: __area,
+      year: __year,
+      quarter: __quarter,
+      promises: {
+        __area: async () => __area,
+        __year: async () => __year,
+        __quarter: async () => __quarter,
+        __label: async () => __label,
+        polygon: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaAreaPolygon>(paths.polygon, abortSignal).catch(handleError('polygon')),
+        statistics: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaStatistics>(paths.statistics, abortSignal).catch(
+            handleError('statistics')
+          ),
+        network_segments_style: (abortSignal?: AbortSignal) =>
+          fetchData<Omit<MapboxStyle, 'sources'> & { sources: Record<string, MapboxVectorSource> }>(
+            paths.network_segments_style,
+            abortSignal,
+            true
+          )
+            .then((style) => {
+              return {
+                ...style,
+                sources: {
+                  ...style.sources,
+                  esri: {
+                    ...style.sources.esri,
+                    // resolve the relative URL to a complete path
+                    url: new URL(
+                      paths.network_segments_style + '/../' + style.sources.esri.url,
+                      window.location.origin
+                    ).href,
+                  },
+                },
+                layers: style.layers.map((layer) => {
+                  return { ...layer, minzoom: undefined, maxzoom: undefined };
+                }),
+              };
+            })
+            .catch(handleError('network_segments_style', true, true)),
+        population: (abortSignal?: AbortSignal) =>
+          fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
+            handleError('population')
+          ),
+      },
     };
   });
 }

@@ -87,7 +87,7 @@
         "Build data-pipeline docker image",
       ],
       "type": "shell",
-      "command": "docker run -it --volume ./input:/input --volume ./data:/data --volume ${workspaceFolder:BigQuery auth}/credentials:/credentials --user 1000 -e REPLICA_YEARS_FILTER=2024 -e REPLICA_QUARTERS_FILTER=Q4 -e USE_BIGQUERY_STORAGE_API=1 gc-mobility-dashboard-data-pipeline:latest --etls=replica",
+      "command": "docker run -it --volume ./input:/input --volume ./data:/data --volume ${workspaceFolder:BigQuery auth}/credentials:/credentials --user 1000 -e REPLICA_YEARS_FILTER=2024 -e REPLICA_QUARTERS_FILTER=Q4 -e USE_BIGQUERY_STORAGE_API=1 gc-mobility-dashboard-data-pipeline:latest",
       "group": "none",
       "presentation": {
         "reveal": "always",

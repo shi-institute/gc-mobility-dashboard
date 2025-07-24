@@ -3,6 +3,8 @@ from typing import Literal, Optional
 
 from etl.sources.replica.etl import ReplicaETL
 
+after = ['greenlink_gtfs']
+
 
 def source_runner():
     REPLICA_YEARS_FILTER = os.getenv('REPLICA_YEARS_FILTER') or None
@@ -20,5 +22,7 @@ def source_runner():
     # get replica data
     trip_columns = ['activity_id', 'person_id', 'mode',
                     'travel_purpose', 'tour_type', 'transit_route_ids',
-                    'network_link_ids', 'vehicle_type']
+                    'network_link_ids', 'vehicle_type', 'start_local_hour',
+                    'end_local_hour', 'duration_minutes',
+                    'destination_building_use_l1', 'destination_building_use_l2',]
     ReplicaETL(trip_columns, years, quarters).run()
