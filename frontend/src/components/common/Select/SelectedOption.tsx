@@ -94,8 +94,10 @@ const SelectedItemWrapper = styled.div`
 `;
 
 const StyledCloseButton = styled(IconButton)`
-  background-color: transparent;
-  border: none;
+  box-shadow: none;
+  &:not(:hover):not(:active) {
+    background: none;
+  }
 
   svg {
     inline-size: 1rem;

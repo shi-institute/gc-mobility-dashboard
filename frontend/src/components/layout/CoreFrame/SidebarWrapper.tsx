@@ -184,7 +184,7 @@ const CloseButton = styled(IconButton)<{ size?: string }>`
   right: 2px;
 
   &:not(:hover):not(:active) {
-    border-color: transparent;
+    box-shadow: none;
     background: none;
   }
 

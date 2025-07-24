@@ -16,7 +16,8 @@
   --surface-radius: 6px;
 
   --card-background-default: hsla(0, 0%, 100%, 70%);
-  --control-stroke-default: hsla(0, 0%, 0%, 5.78%);
+  --control-stroke-default: hsla(0, 0%, 0%, 7%);
+  --control-stroke-secondary-overlay: hsla(0, 0%, 0%, 10.44%);
 
   --text-primary: hsla(0, 0%, 0%, 89.56%);
   --text-secondary: hsla(0, 0%, 0%, 60.63%);

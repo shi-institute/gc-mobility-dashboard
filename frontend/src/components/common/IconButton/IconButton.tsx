@@ -54,7 +54,9 @@ const StyledButton = styled.button`
   min-inline-size: 2.25rem;
   min-block-size: 2.25rem;
   box-sizing: border-box;
-  border: 1px solid lightgray;
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--control-stroke-default),
+    inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
   border-radius: var(--button-radius);
   color: inherit;
   user-select: none;
