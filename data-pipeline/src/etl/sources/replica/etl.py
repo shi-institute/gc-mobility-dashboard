@@ -1,6 +1,7 @@
 import gc
 import json
 import logging
+import multiprocessing
 import os
 import re
 import shutil
@@ -13,6 +14,8 @@ import numpy
 import pandas
 import pandas_gbq
 import polars
+import pyarrow
+import pyarrow.parquet as parquet
 import shapely
 import shapely.wkt
 
@@ -502,7 +505,7 @@ class ReplicaETL:
                                 os.remove(zip_filename)
 
                             os.system(
-                                f'cd {tile_folder_path} && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
+                                f'cd "{tile_folder_path}" && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
 
                         except Exception:
                             # this will happen if the geojson file is empty
@@ -700,7 +703,7 @@ class ReplicaETL:
         if schema_df is None or schema_df.empty:
             return
 
-        for season in schema_df.itertuples():
+        def get_trips() -> None:
             table_name = str(season.table_name)
 
             # Set full_table_path be equal to the table_name column in the schema_df
@@ -716,53 +719,111 @@ class ReplicaETL:
                 origin_lat_col = "start_lat"
                 dest_lng_col = "end_lng"
                 dest_lat_col = "end_lat"
-            table_df = self._run_with_queue(
+            table_ldfs = self._run_with_queue(
                 gdf, full_table_path=full_table_path,
                 origin_lng_col=origin_lng_col, origin_lat_col=origin_lat_col,
                 dest_lng_col=dest_lng_col, dest_lat_col=dest_lat_col
             )
             print('Obtained data for table:', table_name)
-            results_count += 1
-            if not table_df.empty:
-                # add a source_table column with the table name so we can identify the source of the data
-                table_df['source_table'] = table_name
 
-                # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
-                # this regex will match the trip type
-                trip_type_match = re.search(
-                    r'_(thursday|saturday)_trip', table_name)
-                # If no match is found, default to 'other_trip'
-                # this will get the trip type from the regex match
-                trip_type = trip_type_match.group(
-                    0)[1:] if trip_type_match else 'other_trip'
+            network_segments_lookup: dict[str, shapely.LineString] | None = None
 
-                print(f'Forming trip lines for {table_name}...')
+            # Determine trip type (e.g., thursday_trip, saturday_trip) from table_name
+            # this regex will match the trip type
+            trip_type_match = re.search(
+                r'_(thursday|saturday)_trip', table_name)
+            # If no match is found, default to 'other_trip'
+            # this will get the trip type from the regex match
+            trip_type = trip_type_match.group(
+                0)[1:] if trip_type_match else 'other_trip'
 
-                print(f'  Creating a lookup table for network segments...')
-                network_segments_path = os.path.join(
-                    self.folder_path,
-                    f'full_area/network_segments/{self.region}_{season.year}_{season.quarter}.parquet'
-                )
-                network_segments_df = geopandas.read_parquet(network_segments_path)
-                network_segments_lookup = create_network_segments_lookup(network_segments_df)
-                del network_segments_df
-                gc.collect()
-                print(f'  Processing...')
+            print(f'Forming trip lines for {table_name}...')
+            chunk_count = len(table_ldfs)
+            for chunk_index, table_ldf in enumerate(table_ldfs):
+                chunk_index = chunk_index + 1  # start chunk index from 1 for more friendly output
+
+                # Convert the lazy frame to a DataFrame
+                table_df = table_ldf.collect().to_pandas()
+
+                if not table_df.empty:
+                    # add a source_table column with the table name so we can identify the source of the data
+                    table_df['source_table'] = table_name
+
+                if network_segments_lookup is None:
+                    print(f'  Creating a lookup table for network segments...')
+                    network_segments_path = os.path.join(
+                        self.folder_path,
+                        f'full_area/network_segments/{self.region}_{season.year}_{season.quarter}.parquet'
+                    )
+                    network_segments_df = geopandas.read_parquet(network_segments_path)
+                    network_segments_lookup = create_network_segments_lookup(
+                        network_segments_df)
+                    del network_segments_df
+                    gc.collect()
+
+                print(f'  Processing chunk {chunk_index}/{chunk_count}...')
                 trips_gdf = trips_as_lines(table_df, network_segments_lookup, 'EPSG:4326')
                 del table_df
-                del network_segments_lookup
                 gc.collect()
 
-                print(f'Saving {trip_type} data for {table_name}...')
+                print(
+                    f'Saving {trip_type} data for {table_name} chunk {chunk_index}/{chunk_count}...')
                 self._save(
                     trips_gdf,
                     area_name,
-                    table_name,
-                    trip_type,
+                    f'chunk_{chunk_index}',
+                    f'{trip_type}/_chunks/{table_name}',
                     'geoparquet'
                 )
                 del trips_gdf
                 gc.collect()
+
+            del network_segments_lookup
+            gc.collect()
+
+            # combine all chunks using pyarrow's parquet dataset
+            print(f'Combining all chunks for {table_name}...')
+            combined_table_source_folder = os.path.join(
+                self.folder_path,
+                f'{area_name}/{trip_type}/_chunks/{table_name}'
+            )
+            dataset = parquet.ParquetDataset(
+                combined_table_source_folder
+            )
+            combined: pyarrow.Table = dataset.read()
+            print(f'Converting {table_name} to GeoDataFrame...')
+            combined_table_df = combined.to_pandas()
+            del combined
+            gc.collect()
+            combined_table_gdf = geopandas.GeoDataFrame(combined_table_df, crs='EPSG:4326')
+            del combined_table_df
+            gc.collect()
+            print(f'Saving {table_name}...')
+            self._save(
+                combined_table_gdf,
+                area_name,
+                table_name,
+                trip_type,
+                'geoparquet'
+            )
+            del combined_table_gdf
+            gc.collect()
+
+            # delete the chunks folder now that we have combined the chunks
+            shutil.rmtree(combined_table_source_folder)
+
+            return None
+
+        # loop through each trip dataset in the schema_df
+        # and run the get_trips function in a separate process
+        # so that any holds on memory that python creates are
+        # released (downloading and processing trip data is memory
+        # intensive and pandas_gbq appears hold on to memory)
+        for season in schema_df.itertuples():
+            process = multiprocessing.Process(target=get_trips)
+            process.start()
+            process.join()  # wait for the process to finish
+            results_count += 1
 
         print(
             f"\nSuccessfully obtained data from {results_count} trip tables.")
@@ -829,7 +890,7 @@ class ReplicaETL:
         '''
 
     def _run_with_queue(self, gdf_upload: geopandas.GeoDataFrame, full_table_path: str, origin_lng_col: str,
-                        origin_lat_col: str, dest_lng_col: str, dest_lat_col: str, max_query_chars: int = 150000) -> pandas.DataFrame:
+                        origin_lat_col: str, dest_lng_col: str, dest_lat_col: str, max_query_chars: int = 150000) -> list[polars.LazyFrame]:
         queue: list[str] = []
         queue_length = 0
         queries: list[str] = []
@@ -921,7 +982,11 @@ class ReplicaETL:
                             lambda x: ','.join(map(str, x)) if isinstance(x, numpy.ndarray) else x)
 
                 # save a backup/cache of the data upon download that we can use to restore downloaded data
-                pandas.DataFrame.to_parquet(df, os.path.join(download_cache_filepath))
+                pandas.DataFrame.to_parquet(
+                    df,
+                    os.path.join(download_cache_filepath),
+                    compression=None  # reduces memory use: no need to compress and uncompress this chunk
+                )
 
                 # once the data is saved, write an empty .success file with the same name
                 # to indicate that the download was successful
@@ -958,21 +1023,10 @@ class ReplicaETL:
                 future.add_done_callback(handle_query_error)
                 futures.append(future)
 
-        # Merge all results
+        # return all results
         logger.setLevel(logging.INFO)
         executor.shutdown(wait=True)  # wait for all futures to finish
-
-        # disable parallel to reduce RAM usage - polars has to uncompress each parquet file
-        joined_ldfs = polars.concat(result_ldfs, how='vertical', rechunk=False, parallel=False)
-
-        start_time = datetime.now()
-        print('Collecting trip results...')
-        df = polars.concat(result_ldfs, how='vertical',
-                           rechunk=False, parallel=False).collect().to_pandas()
-        elapsed_time = datetime.now() - start_time
-        print('Done in ', elapsed_time, ' seconds.')
-
-        return df
+        return result_ldfs
 
     def _run_schema_query(self) -> pandas.DataFrame:
         """
@@ -1064,8 +1118,8 @@ class ReplicaETL:
         inferred_schema_rows = []
         for root, _, files in os.walk(full_area_path):
             for filename in files:
-                if root.endswith('download'):
-                    # skip the download cache folder
+                if root.endswith('download') or '_chunks' in root:
+                    # skip the download cache folder or any chunks folders
                     continue
 
                 if filename.endswith('.parquet'):
@@ -1166,8 +1220,9 @@ class ReplicaETL:
         # save to file
         output_path = os.path.join(output_folder, output_name)
         if format == 'geoparquet':
+            has_bbox_column = 'bbox' in gdf.columns
             gdf.to_parquet(output_path + '.parquet',
-                           write_covering_bbox=True, geometry_encoding='WKB', schema_version='1.1.0')
+                           write_covering_bbox=not has_bbox_column, geometry_encoding='WKB', schema_version='1.1.0', compression=None)
             print(f'Saved results to {output_path}.parquet')
         if format == 'geojson':
             gdf.to_crs('EPSG:4326').to_file(output_path + '.geojson', driver='GeoJSON')
