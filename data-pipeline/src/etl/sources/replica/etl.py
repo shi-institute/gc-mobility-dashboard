@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import re
 import shutil
+import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Literal, Optional
@@ -554,11 +555,11 @@ class ReplicaETL:
         # check if the etl is running in GitHub Actions
         is_running_in_workflow = os.getenv('IS_GH_WORKFLOW', 'false').lower() == 'true'
 
-        for table_name in schema_df['table_name']:
+        def get_segments(table_name: str) -> None:
             # Set full_table_path be equal to the table_name column in the schema_df
             full_table_path = f"{self.project_id}.{self.region}.{table_name}"
 
-            print(f'Running query for {full_table_path}...')
+            print(f'\nRunning query for {full_table_path}...')
 
             segments_gdf: geopandas.GeoDataFrame | None = None
             if not is_running_in_workflow:
@@ -595,6 +596,7 @@ class ReplicaETL:
                 )
 
             # save to file
+            print(f'  Saving...')
             self._save(
                 segments_gdf,
                 area_name,
@@ -604,6 +606,19 @@ class ReplicaETL:
             )
 
             print(f"\nSuccessfully obtained data from {full_table_path}.")
+
+        results_count = 0
+        for season in schema_df.itertuples():
+            # run in a separate process because pandas_gbq uses a rediculous amount of RAM and
+            # never releases it unless the process is killed (~4 GB uncompressed data becomes
+            # ~35 GB RAM usage)
+            process = multiprocessing.Process(target=get_segments, args=(season.table_name,))
+            process.start()
+            process.join()  # wait for the process to finish
+            results_count += 1
+
+        print(
+            f"\nSuccessfully obtained data from {results_count} network segments table{'' if results_count == 1 else 's'}.")
 
     def _run_for_pop_(self, gdf: geopandas.GeoDataFrame, area_name: str) -> list[pandas.DataFrame]:
         """Loop through population tables and run queries to get the data.
