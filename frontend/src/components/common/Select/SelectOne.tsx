@@ -56,6 +56,7 @@ export function SelectOne({
 }
 
 const SelectOneComponent = styled.select`
+  --dropdown-hover: #c4d8b5;
   appearance: none;
   font-family: inherit;
   font-weight: 400;
@@ -98,5 +99,13 @@ const SelectOneComponent = styled.select`
   option {
     background-color: white;
     color: var(--text-primary);
+
+    &:hover {
+      background-color: var(--dropdown-hover) !important;
+    }
+
+    &:checked {
+      background-color: var(--dropdown-hover) !important;
+    }
   }
 `;

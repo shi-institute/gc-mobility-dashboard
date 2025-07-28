@@ -55,9 +55,13 @@ const SelectedItemWrapper = styled.div`
   flex-direction: row;
   align-items: stretch;
   margin-top: 6px;
-  background-color: var(--card-background-default);
+  background-color: var(white);
   box-shadow: inset 0 0 0 1px var(--control-stroke-default);
   border-radius: var(--button-radius);
+
+  &:hover {
+    background-color: #62a34b !important;
+  }
 
   .select-item-detail {
     --drag-handle-width: 0;
@@ -85,7 +89,7 @@ const SelectedItemWrapper = styled.div`
       line-height: 16px;
       flex-wrap: nowrap;
       color: var(--text-secondary);
-      opacity: 0.8;
+      opacity: 1.5;
       overflow: hidden;
       text-overflow: ellipsis;
     }
