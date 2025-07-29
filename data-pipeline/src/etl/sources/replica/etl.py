@@ -1174,7 +1174,7 @@ class ReplicaETL:
                     # skip the download cache folder or any chunks folders
                     continue
 
-                if filename.endswith('.parquet'):
+                if filename.endswith('.parquet') or filename.endswith('.success'):
 
                     # extract the table info from the file path
                     relative_path = os.path.relpath(
@@ -1184,6 +1184,7 @@ class ReplicaETL:
                     # remove suffixes
                     partial_table_name = partial_table_name\
                         .replace('.parquet', '')\
+                        .replace('.success', '')\
                         .replace('_home', '')\
                         .replace('_school', '')\
                         .replace('_work', '')\
