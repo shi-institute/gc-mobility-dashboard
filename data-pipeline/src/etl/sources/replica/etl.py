@@ -847,7 +847,7 @@ class ReplicaETL:
             # create a .success file to indicate that the chunks have been successfully created
             print(f'Flagging {table_name} chunks as complete...')
             success_file_path = os.path.join(
-                output_folder, f'{area_name}/{trip_type}/{self.region}_{season.year}_{season.quarter}.success')
+                self.folder_path, f'{area_name}/{trip_type}/{self.region}_{season.year}_{season.quarter}.success')
             with open(success_file_path, 'w') as success_file:
                 success_file.write('\n')
 
