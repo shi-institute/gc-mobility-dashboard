@@ -16,6 +16,9 @@ interface CoreFrameProps {
   sections?: React.ReactElement[];
   /** The sidebar element. On widths >= 1280px, it is rendered directly. On smaller widths, it should support an overlay mode with a button that floats in the bottom-right corner to open it. */
   sidebar?: React.ReactElement;
+
+  /** disables grid mode for the sections  area */
+  disableSectionsGrid?: boolean;
 }
 
 export function CoreFrame(props: CoreFrameProps) {
@@ -59,12 +62,16 @@ export function CoreFrame(props: CoreFrameProps) {
                     );
                   })}
               </div>
-              <MainArea>{[props.map, ...(props.sections || [])][activeMobileSection]}</MainArea>
+              <MainArea disableSectionsGrid={props.disableSectionsGrid}>
+                {[props.map, ...(props.sections || [])][activeMobileSection]}
+              </MainArea>
             </>
           ) : (
             <>
               {props.map ? <MapArea>{props.map}</MapArea> : null}
-              <MainArea>{props.sections?.map((section) => section)}</MainArea>
+              <MainArea disableSectionsGrid={props.disableSectionsGrid}>
+                {props.sections?.map((section) => section)}
+              </MainArea>
             </>
           )}
           <SidebarWrapper frameWidth={width}>{props.sidebar}</SidebarWrapper>
@@ -136,10 +143,10 @@ const InnerFrame = styled.div<{ fixedSidebarOpen: boolean; hasMapElement?: boole
   }
 `;
 
-const MainArea = styled.div`
+const MainArea = styled.div<{ disableSectionsGrid?: boolean }>`
   grid-area: main;
 
-  display: grid;
+  display: ${(props) => (props.disableSectionsGrid ? 'block' : 'grid')};
   grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   grid-auto-rows: min-content;
   gap: 1rem;
