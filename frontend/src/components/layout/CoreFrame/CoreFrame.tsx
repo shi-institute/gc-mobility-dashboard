@@ -37,7 +37,7 @@ export function CoreFrame(props: CoreFrameProps) {
       <OuterFrame style={props.outerStyle}>
         <div style={{ gridArea: 'header' }}>{props.header}</div>
         <InnerFrame
-          fixedSidebarOpen={fixedSidebarOpen && isFullDesktop}
+          fixedSidebarOpen={!props.sidebar ? false : fixedSidebarOpen && isFullDesktop}
           hasMapElement={!!props.map}
         >
           {isMobile ? (
@@ -74,7 +74,9 @@ export function CoreFrame(props: CoreFrameProps) {
               </MainArea>
             </>
           )}
-          <SidebarWrapper frameWidth={width}>{props.sidebar}</SidebarWrapper>
+          {props.sidebar ? (
+            <SidebarWrapper frameWidth={width}>{props.sidebar}</SidebarWrapper>
+          ) : null}
         </InnerFrame>
       </OuterFrame>
     </Container>
