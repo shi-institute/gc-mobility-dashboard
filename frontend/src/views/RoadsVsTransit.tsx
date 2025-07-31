@@ -15,7 +15,7 @@ export function RoadsVsTransit() {
           <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85"></arcgis-map>
         </div>
       }
-      sections={[Comparison()]}
+      sections={[<Comparison />]}
       disableSectionsGrid
     />
   );
@@ -61,7 +61,7 @@ function Comparison() {
           <p>What happens when this amount is spent on public transit instead?</p>
         </div>
 
-        <div className="bus-container"></div>
+        <img src="./img/bus.webp" alt="" className="bus-container" />
         <OptionTrack.Track
           mode={mode}
           style={`${(() => {
@@ -372,8 +372,6 @@ const ComparisonComponent = styled.div`
     position: absolute;
     bottom: 20px;
     right: 20px;
-    border: 1px solid black;
-    height: 200px;
     width: 400px;
   }
 `;
