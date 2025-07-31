@@ -13,6 +13,7 @@ interface SelectOneProps {
    */
   noOptionsPlaceholder?: string;
   disabled?: boolean;
+  className?: string;
 }
 
 export function SelectOne({
@@ -22,6 +23,7 @@ export function SelectOne({
   placeholder = 'Select an option',
   noOptionsPlaceholder = 'No options available',
   disabled,
+  className,
 }: SelectOneProps) {
   function handleSelectionChange(evt: React.ChangeEvent<HTMLSelectElement>) {
     const newSelected = Array.from(evt.target.selectedOptions, (option) => option.value)[0];
@@ -34,6 +36,7 @@ export function SelectOne({
       value={value ?? ''}
       style={{ color: !value ? 'var(--text-secondary)' : 'inherit' }}
       disabled={disabled || options.length === 0}
+      className={className}
     >
       {!value ? (
         <option key="blank" value="" disabled>
