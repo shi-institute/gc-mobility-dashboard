@@ -1,8 +1,9 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CoreFrame, OptionTrack, SelectOne } from '../components';
 import { AppNavigation } from '../components/navigation';
+import { useRect } from '../hooks';
 
 export function RoadsVsTransit() {
   return (
@@ -36,22 +37,54 @@ function Comparison() {
     }, 300); // delay to allow for transition effect
   }
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const containterRect = useRect(containerRef);
+
+  const mode: 'row' | 'column' = containterRect.height < 980 ? 'column' : 'row';
+  const hideSmallButtons = containterRect.height < 640;
+
   return (
-    <ComparisionContainer>
+    <ComparisionContainer ref={containerRef}>
       <div className="left-bar"></div>
       <ComparisonComponent>
         <div className="background"></div>
 
         <div className="bus-container"></div>
-        <OptionTrack.Track>
+        <OptionTrack.Track
+          mode={mode}
+          style={`${
+            mode === 'column' && !hideSmallButtons ? 'height: calc(100% - 100px); top: 100px;' : ''
+          }
+            
+          ${
+            hideSmallButtons
+              ? `*[data-size="small"] {
+              opacity: 0;
+              pointer-events: none;
+            }`
+              : ''
+          }
+            
+          `}
+        >
           <OptionTrack.Button
             size={selectedIndex === 0 ? 400 : undefined}
             onClick={() => switchSelectedIndex(0)}
             transitioning={transitioning}
             as={delayedSelectedIndex === 0 ? 'div' : undefined}
             style={{
-              right: selectedIndex === 0 ? 'calc(-100% + var(--size) + 20px)' : 'unset',
-              top: selectedIndex === 0 ? '100px' : 'unset',
+              right:
+                selectedIndex === 0 && mode === 'row'
+                  ? 'calc(-100% + var(--size) + 20px)'
+                  : 'unset',
+              top:
+                selectedIndex === 0 && mode === 'row'
+                  ? '100px'
+                  : selectedIndex === 0 && mode === 'column'
+                  ? '120px'
+                  : 'unset',
+              position: selectedIndex === 0 && mode === 'column' ? 'absolute' : 'relative',
+              left: selectedIndex === 0 && mode === 'column' ? '50%' : 'unset',
             }}
           >
             <div
@@ -76,13 +109,25 @@ function Comparison() {
               <p>A message goes here</p>
             </article>
           </OptionTrack.Button>
+          {mode === 'column' ? (
+            <OptionTrack.Button
+              placeholderMode
+              visible={selectedIndex === 0 || selectedIndex === 1}
+            />
+          ) : null}
           <OptionTrack.Button
             size={selectedIndex === 1 ? 400 : undefined}
             onClick={() => switchSelectedIndex(1)}
             transitioning={transitioning}
             as={delayedSelectedIndex === 1 ? 'div' : undefined}
             style={{
-              right: selectedIndex === 1 ? 'calc(-100% + var(--size) + 20px)' : 'unset',
+              right:
+                selectedIndex === 1 && mode === 'row'
+                  ? 'calc(-100% + var(--size) + 20px)'
+                  : 'unset',
+              top: selectedIndex === 1 && mode === 'column' ? '120px' : 'unset',
+              position: selectedIndex === 1 && mode === 'column' ? 'absolute' : 'relative',
+              left: selectedIndex === 1 && mode === 'column' ? '50%' : 'unset',
             }}
           >
             <div
@@ -107,13 +152,25 @@ function Comparison() {
               <p>A message goes here</p>
             </article>
           </OptionTrack.Button>
+          {mode === 'column' ? (
+            <OptionTrack.Button
+              placeholderMode
+              visible={selectedIndex === 1 || selectedIndex === 2}
+            />
+          ) : null}
           <OptionTrack.Button
             size={selectedIndex === 2 ? 400 : undefined}
             onClick={() => switchSelectedIndex(2)}
             transitioning={transitioning}
             as={delayedSelectedIndex === 2 ? 'div' : undefined}
             style={{
-              right: selectedIndex === 2 ? 'calc(-100% + var(--size) + 20px)' : 'unset',
+              right:
+                selectedIndex === 2 && mode === 'row'
+                  ? 'calc(-100% + var(--size) + 20px)'
+                  : 'unset',
+              top: selectedIndex === 2 && mode === 'column' ? '120px' : 'unset',
+              position: selectedIndex === 2 && mode === 'column' ? 'absolute' : 'relative',
+              left: selectedIndex === 2 && mode === 'column' ? '50%' : 'unset',
             }}
           >
             <div
@@ -138,13 +195,25 @@ function Comparison() {
               <p>A message goes here</p>
             </article>
           </OptionTrack.Button>
+          {mode === 'column' ? (
+            <OptionTrack.Button
+              placeholderMode
+              visible={selectedIndex === 2 || selectedIndex === 3}
+            />
+          ) : null}
           <OptionTrack.Button
             size={selectedIndex === 3 ? 400 : undefined}
             onClick={() => switchSelectedIndex(3)}
             transitioning={transitioning}
             as={delayedSelectedIndex === 3 ? 'div' : undefined}
             style={{
-              right: selectedIndex === 3 ? 'calc(-100% + var(--size) + 20px)' : 'unset',
+              right:
+                selectedIndex === 3 && mode === 'row'
+                  ? 'calc(-100% + var(--size) + 20px)'
+                  : 'unset',
+              top: selectedIndex === 3 && mode === 'column' ? '120px' : 'unset',
+              position: selectedIndex === 3 && mode === 'column' ? 'absolute' : 'relative',
+              left: selectedIndex === 3 && mode === 'column' ? '50%' : 'unset',
             }}
           >
             <div
@@ -169,6 +238,9 @@ function Comparison() {
               <p>A message goes here</p>
             </article>
           </OptionTrack.Button>
+          {mode === 'column' ? (
+            <OptionTrack.Button placeholderMode visible={selectedIndex === 3} />
+          ) : null}
         </OptionTrack.Track>
 
         <SelectOne

@@ -7,6 +7,8 @@ interface OptionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   as?: React.ElementType<any, keyof React.JSX.IntrinsicElements>;
   transitioning?: boolean;
   ref?: React.Ref<HTMLElement>;
+  placeholderMode?: boolean;
+  visible?: boolean;
 }
 
 export function OptionButton(props: OptionButtonProps) {
@@ -14,7 +16,18 @@ export function OptionButton(props: OptionButtonProps) {
   const rect = useRect(ref);
   const scale = rect.width / 100;
 
-  const size = props.size || 100;
+  const size = props.size ?? 100;
+  const visible = props.visible ?? true;
+
+  if (props.placeholderMode) {
+    return (
+      <OptionButtonComponent size={size} visible={visible}>
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="20" fill="hsl(210, 3%, 38%)" />
+        </svg>
+      </OptionButtonComponent>
+    );
+  }
 
   return (
     <OptionButtonComponent
@@ -33,6 +46,7 @@ export function OptionButton(props: OptionButtonProps) {
         ref.current = element;
       }}
       style={{ ...props.style, '--size': size + 'px' } as React.CSSProperties}
+      visible={visible}
     >
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         {size > 180 ? (
@@ -85,7 +99,11 @@ export function OptionButton(props: OptionButtonProps) {
   );
 }
 
-const OptionButtonComponent = styled.button<{ size: number; transitioning?: boolean }>`
+const OptionButtonComponent = styled.button<{
+  size: number;
+  transitioning?: boolean;
+  visible: boolean;
+}>`
   appearance: none;
   background: none;
   border: none;
@@ -131,5 +149,14 @@ const OptionButtonComponent = styled.button<{ size: number; transitioning?: bool
         fill: rgba(0, 0, 0, 0.06);
       }
     }
+  `}
+
+  // set the opacity to 0 when the button is not visible
+  ${(props) =>
+    props.visible
+      ? ''
+      : `
+    opacity: 0;
+    pointer-events: none;
   `}
 `;

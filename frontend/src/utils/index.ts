@@ -1,3 +1,4 @@
+export { debounce } from './debounce';
 export { inflateResponse } from './inflateResponse';
 export { notEmpty } from './notEmpty';
 export { requireKey } from './requireKey';

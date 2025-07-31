@@ -1,6 +1,7 @@
 import styled from '@emotion/styled';
-import React, { Children, isValidElement, useEffect, useRef } from 'react';
+import React, { Children, isValidElement, useCallback, useEffect, useRef } from 'react';
 import { useRect } from '../../../hooks';
+import { debounce } from '../../../utils';
 import { OptionButton } from './OptionButton';
 
 interface OptionTrackProps {
@@ -8,33 +9,45 @@ interface OptionTrackProps {
    * The children of the OptionTrack component. These should be OptionButton components.
    */
   children: React.ReactNode;
+  mode?: 'column' | 'row';
+  style?: string;
+}
+
+interface ClonedChildProps {
+  child: React.ReactElement<any, typeof OptionButton>;
+  onResize: (width: number, height: number) => void;
+}
+
+function ClonedChild({ child, onResize }: ClonedChildProps) {
+  // get the rect for the child
+  const ref = useRef<HTMLButtonElement>(null);
+  const rect = useRect(ref);
+
+  useEffect(() => {
+    onResize(rect.width, rect.height);
+  }, [rect.width, rect.height, onResize]);
+
+  return React.cloneElement(child, { ref, 'data-size': rect.width > 200 ? 'large' : 'small' });
 }
 
 export function OptionTrack(props: OptionTrackProps) {
+  // increment the count state whenver a child node is resized
+  // so that the component is rerendered (and therefore the svg lines are redrawn)
+  const [, setCount] = React.useState(0);
+  const rerenderOnResize = useCallback(
+    debounce(() => {
+      setCount((prev) => prev + 1);
+    }, 6),
+    [setCount]
+  );
+
+  // add resize listeners to each child node
   const eachChildNode = Children.toArray(props.children)
     .filter((child): child is React.ReactElement<any, typeof OptionButton> => {
       return isValidElement(child) && child.type === OptionButton;
     })
-    .map((child) => {
-      // get the rect for each child
-      const ref = useRef<HTMLButtonElement>(null);
-      const rect = useRect(ref);
-
-      // Return the child, but include the react width and height as data attributes
-      // so that the node will be rerendered whenever the size changes (including during css transitions).
-      // This allows us to have an effect hook that draws lines between the buttons
-      // and keeps the lines updated DURING the size transition.
-      return (
-        <child.type
-          {...child.props}
-          ref={ref}
-          key={child.key}
-          data-width={rect.width}
-          data-height={rect.height}
-        >
-          {child.props.children}
-        </child.type>
-      );
+    .map((child, index) => {
+      return <ClonedChild key={index} child={child} onResize={rerenderOnResize} />;
     });
 
   // get the dimensions for the track area
@@ -146,10 +159,26 @@ export function OptionTrack(props: OptionTrackProps) {
       lineGroup.appendChild(leftEdgeLine);
       lineGroup.appendChild(rightEdgeLine);
     }
+
+    // if there are more line groups than child nodes, remove the extra ones
+    const existingLineGroups = svgRef.current.querySelectorAll('g');
+    if (existingLineGroups.length > childNodes.length - 1) {
+      for (let i = childNodes.length - 1; i < existingLineGroups.length; i++) {
+        const lineGroup = existingLineGroups[i];
+        if (lineGroup) {
+          svgRef.current.removeChild(lineGroup);
+        }
+      }
+    }
   });
 
   return (
-    <OptionTrackComponent ref={trackRef}>
+    <OptionTrackComponent
+      ref={trackRef}
+      mode={props.mode || 'row'}
+      styleString={props.style}
+      childrenCount={eachChildNode.length + 2}
+    >
       <svg
         ref={svgRef}
         viewBox={`0 0 ${trackAreaRect.width} ${trackAreaRect.height}`}
@@ -163,29 +192,54 @@ export function OptionTrack(props: OptionTrackProps) {
   );
 }
 
-const OptionTrackComponent = styled.div`
+const OptionTrackComponent = styled.div<{
+  mode: 'column' | 'row';
+  styleString?: string;
+  childrenCount: number;
+}>`
   position: relative;
   display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto;
-  align-items: center;
+  ${(props) => {
+    if (props.mode === 'row') {
+      return `
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        align-items: center;
+      `;
+    }
+    return `
+      grid-template-columns: repeat(${props.childrenCount - 2}, 0);
+      grid-template-rows: 1fr;
+      grid-auto-flow: column;
+      align-items: flex-start;
+
+      > * {
+        overflow: hidden;
+        transform: translateX(calc(var(--size) / 2 * -1));
+
+      }
+    `;
+  }}
   justify-content: space-between;
+
   height: 100%;
   gap: 0.5rem;
 
   .connector-edge {
-    width: 100px;
+    ${(props) => (props.mode === 'row' ? 'width' : 'height')}: 100px;
 
     &:first-of-type {
       position: relative;
-      top: -20px;
+      ${(props) => (props.mode === 'row' ? 'top' : 'left')}: -20px;
       align-self: flex-start;
     }
 
     &:last-of-type {
       position: relative;
-      bottom: -20px;
-      align-self: flex-end;
+      ${(props) => (props.mode === 'row' ? 'bottom' : 'right')}: -20px;
+      align-self: ${(props) => (props.mode === 'row' ? 'flex-end' : 'flex-start')};
     }
   }
+
+  ${(props) => props.styleString || ''}
 `;
