@@ -1,7 +1,7 @@
 import styled from '@emotion/styled';
 import React, { Children, isValidElement, useCallback, useEffect, useRef } from 'react';
 import { useRect } from '../../../hooks';
-import { debounce } from '../../../utils';
+import { debounce, quadraticBezierToPolygon } from '../../../utils';
 import { OptionButton } from './OptionButton';
 
 interface OptionTrackProps {
@@ -107,17 +107,6 @@ export function OptionTrack(props: OptionTrackProps) {
         svgRef.current.appendChild(lineGroup);
       }
 
-      const roadLineId = `road-${i}-${i + 1}`;
-      let roadLine = lineGroup.querySelector(`#${roadLineId}`);
-      if (!roadLine) {
-        roadLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      }
-      roadLine.setAttribute('id', roadLineId);
-      roadLine.setAttribute('d', path);
-      roadLine.setAttribute('fill', 'none');
-      roadLine.setAttribute('stroke', 'hsl(210, 3%, 38%)');
-      roadLine.setAttribute('stroke-width', '30');
-
       const centerLineId = `centerline-${i}-${i + 1}`;
       let centerLine = lineGroup.querySelector(`#${centerLineId}`);
       if (!centerLine) {
@@ -130,34 +119,48 @@ export function OptionTrack(props: OptionTrackProps) {
       centerLine.setAttribute('stroke-width', '1.2');
       centerLine.setAttribute('stroke-dasharray', '10, 10');
 
-      const leftEdgeLineId = `left-edge-${i}-${i + 1}`;
-      let leftEdgeLine = lineGroup.querySelector(`#${leftEdgeLineId}`);
-      if (!leftEdgeLine) {
-        leftEdgeLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const polygonId = `polygon-${i}-${i + 1}`;
+      let polygon = lineGroup.querySelector(`#${polygonId}`);
+      if (!polygon) {
+        polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
       }
-      leftEdgeLine.setAttribute('id', leftEdgeLineId);
-      leftEdgeLine.setAttribute('d', path);
-      leftEdgeLine.setAttribute('fill', 'none');
-      leftEdgeLine.setAttribute('stroke', 'white');
-      leftEdgeLine.setAttribute('stroke-width', '1.2');
-      leftEdgeLine.setAttribute('transform', `translate(-13.6, 0)`);
+      const polygonPoints = quadraticBezierToPolygon(
+        startX,
+        startY,
+        controlX,
+        controlY,
+        endX,
+        endY,
+        30
+      );
+      polygon.setAttribute('id', polygonId);
+      polygon.setAttribute('points', polygonPoints);
+      polygon.setAttribute('fill', 'hsl(210, 3%, 38%)');
+      polygon.setAttribute('stroke', 'none');
 
-      const rightEdgeLineId = `right-edge-${i}-${i + 1}`;
-      let rightEdgeLine = lineGroup.querySelector(`#${rightEdgeLineId}`);
-      if (!rightEdgeLine) {
-        rightEdgeLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const surfacePolygonId = `surface-${i}-${i + 1}`;
+      let surfacePolygon = lineGroup.querySelector(`#${surfacePolygonId}`);
+      if (!surfacePolygon) {
+        surfacePolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
       }
-      rightEdgeLine.setAttribute('id', rightEdgeLineId);
-      rightEdgeLine.setAttribute('d', path);
-      rightEdgeLine.setAttribute('fill', 'none');
-      rightEdgeLine.setAttribute('stroke', 'white');
-      rightEdgeLine.setAttribute('stroke-width', '1.2');
-      rightEdgeLine.setAttribute('transform', `translate(13.6, 0)`);
+      const smallerPolygonPoints = quadraticBezierToPolygon(
+        startX,
+        startY,
+        controlX,
+        controlY,
+        endX,
+        endY,
+        26
+      );
+      surfacePolygon.setAttribute('id', surfacePolygonId);
+      surfacePolygon.setAttribute('points', smallerPolygonPoints);
+      surfacePolygon.setAttribute('fill', 'none');
+      surfacePolygon.setAttribute('stroke', 'white');
+      surfacePolygon.setAttribute('stroke-width', '1.2');
 
-      lineGroup.appendChild(roadLine);
+      lineGroup.appendChild(polygon);
+      lineGroup.appendChild(surfacePolygon);
       lineGroup.appendChild(centerLine);
-      lineGroup.appendChild(leftEdgeLine);
-      lineGroup.appendChild(rightEdgeLine);
     }
 
     // if there are more line groups than child nodes, remove the extra ones

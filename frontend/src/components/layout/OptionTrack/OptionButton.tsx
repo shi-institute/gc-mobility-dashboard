@@ -23,7 +23,18 @@ export function OptionButton(props: OptionButtonProps) {
     return (
       <OptionButtonComponent size={size} visible={visible}>
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="20" fill="hsl(210, 3%, 38%)" />
+          {/* lower */}
+          <rect x="35" y="35" width="30" height="30" fill="hsl(210, 3%, 38%)" rx="15" />
+          {/* middle with edge line */}
+          <rect
+            x="34"
+            y="36"
+            width="30"
+            height="30"
+            fill="hsl(210, 3%, 38%)"
+            rx="15"
+            stroke="#fff"
+          />
         </svg>
       </OptionButtonComponent>
     );
