@@ -14,11 +14,13 @@ export function OptionButton(props: OptionButtonProps) {
   const rect = useRect(ref);
   const scale = rect.width / 100;
 
+  const size = props.size || 100;
+
   return (
     <OptionButtonComponent
       {...props}
       className={`option-button ${props.className}`}
-      size={props.size || 100}
+      size={size}
       ref={(element) => {
         // apply the parents's ref
         if (typeof props.ref === 'function') {
@@ -30,9 +32,10 @@ export function OptionButton(props: OptionButtonProps) {
         // also use the ref we just created
         ref.current = element;
       }}
+      style={{ ...props.style, '--size': size + 'px' } as React.CSSProperties}
     >
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        {props.size && props.size > 180 ? (
+        {size > 180 ? (
           <>
             <circle cx="52" cy="46" r="46" fill="rgb(86, 188, 108)" id="lower" />
             <circle cx="52" cy="46" r="46" fill="rgba(0, 0, 0, 0)" id="lower-tint" />

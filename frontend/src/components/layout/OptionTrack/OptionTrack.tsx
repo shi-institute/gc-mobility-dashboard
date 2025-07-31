@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { Children, isValidElement, useEffect, useRef } from 'react';
+import React, { Children, isValidElement, useEffect, useRef } from 'react';
 import { useRect } from '../../../hooks';
 import { OptionButton } from './OptionButton';
 
@@ -163,8 +163,9 @@ export function OptionTrack(props: OptionTrackProps) {
 
 const OptionTrackComponent = styled.div`
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
   align-items: flex-start;
   justify-content: space-between;
   height: 100%;
