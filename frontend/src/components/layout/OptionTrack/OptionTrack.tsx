@@ -156,7 +156,9 @@ export function OptionTrack(props: OptionTrackProps) {
         xmlns="http://www.w3.org/2000/svg"
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       />
+      <div className="connector-edge"></div>
       {eachChildNode.map((child) => child)}
+      <div className="connector-edge"></div>
     </OptionTrackComponent>
   );
 }
@@ -166,8 +168,24 @@ const OptionTrackComponent = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: auto;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   height: 100%;
   gap: 0.5rem;
+
+  .connector-edge {
+    width: 100px;
+
+    &:first-of-type {
+      position: relative;
+      top: -20px;
+      align-self: flex-start;
+    }
+
+    &:last-of-type {
+      position: relative;
+      bottom: -20px;
+      align-self: flex-end;
+    }
+  }
 `;
