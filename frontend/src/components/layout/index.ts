@@ -4,3 +4,4 @@ export {
   createCoreFrameContextValue,
   type CoreFrameContextValue,
 } from './CoreFrame/CoreFrameContext';
+export { OptionTrack } from './OptionTrack';
