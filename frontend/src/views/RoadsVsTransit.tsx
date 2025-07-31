@@ -41,7 +41,7 @@ function Comparison() {
   const containterRect = useRect(containerRef);
 
   const mode: 'row' | 'column' =
-    containterRect.height && containterRect.height < 980 ? 'column' : 'row';
+    containterRect.height && containterRect.height < 880 ? 'column' : 'row';
   const hideSmallButtons =
     (selectedIndex === null && mode === 'column') ||
     (containterRect.height && containterRect.height < 640);
