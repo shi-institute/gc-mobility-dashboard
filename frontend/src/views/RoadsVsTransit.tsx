@@ -22,7 +22,7 @@ export function RoadsVsTransit() {
 }
 
 function Comparison() {
-  const [selectedIndex, setSelectedIndex] = useState(1);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
   const transitioning = selectedIndex !== delayedSelectedIndex;
 
@@ -40,8 +40,12 @@ function Comparison() {
   const containerRef = useRef<HTMLDivElement>(null);
   const containterRect = useRect(containerRef);
 
-  const mode: 'row' | 'column' = containterRect.height < 980 ? 'column' : 'row';
-  const hideSmallButtons = containterRect.height < 640;
+  const mode: 'row' | 'column' =
+    containterRect.height && containterRect.height < 980 ? 'column' : 'row';
+  const hideSmallButtons =
+    (selectedIndex === null && mode === 'column') ||
+    (containterRect.height && containterRect.height < 640);
+  hideSmallButtons;
 
   return (
     <ComparisionContainer ref={containerRef}>
@@ -49,12 +53,26 @@ function Comparison() {
       <ComparisonComponent>
         <div className="background"></div>
 
+        <div
+          className="imagine-prose"
+          style={{ opacity: selectedIndex === null ? 1 : 0, transition: '120ms opacity' }}
+        >
+          <p>1 mile of road pavement costs around $1 Million -</p>
+          <p>What happens when this amount is spent on public transit instead?</p>
+        </div>
+
         <div className="bus-container"></div>
         <OptionTrack.Track
           mode={mode}
-          style={`${
-            mode === 'column' && !hideSmallButtons ? 'height: calc(100% - 100px); top: 100px;' : ''
-          }
+          style={`${(() => {
+            if (mode === 'column') {
+              if (hideSmallButtons) {
+                return 'height: calc(100% - 10px); top: 10px;';
+              }
+              return 'height: calc(100% - 120px); top: 120px;';
+            }
+            return '';
+          })()}
             
           ${
             hideSmallButtons
@@ -64,7 +82,6 @@ function Comparison() {
             }`
               : ''
           }
-            
           `}
         >
           <OptionTrack.Button
@@ -250,7 +267,8 @@ function Comparison() {
             const index = parseInt(value.split(' ')[1], 10) - 1;
             switchSelectedIndex(index);
           }}
-          value={`Scenario ${selectedIndex + 1}`}
+          value={selectedIndex !== null ? `Scenario ${selectedIndex + 1}` : ''}
+          placeholder="Imagine"
         ></SelectOne>
       </ComparisonComponent>
     </ComparisionContainer>
@@ -268,7 +286,7 @@ const ComparisionContainer = styled.div`
 
   .left-bar {
     width: 3rem;
-    background-color: hsl(96, 58%, 72%);
+    background-color: hsla(102, 63%, 60%, 0.75);
 
     flex-grow: 0;
     flex-shrink: 1;
@@ -291,7 +309,7 @@ const ComparisonComponent = styled.div`
   flex-shrink: 0;
 
   .background {
-    background-color: hsl(231, 90%, 79%);
+    background-color: hsla(229, 100%, 66%, 0.6);
     position: absolute;
     top: 0;
     right: 0;
@@ -311,8 +329,8 @@ const ComparisonComponent = styled.div`
     position: absolute;
     top: 20px;
     right: 20px;
-    height: 60px;
-    font-size: 1.4rem;
+    height: 80px;
+    font-size: 1.8rem;
     font-weight: 600;
     text-align: center;
     border-radius: 0;
@@ -326,6 +344,27 @@ const ComparisonComponent = styled.div`
     @container core (max-width: 899px) {
       left: 20px;
       width: unset;
+    }
+  }
+
+  .imagine-prose {
+    width: 320px;
+    position: absolute;
+    top: 100px;
+    right: 20px;
+
+    p:first-of-type {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+    }
+
+    p:last-of-type {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: hsl(83, 97%, 75%);
+      text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
     }
   }
 

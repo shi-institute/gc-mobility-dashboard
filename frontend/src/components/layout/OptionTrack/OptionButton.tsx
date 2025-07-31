@@ -51,9 +51,9 @@ export function OptionButton(props: OptionButtonProps) {
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         {size > 180 ? (
           <>
-            <circle cx="52" cy="46" r="46" fill="rgb(86, 188, 108)" id="lower" />
+            <circle cx="52" cy="46" r="46" fill="rgb(0, 191, 99)" id="lower" />
             <circle cx="52" cy="46" r="46" fill="rgba(0, 0, 0, 0)" id="lower-tint" />
-            <circle cx="48" cy="54" r="46" fill="rgba(172, 255, 99, 0.6)" id="upper" />
+            <circle cx="48" cy="54" r="46" fill="rgba(193, 255, 114, 0.57)" id="upper" />
             <circle cx="48" cy="54" r="46" fill="rgba(0, 0, 0, 0)" id="upper-tint" />
             <foreignObject id="overlap-area" x="6" y="8" width="88" height="84">
               <div
@@ -73,9 +73,9 @@ export function OptionButton(props: OptionButtonProps) {
           </>
         ) : (
           <>
-            <circle cx="56" cy="44" r="44" fill="rgb(86, 188, 108)" id="lower" />
+            <circle cx="56" cy="44" r="44" fill="rgb(0, 191, 99)" id="lower" />
             <circle cx="56" cy="44" r="44" fill="rgba(0, 0, 0, 0)" id="lower-tint" />
-            <circle cx="44" cy="56" r="44" fill="rgba(172, 255, 99, 0.6)" id="upper" />
+            <circle cx="44" cy="56" r="44" fill="rgba(193, 255, 114, 0.57)" id="upper" />
             <circle cx="44" cy="56" r="44" fill="rgba(0, 0, 0, 0)" id="upper-tint" />
             <foreignObject id="overlap-area" x="12" y="12" width="76" height="76">
               <div
