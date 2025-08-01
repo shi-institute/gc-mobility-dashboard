@@ -123,9 +123,126 @@ function Sections() {
       </SectionEntry>
     </Section>,
     <Section title="Rider Demographics">
-      <SectionEntry>
+      <SectionEntry
+        s={{ gridColumn: '1 / 3' }}
+        m={{ gridColumn: '1 / 4' }}
+        l={{ gridColumn: '1 / 5' }}
+      >
         <div>
           <div>Population by race and ethnicity</div>
+          <Statistic.Figure
+            options={(Plot, d3) => {
+              const raceMap: Record<string, string> = {
+                black_african_american: 'Black',
+                white: 'White',
+                asian: 'Asian',
+                other_race_alone: 'Other',
+                two_or_more_races: 'Two or more',
+              };
+
+              const plotData =
+                data
+                  ?.map((area) => ({
+                    __label: area.__label,
+                    ...(area.statistics?.synthetic_demographics.race || {}),
+                    // ...(area.statistics?.synthetic_demographics.ethnicity || {}),
+                  }))
+                  .flatMap(({ __label, ...rest }) => {
+                    const totalSyntheticPopulation =
+                      Object.values(rest).reduce((sum, value) => sum + (value || 0), 0) || 0;
+
+                    return Object.entries(rest).map(([key, value]) => ({
+                      areaSeason: __label,
+                      group: raceMap[key] || key,
+                      syntheticPopulation: value,
+                      fractionSyntheticPopulation: (value || 0) / totalSyntheticPopulation,
+                    }));
+                  })
+                  .filter(notEmpty) || [];
+
+              const raceDomain = Object.values(raceMap);
+
+              console.log(plotData);
+
+              // return null;
+              return {
+                color: {
+                  legend: true,
+                  domain: raceDomain,
+                },
+                fy: {
+                  // hide area/season axis label
+                  label: null,
+                  // gap between each facet
+                  padding: 0.3,
+                },
+                y: {
+                  label: 'Race',
+                  // hide the axis - the legend will suffice
+                  axis: null,
+                  domain: raceDomain,
+                },
+                x: {
+                  label: 'Percent of race',
+                  tickFormat: d3.format('.0%'),
+                  domain: [0, 0.8],
+                  grid: true,
+                  tickSpacing: 50,
+                },
+                marginLeft: 0,
+                marginTop: 20,
+                marks: [
+                  Plot.barX(plotData, {
+                    x: 'fractionSyntheticPopulation',
+                    y: 'group',
+                    fy: 'areaSeason',
+                    fill: 'group',
+                    title: (d) => d.areaSeason,
+                    sort: { x: 'y' },
+                    strokeWidth: 20,
+                  }),
+
+                  // line at the start of the bars
+                  Plot.ruleX([0]),
+
+                  // bar labels
+                  Plot.text(plotData, {
+                    x: 'fractionSyntheticPopulation',
+                    y: 'group',
+                    fy: 'areaSeason',
+                    text: (d) => {
+                      const showPercent = d.fractionSyntheticPopulation > 0.05;
+
+                      return showPercent
+                        ? `${d3.format('.0%')(d.fractionSyntheticPopulation)}`
+                        : '';
+                    },
+                    dx: -6,
+                    textAnchor: 'end',
+                    fill: 'white',
+                    stroke: 'black',
+                    strokeOpacity: 0.14,
+                  }),
+
+                  // place area/season labels at the top of each group of bars
+                  Plot.text(
+                    plotData.map((d) => d.areaSeason),
+                    {
+                      x: 0,
+                      fy: (d) => d,
+                      frameAnchor: 'top',
+                      textAnchor: 'start',
+                      text: (d) => d,
+                      dy: -20,
+                      dx: 0,
+                      fontWeight: 400,
+                      fontSize: 14,
+                    }
+                  ),
+                ],
+              };
+            }}
+          />
           <pre>
             {JSON.stringify(
               data
