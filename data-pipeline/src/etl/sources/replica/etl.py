@@ -1252,7 +1252,7 @@ class ReplicaETL:
 
         return inferred_schema_df
 
-    def _save(self, gdf: geopandas.GeoDataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json', 'geojson'] | list[Literal['geoparquet', 'json', 'geojson']]) -> None:
+    def _save(self, gdf: geopandas.GeoDataFrame | pandas.DataFrame, area_name: str, full_table_name: str, table_alias: str, format: Literal['geoparquet', 'json', 'geojson'] | list[Literal['geoparquet', 'json', 'geojson']], log_prefix: str = '') -> None:
         # if format is a list, call this function for each format in the list
         if isinstance(format, list):
             for fmt in format:
@@ -1275,17 +1275,24 @@ class ReplicaETL:
         )
         os.makedirs(output_folder, exist_ok=True)
 
+        # require geodataframe for goeparquet and geojson formats
+        if format in ['geoparquet', 'geojson'] and not isinstance(gdf, geopandas.GeoDataFrame):
+            raise ValueError(
+                f"Expected a GeoDataFrame for format '{format}', but got {type(gdf)}. "
+                "Please convert the DataFrame to a GeoDataFrame before saving."
+            )
+
         # save to file
         output_path = os.path.join(output_folder, output_name)
-        if format == 'geoparquet':
+        if format == 'geoparquet' and isinstance(gdf, geopandas.GeoDataFrame):
             has_bbox_column = 'bbox' in gdf.columns
             gdf.to_parquet(output_path + '.parquet',
                            write_covering_bbox=not has_bbox_column, geometry_encoding='WKB', schema_version='1.1.0', compression=None)
-            print(f'Saved results to {output_path}.parquet')
-        if format == 'geojson':
+            logger.info(f'{log_prefix}Saved results to {output_path}.parquet')
+        if format == 'geojson' and isinstance(gdf, geopandas.GeoDataFrame):
             gdf.to_crs('EPSG:4326').to_file(output_path + '.geojson', driver='GeoJSON')
-            print(f'Saved results to {output_path}.parquet')
+            logger.info(f'{log_prefix}Saved results to {output_path}.parquet')
         if format == 'json':
             df = pandas.DataFrame(gdf.drop(columns='geometry', errors='ignore'))
             df.to_json(output_path + '.json', orient='records', indent=2)
-            print(f'Saved results to {output_path}.json')
+            logger.info(f'{log_prefix}Saved results to {output_path}.json')
