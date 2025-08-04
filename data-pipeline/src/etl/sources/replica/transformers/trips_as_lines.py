@@ -9,7 +9,7 @@ import pandas
 from shapely.geometry import LineString, MultiLineString
 from tqdm import tqdm
 
-logger = getLogger('replica')
+logger = getLogger('trips_as_lines')
 logger.setLevel(logging.INFO)
 
 
