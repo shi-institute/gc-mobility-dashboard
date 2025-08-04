@@ -29,9 +29,12 @@ from etl.sources.replica.transformers.to_vector_tiles import to_vector_tiles
 from etl.sources.replica.transformers.trips_as_lines import (
     create_network_segments_lookup, trips_as_lines)
 
-logger = logging.getLogger('pandas_gbq')
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+gbq_logger = logging.getLogger('pandas_gbq')
+gbq_logger.setLevel(logging.INFO)
+gbq_logger.addHandler(logging.StreamHandler())
+
+logger = logging.getLogger('replica_etl')
+logger.setLevel(logging.DEBUG)
 
 
 class ReplicaETL:
@@ -978,7 +981,7 @@ class ReplicaETL:
         # and collect the results in result_dfs
         result_ldfs: list[polars.LazyFrame] = []
         chunk_paths: list[str] = []
-        logger.setLevel(logging.WARNING)
+        gbq_logger.setLevel(logging.WARNING)
 
         def process_query(query: str, index: int, num_queries: int) -> None:
             """Process a single query and collect the results in the external result_dfs list.
@@ -1070,7 +1073,7 @@ class ReplicaETL:
                 future = executor.submit(process_query, query, index, len(queries))
                 future.add_done_callback(handle_query_error)
                 futures.append(future)
-        logger.setLevel(logging.INFO)
+        gbq_logger.setLevel(logging.INFO)
 
         # wait for all futures to finish
         executor.shutdown(wait=True)
