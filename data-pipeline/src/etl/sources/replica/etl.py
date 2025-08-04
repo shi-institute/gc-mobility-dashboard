@@ -19,6 +19,7 @@ import polars
 import shapely
 import shapely.wkt
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from etl.sources.replica.readers.partitions_to_gdf import partitions_to_gdf
 from etl.sources.replica.transformers.as_points import as_points
@@ -578,12 +579,13 @@ class ReplicaETL:
                 segments_query = f'''
                 SELECT stableEdgeId, streetName, geometry, osmid FROM {full_table_path};
                 '''
-                segments_df = pandas_gbq.read_gbq(
-                    segments_query,
-                    project_id=self.project_id,
-                    dialect='standard',
-                    use_bqstorage_api=self.use_bqstorage_api
-                )
+                with logging_redirect_tqdm():
+                    segments_df = pandas_gbq.read_gbq(
+                        segments_query,
+                        project_id=self.project_id,
+                        dialect='standard',
+                        use_bqstorage_api=self.use_bqstorage_api
+                    )
 
                 if segments_df is None:
                     segments_df = pandas.DataFrame()
@@ -669,12 +671,13 @@ class ReplicaETL:
                     ST_COVERS(query_geometry, ST_GEOGPOINT(pop.lng, pop.lat))
             );
             '''
-            population_df = pandas_gbq.read_gbq(
-                pop_query,
-                project_id=self.project_id,
-                dialect='standard',
-                use_bqstorage_api=self.use_bqstorage_api
-            )
+            with logging_redirect_tqdm():
+                population_df = pandas_gbq.read_gbq(
+                    pop_query,
+                    project_id=self.project_id,
+                    dialect='standard',
+                    use_bqstorage_api=self.use_bqstorage_api
+                )
             if population_df is None:
                 population_df = pandas.DataFrame()
             result_dfs.append(population_df)
@@ -786,7 +789,7 @@ class ReplicaETL:
                 desc=f'Forming trip lines for {table_name}',
                 unit="features"
             )
-            with ThreadPoolExecutor(max_workers=1) as executor:
+            with logging_redirect_tqdm(), ThreadPoolExecutor(max_workers=1) as executor:
                 futures: list[Future[None]] = []
 
                 for chunk_index, delayed_partition in enumerate(table_partitions):
@@ -1008,12 +1011,13 @@ class ReplicaETL:
                     return
 
                 # otherwise, download the data from BigQuery
-                df = pandas_gbq.read_gbq(
-                    query,
-                    project_id=self.project_id,
-                    dialect='standard',
-                    use_bqstorage_api=self.use_bqstorage_api
-                )
+                with logging_redirect_tqdm():
+                    df = pandas_gbq.read_gbq(
+                        query,
+                        project_id=self.project_id,
+                        dialect='standard',
+                        use_bqstorage_api=self.use_bqstorage_api
+                    )
                 if df is None:
                     df = pandas.DataFrame()
 
@@ -1098,8 +1102,9 @@ class ReplicaETL:
         FROM
         `replica-customer.south_atlantic.INFORMATION_SCHEMA.TABLES`;
         '''
-        result = pandas_gbq.read_gbq(
-            query, project_id=self.project_id, dialect='standard', progress_bar_type='None')
+        with logging_redirect_tqdm():
+            result = pandas_gbq.read_gbq(
+                query, project_id=self.project_id, dialect='standard', progress_bar_type='None')
 
         if result is None or result.empty:
             raise ValueError("No tables found in the replica dataset schema.")
