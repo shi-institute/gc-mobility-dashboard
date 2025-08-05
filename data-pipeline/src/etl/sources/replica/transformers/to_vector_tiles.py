@@ -2,12 +2,12 @@ import json
 import os
 import shutil
 import subprocess
-from typing import Any
+from typing import Any, Generator
 
 import geopandas
 
 
-def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, output_folder: str, zoomLevel: int = -1) -> None:
+def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, output_folder: str, zoomLevel: int = -1) -> Generator[float, None, None]:
     """Converts a GeoDataFrame of lines to vector tiles using tippecanoe.
 
     This function saves the GeoDataFrame to a GeoJSON file, then uses tippecanoe
@@ -44,19 +44,47 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, out
     gdf.to_crs('EPSG:3857').to_file(temp_geojson_path, driver='GeoJSON')
 
     # generate vector tiles using tippecanoe - see https://github.com/felt/tippecanoe
-    subprocess.run(
-        [
-            'tippecanoe',
-            f'-z{zoomLevel}' if zoomLevel >= 0 and zoomLevel <= 22 else 'g',
-            '--output-to-directory', output_folder,
-            '--force',
-            '--name', name,
-            '--projection', 'EPSG:3857',
-            '--no-tile-compression',
-            temp_geojson_path
-        ],
-        check=True
-    )
+    command = [
+        'tippecanoe',
+        f'-z{zoomLevel}' if zoomLevel >= 0 and zoomLevel <= 22 else 'g',
+        '--output-to-directory', output_folder,
+        '--force',
+        '--name', name,
+        '--projection', 'EPSG:3857',
+        '--no-tile-compression',
+        # dynamically drop features at a zoom level if a tile at that zoom level is too large (> 500 KB)
+        '--drop-fraction-as-needed',
+        '--json-progress',
+        temp_geojson_path
+    ]
+
+    process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, text=True)
+
+    if process.stdout is None:
+        raise RuntimeError(
+            "Failed to start tippecanoe process. Check if tippecanoe is installed and available in PATH.")
+
+    # intercept the progress and share it with the parent
+    for line in iter(process.stdout.readline, ""):
+        try:
+            data = json.loads(line)
+            if "progress" in data:
+                progress_percent = data["progress"]
+                yield progress_percent
+
+        except json.JSONDecodeError:
+            # ignore lines that are not valid JSON
+            pass
+
+        except Exception as e:
+            print(f"\nError processing line: {e}")
+
+    process.stdout.close()
+
+    return_code = process.wait()
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, command)
 
     # generate vector tile server and style json files
     vt_index = create_vector_tile_server_index(name)
