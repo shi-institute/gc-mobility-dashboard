@@ -440,7 +440,7 @@ class ReplicaETL:
             def save_geodataframe(trips_gdf: geopandas.GeoDataFrame, output_path: str) -> None:
                 has_bbox_column = 'bbox' in gdf.columns
                 trips_gdf.to_parquet(output_path, write_covering_bbox=not has_bbox_column,
-                                     geometry_encoding='WKB', schema_version='1.1.0', compression=None)
+                                     geometry_encoding='WKB', schema_version='1.1.0', compression='snappy')
                 # tqdm.write(f'  Saved chunk to {output_path}')
 
             print(f'Forming trip lines for {table_name}...')
@@ -694,7 +694,7 @@ class ReplicaETL:
                 pandas.DataFrame.to_parquet(
                     df,
                     os.path.join(download_cache_filepath),
-                    compression=None  # reduces memory use: no need to compress and uncompress this chunk
+                    compression='snappy'
                 )
 
                 # once the data is saved, write an empty .success file with the same name
@@ -949,7 +949,7 @@ class ReplicaETL:
         if format == 'geoparquet' and isinstance(gdf, geopandas.GeoDataFrame):
             has_bbox_column = 'bbox' in gdf.columns
             gdf.to_parquet(output_path + '.parquet',
-                           write_covering_bbox=not has_bbox_column, geometry_encoding='WKB', schema_version='1.1.0', compression=None)
+                           write_covering_bbox=not has_bbox_column, geometry_encoding='WKB', schema_version='1.1.0', compression='snappy')
             logger.info(f'{log_prefix}Saved results to {output_path}.parquet')
         if format == 'geojson' and isinstance(gdf, geopandas.GeoDataFrame):
             gdf.to_crs('EPSG:4326').to_file(output_path + '.geojson', driver='GeoJSON')
