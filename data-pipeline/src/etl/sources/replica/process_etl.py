@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import gc
+import itertools
 import json
 import logging
+import multiprocessing
 import os
 import shutil
 import time
+from multiprocessing.managers import DictProxy, ValueProxy
 from pathlib import Path
-from pprint import pprint
 from typing import Any, Literal, TypedDict, cast
 
 import dask_geopandas
@@ -19,9 +22,17 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 from etl.sources.replica.etl import ReplicaETL
 from etl.sources.replica.readers.partitions_to_gdf import partitions_to_gdf
 from etl.sources.replica.transformers.as_points import as_points
+from etl.sources.replica.transformers.count_segment_frequency import \
+    count_segment_frequency
+from etl.sources.replica.transformers.to_vector_tiles import to_vector_tiles
 
 logger = logging.getLogger('replica_process_etl')
 logger.setLevel(logging.DEBUG)
+
+pyogrio_logger = logging.getLogger('pyogrio._io')
+pyogrio_logger.setLevel(logging.WARNING)
+
+replica_logger = logging.getLogger('replica_etl')
 
 
 class Season(TypedDict):
@@ -55,18 +66,26 @@ class ReplicaProcessETL:
 
         area_geojson_paths = [Path(path) for path in area_geojson_paths]
         area_names = [os.path.splitext(path.name)[0] for path in area_geojson_paths]
-        self.areas = list(zip(area_geojson_paths, area_names))
+        self.areas = list(zip(area_geojson_paths, area_names))[5:6]
 
     def process(self):
         statistics = {}
 
         start_time = time.time()
-        [count, population_stats] = self.process_population()
-        statistics['synthetic_demographics'] = population_stats
+        shared_count = multiprocessing.Manager().Value('i', 0)
+        shared_stats = multiprocessing.Manager().dict()
+        process = multiprocessing.Process(
+            target=self.mp__process_population,
+            args=(shared_count, shared_stats)
+        )
+        process.start()
+        process.join()
+        statistics['synthetic_demographics'] = shared_stats.copy()
         elapsed_time = time.time() - start_time
         formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
         logger.info('')
-        logger.info(f'Population data processed for {count} season-areas in {formatted_time}.')
+        logger.info(
+            f'Population data processed for {shared_count.value} season-areas in {formatted_time}.')
         logger.info('')
 
         start_time = time.time()
@@ -107,6 +126,34 @@ class ReplicaProcessETL:
                 os.makedirs(os.path.dirname(statistics_path), exist_ok=True)
                 with open(statistics_path, 'w') as file:
                     json.dump(area_stats, file,)
+
+        start_time = time.time()
+        self.build_network_segments(['saturday', 'thursday'])
+        elapsed_time = time.time() - start_time
+        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+        logger.info('')
+        logger.info(f'Network segments built in {formatted_time}.')
+        logger.info('')
+
+        # discard the chunks since we no longer need them
+        season_areas_days = list(itertools.product(
+            self.seasons, [area_name for _, area_name in self.areas], ['saturday', 'thursday']))
+        for _season, area_name, day in season_areas_days:
+            region = _season['region']
+            year = _season['year']
+            quarter = _season['quarter']
+
+            area_trips_chunks_path = self.output_folder / \
+                area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
+
+            logger.info(
+                f'Discarding trips chunks for {area_name} ({year} {quarter} {day})...')
+            shutil.rmtree(area_trips_chunks_path, ignore_errors=True)
+
+    def mp__process_population(self, shared_count: ValueProxy[int], shared_stats: DictProxy[str, Any]) -> None:
+        [count, population_stats] = self.process_population()
+        shared_count.value += count
+        shared_stats.update(population_stats.items())
 
     def filter_intersected(self, gdf_or_partitions_path: geopandas.GeoDataFrame | str, gdf_union: BaseGeometry) -> geopandas.GeoDataFrame:
         """Filter an input GeoDataFrame or folder of GeoDataFrame partitions to only include geometries that intersect with the gdf."""
@@ -361,33 +408,43 @@ class ReplicaProcessETL:
                     partitions_slice = partitioned_all_trips_dgdf.partitions[start:end]
 
                     for [area_geojson_path, area_name] in self.areas:
-                        logger.info(f'    Processing area: {area_name}')
 
-                        # open the geojson file
-                        logger.debug(f'      Reading area GeoJSON: {area_geojson_path.as_posix()}')
-                        gdf = geopandas.read_file(area_geojson_path).to_crs(epsg=4326)
-                        logger.debug(
-                            f'      Area GeoDataFrame has {gdf.shape[0]} rows and {gdf.shape[1]} columns.')
-                        logger.debug(f'        Area GeoDataFrame CRS: {gdf.crs}')
-                        logger.debug(f'        Creating union of area geometries for filtering.')
-                        gdf_union = gdf.geometry.union_all()
+                        def process_area():
+                            logger.info(f'    Processing area: {area_name}')
 
-                        # filter the partition for the current area
-                        logger.info(f'      Filtering partition for {area_name}...')
-                        filtered_partition_gdf = partitions_slice[partitions_slice.intersects(
-                            gdf_union)].compute()
+                            # open the geojson file
+                            logger.debug(
+                                f'      Reading area GeoJSON: {area_geojson_path.as_posix()}')
+                            gdf = geopandas.read_file(area_geojson_path).to_crs(epsg=4326)
+                            logger.debug(
+                                f'      Area GeoDataFrame has {gdf.shape[0]} rows and {gdf.shape[1]} columns.')
+                            logger.debug(f'        Area GeoDataFrame CRS: {gdf.crs}')
+                            logger.debug(
+                                f'        Creating union of area geometries for filtering.')
+                            gdf_union = gdf.geometry.union_all()
 
-                        # save the filtered partition to a file
-                        logger.info(f'      Saving filtered partition for {area_name}...')
-                        self.parent._save(
-                            filtered_partition_gdf,
-                            area_name,
-                            f'{region}_{year}_{quarter}__chunk_{output_chunk_index + 1}',
-                            f'{day}_trip/{region}_{year}_{quarter}/_chunks',
-                            'geoparquet',
-                            '        '
-                        )
+                            # filter the partition for the current area
+                            logger.info(f'      Filtering partition for {area_name}...')
+                            filtered_partition_gdf = partitions_slice[partitions_slice.intersects(
+                                gdf_union)].compute()
+
+                            # save the filtered partition to a file
+                            logger.info(f'      Saving filtered partition for {area_name}...')
+                            self.parent._save(
+                                filtered_partition_gdf,
+                                area_name,
+                                f'{region}_{year}_{quarter}__chunk_{output_chunk_index + 1}',
+                                f'{day}_trip/{region}_{year}_{quarter}/_chunks',
+                                'geoparquet',
+                                '        '
+                            )
+
+                        process = multiprocessing.Process(target=process_area)
+                        process.start()
+                        process.join()
+
                         bar.update(1)
+
                 bar.close()
 
             # calculate statistics for each area
@@ -442,29 +499,153 @@ class ReplicaProcessETL:
                         all_statistics[season_str][area_name] = {}
                     all_statistics[season_str][area_name][day + '_trip'] = statistics
 
-                    # save the trips GeoDataFrame to a file
-                    logger.info(f'    Saving trips data for {area_name}...')
-                    self.parent._save(
-                        trips_gdf,
-                        area_name,
-                        f'{region}_{year}_{quarter}',
-                        f'{day}_trip',
-                        'geoparquet',
-                        '      ',
-                    )
+                    # TODO: do this with a non-column-filtered version of the trips_gdf
+                    # # save the trips GeoDataFrame to a file
+                    # # since we have already had to compute it
+                    # logger.info(f'    Saving trips data for {area_name}...')
+                    # self.parent._save(
+                    #     trips_gdf,
+                    #     area_name,
+                    #     f'{region}_{year}_{quarter}',
+                    #     f'{day}_trip',
+                    #     'geoparquet',
+                    #     '      ',
+                    # )
 
                     processed_count += 1
                     del trips_gdf
-
-                    # discard the chunks since we no longer need them
-                    logger.debug(f'    Discarding area trips chunks...')
-                    shutil.rmtree(area_trips_chunks_path, ignore_errors=True)
+                    del area_trips_chunks_dgdf
+                    gc.collect()
 
             del walk_gdf
             del bike_gdf
+            gc.collect()
 
         # return the statistics for all areas in this season so that we can access them later
         return (processed_count, all_statistics)
+
+    def build_network_segments(self, days: list[Literal['saturday', 'thursday']]) -> None:
+        # build network segments for each area
+        season_areas_days = list(itertools.product(
+            self.seasons, [area_name for _, area_name in self.areas], days))
+        travel_modes = ['', 'biking', 'carpool', 'commercial', 'on_demand_auto',
+                        'other_travel_mode', 'private_auto', 'public_transit', 'walking']
+        bar = tqdm.tqdm(desc=f'Building network segments', unit='mode',
+                        total=len(season_areas_days) * len(travel_modes), position=1)
+
+        with logging_redirect_tqdm():
+            for season, area_name, day in season_areas_days:
+                region = season['region']
+                year = season['year']
+                quarter = season['quarter']
+
+                logger.info(
+                    f'Building network segments for {area_name} ({year} {quarter} {day})...')
+
+                logger.info('  Reading trips chunks...')
+                area_trips_chunks_path = self.output_folder / \
+                    area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
+                logger.debug(f'    Area trips chunks path: {area_trips_chunks_path}')
+                area_trips_chunks_dgdf = cast(dask_geopandas.GeoDataFrame,
+                                              dask_geopandas.read_parquet(area_trips_chunks_path, columns=['tour_type', 'mode', 'geometry']))
+                logger.debug(
+                    f'    Area trips chunks GeoDataFrame has {area_trips_chunks_dgdf.shape[0]} rows and {area_trips_chunks_dgdf.shape[1]} columns.')
+                logger.debug(
+                    f'    Area trips chunks GeoDataFrame CRS: {area_trips_chunks_dgdf.crs.name}')
+                logger.info(f'  Computing area trips chunks GeoDataFrame...')
+                # TODO: repartion and then process in chunks instead of computing (combined file size is still many gigabytes)
+                trips_gdf = area_trips_chunks_dgdf.compute()
+
+                # create a fake activity_id column, which is required for counting segment frequencies
+                logger.debug('  Creating fake activity_id column...')
+                trips_gdf = trips_gdf.reset_index(drop=True)
+                trips_gdf['activity_id'] = trips_gdf.index.astype(int)
+
+                # count segments and generate vector tiles for each travel mode
+                logger.info(f'  Building network segments...')
+                total_segment_exports = len(travel_modes)
+                current_segment_export = 0
+
+                for travel_mode in travel_modes:
+                    current_segment_export += 1
+
+                    if travel_mode == '':
+                        logger.info(
+                            f'    ...building {day} network segments [{current_segment_export}/{total_segment_exports}]')
+
+                        full_table_name = f'{region}_{year}_{quarter}__{day}'
+
+                        gdf = count_segment_frequency(trips_gdf)
+
+                    else:
+                        logger.info(
+                            f'    ...building {day} network segments (commute:{travel_mode}) [{current_segment_export}/{total_segment_exports}]'
+                        )
+
+                        full_table_name = f'{region}_{year}_{quarter}__{day}__travel_mode__{travel_mode}'
+
+                        filter = (trips_gdf['mode'] == travel_mode.upper())\
+                            & (trips_gdf['tour_type'] == 'COMMUTE')
+                        gdf = count_segment_frequency(
+                            trips_gdf[filter]
+                        )
+
+                        del filter
+
+                    logger.debug(
+                        f'       ...saving')
+                    original_logger_level = replica_logger.getEffectiveLevel()
+                    replica_logger.setLevel(logging.WARNING)
+                    self.parent._save(
+                        gdf,
+                        area_name,
+                        full_table_name,
+                        'network_segments',
+                        ['geoparquet'],
+                    )
+                    replica_logger.setLevel(original_logger_level)
+
+                    # try to generate tiles for the network segments
+                    logger.info(f'       ...generating tiles')
+                    tile_folder_path = self.output_folder / area_name / 'network_segments' / full_table_name
+                    try:
+
+                        tile_bar = tqdm.tqdm(
+                            desc=f'Generating tiles for {area_name} ({quarter} {year}) {f'(commute:{travel_mode})' if travel_mode else ''}',
+                            unit='%',
+                            total=100,
+                            leave=False,
+                            position=0,  # show above the other bar
+                        )
+                        for current_percent_complete in to_vector_tiles(
+                                gdf, f'Network Segments ({area_name}) ({quarter} {year})', full_table_name, tile_folder_path.as_posix(), 14):
+                            tile_bar.update(current_percent_complete - tile_bar.n)
+                        tile_bar.close()
+
+                        # zip (no compression) the tiles folder
+                        zip_filename = f'{tile_folder_path}.vectortiles'
+                        if os.path.exists(zip_filename):
+                            os.remove(zip_filename)
+
+                        os.system(
+                            f'cd "{tile_folder_path}" && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
+
+                    except Exception:
+                        # this will happen if the geojson file is empty
+                        continue
+
+                    finally:
+                        # remove the tiles folder
+                        shutil.rmtree(tile_folder_path)
+
+                        # increment the progress bar
+                        bar.update(1)
+
+                    del gdf
+
+                del trips_gdf
+
+        bar.close()
 
 
 def count_trip_travel_methods(trips_gdf: geopandas.GeoDataFrame) -> dict[str, int]:
