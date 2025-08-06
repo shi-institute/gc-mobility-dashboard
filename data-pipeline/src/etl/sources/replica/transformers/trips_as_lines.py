@@ -1,15 +1,15 @@
 import gc
 import logging
-import sys
 from datetime import datetime
 from logging import getLogger
+from typing import Optional
 
 import geopandas
 import pandas
 from shapely.geometry import LineString, MultiLineString
 from tqdm import tqdm
 
-logger = getLogger('replica')
+logger = getLogger('trips_as_lines')
 logger.setLevel(logging.INFO)
 
 
@@ -33,7 +33,7 @@ def create_network_segments_lookup(network_segments_gdf: geopandas.GeoDataFrame)
     return segment_lookup
 
 
-def trips_as_lines(trips_df: pandas.DataFrame, network_segments_lookup: dict[str, LineString] | geopandas.GeoDataFrame, crs: str = 'EPSG:4326') -> geopandas.GeoDataFrame:
+def trips_as_lines(trips_df: pandas.DataFrame, network_segments_lookup: dict[str, LineString] | geopandas.GeoDataFrame, crs: str = 'EPSG:4326', bar: Optional[tqdm] = None) -> geopandas.GeoDataFrame:
     """
     Convert trips to lines by joining trip points with network segments.
 
@@ -58,7 +58,11 @@ def trips_as_lines(trips_df: pandas.DataFrame, network_segments_lookup: dict[str
         geopandas.GeoDataFrame: GeoDataFrame with trips as lines.
     """
 
-    tqdm.pandas(file=sys.stdout)
+    # if the consumer of this function does not provide a progress bar, create one
+    should_close_bar_when_done = False
+    if bar is None:
+        bar = tqdm(total=len(trips_df), desc='Processing trips', unit='trip')
+        should_close_bar_when_done = True
 
     if 'geometry' in trips_df.columns:
         logger.warning(
@@ -144,6 +148,9 @@ def trips_as_lines(trips_df: pandas.DataFrame, network_segments_lookup: dict[str
             # converting to bytes instead of keeping as a shapely MultiLineString is slower but way less memory intensive
             found_segments_wkb = MultiLineString(found_segments).wkb
 
+        # increment the progress bar
+        bar.update(1)
+
         # convert the ordered segments into a multilinestring indicating the line geometries as a single multilinestring
         if found_segments:
             return (found_segments_wkb, missing_links_str)
@@ -154,8 +161,8 @@ def trips_as_lines(trips_df: pandas.DataFrame, network_segments_lookup: dict[str
 
     # Apply the function to each row and unpack the results into new columns
     # expand: create a new DataFrame with the results for each row
-    apply_results: pandas.DataFrame = trips_df.progress_apply(
-        get_matching_segments, axis=1, result_type='expand')  # type: ignore
+    apply_results = trips_df.apply(
+        get_matching_segments, axis=1, result_type='expand')
     geometry_wkb: pandas.Series[bytes | None] = apply_results[0]  # type: ignore
     missing_network_link_ids: pandas.Series[str | None] = apply_results[1]  # type: ignore
 
@@ -173,6 +180,10 @@ def trips_as_lines(trips_df: pandas.DataFrame, network_segments_lookup: dict[str
     del geometry_wkb
     del missing_network_link_ids
     gc.collect()
+
+    # if the bar was created in this function, close it
+    if should_close_bar_when_done:
+        bar.close()
 
     # filter out null geometries before returning the new GeoDataFrame
     return gdf

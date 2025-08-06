@@ -13,3 +13,5 @@ dependencies:
   - conda-forge::libgdal-arrow-parquet
   - conda-forge::polars=1.31
   - conda-forge::geographiclib=2.0
+  - conda-forge::dask=2025.7.0
+  - conda-forge::dask-geopandas=0.5.0

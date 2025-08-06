@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import sys
 import time
@@ -9,6 +10,10 @@ import pydata_google_auth
 from dotenv import load_dotenv
 
 from etl.runner import etl_runner
+from TeeLogger import TeeLogger
+
+pyogrio_logger = logging.getLogger('pyogrio._io')
+pyogrio_logger.setLevel(logging.WARNING)
 
 if __name__ == "__main__":
     # check if the script is running in docker
@@ -44,6 +49,24 @@ if __name__ == "__main__":
         else:
             print("Exiting the data pipeline.")
             exit(0)
+
+    # redirect stdout to both terminal and log file
+    log_folder_path = './data/logs/'
+    if not os.path.exists(log_folder_path):
+        os.makedirs(log_folder_path)
+    current_log_file_count = len([name for name in os.listdir(
+        log_folder_path) if os.path.isfile(os.path.join(log_folder_path, name))])
+    log_file_path = os.path.join(log_folder_path, f'pipeline-{current_log_file_count}.log')
+    sys.stdout = TeeLogger(log_file_path)
+    sys.stderr = sys.stdout  # redirect stderr to the same logger
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s | %(name)-24s | %(levelname)-5s | %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stderr),
+        ]
+    )
 
     # if etls argument is provided, split it into a list of strings
     etls: Optional[list[str]] = None
