@@ -4,6 +4,7 @@ import gc
 import itertools
 import json
 import logging
+import math
 import multiprocessing
 import os
 import shutil
@@ -12,10 +13,12 @@ from multiprocessing.managers import DictProxy, ValueProxy
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
+import dask.dataframe
 import dask_geopandas
 import geopandas
 import pandas
 import tqdm
+from pyproj import CRS
 from shapely.geometry.base import BaseGeometry
 from tqdm.contrib.logging import logging_redirect_tqdm
 
@@ -61,6 +64,11 @@ class ReplicaProcessETL:
     def __init__(self, parent: ReplicaETL, seasons: list[Season], area_geojson_paths: list[str] | list[Path], input_file_path_templates: InputFilePathTemplates):
         self.parent = parent
         self.seasons = seasons
+        self.seasons = [{
+            'region': 'south_atlantic',
+            'year': 2024,
+            'quarter': 'Q2',
+        }]
         self.output_folder = Path(self.parent.folder_path)
         self.input_files = input_file_path_templates
 
@@ -386,6 +394,11 @@ class ReplicaProcessETL:
             logger.debug(f'    Trip partitions path: {trip_partitions_folder_path}')
             partitioned_all_trips_dgdf = cast(dask_geopandas.GeoDataFrame,
                                               dask_geopandas.read_parquet(trip_partitions_folder_path))
+            trips_crs: CRS | None = partitioned_all_trips_dgdf.crs
+
+            if trips_crs is None:
+                logger.warning(f'No CRS found for trip partitions. Setting to EPSG:4326.')
+                trips_crs = CRS.from_epsg(4326)
 
             # open each chunk and filter it for each area
             # and save the filtered chunks to a file
@@ -393,12 +406,12 @@ class ReplicaProcessETL:
             logger.info(f'  Filtering full area chunks for each area...')
             with logging_redirect_tqdm():
                 chunk_size = 10
-                to_filter_count = int((partitioned_all_trips_dgdf.npartitions /
-                                       chunk_size) * len(self.areas))
+                to_filter_count = math.ceil(
+                    partitioned_all_trips_dgdf.npartitions / chunk_size) * len(self.areas)
                 bar = tqdm.tqdm(
                     desc=f'Filtering chunks ({year} {quarter} {day})', total=to_filter_count, unit='filter')
                 for index in range(0, partitioned_all_trips_dgdf.npartitions, chunk_size):
-                    output_chunk_index = int(index / chunk_size)
+                    output_chunk_index = int(index / chunk_size)  # starts at 1
 
                     # select a slice of partitions
                     start = index
@@ -449,7 +462,7 @@ class ReplicaProcessETL:
 
             # calculate statistics for each area
             with logging_redirect_tqdm():
-                for [area_geojson_path, area_name] in tqdm.tqdm(self.areas, desc=f'Calculating {day} trip statistics ({year} {quarter} {day})', unit='area'):
+                for [area_geojson_path, area_name] in tqdm.tqdm(self.areas, desc=f'Calculating {day} trip statistics ({year} {quarter} {day})', unit='area', position=1):
                     logger.info(f'  Calculating statistics for {area_name}...')
                     statistics: dict[Any, Any] = {
                         'methods': {},
@@ -458,37 +471,47 @@ class ReplicaProcessETL:
                         'destination_building_use': {}
                     }
 
-                    logger.info('    Reading areas trips chunks...')
+                    logger.debug('    Reading areas trips chunks...')
                     area_trips_chunks_path = self.output_folder / \
                         area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
                     logger.debug(f'      Area trips chunks path: {area_trips_chunks_path}')
+                    area_trips_chunks_ddf = cast(dask.dataframe.DataFrame,
+                                                 dask.dataframe.read_parquet(area_trips_chunks_path, columns=['tour_type', 'mode', 'duration_minutes', 'destination_building_use_l1', 'destination_building_use_l2', 'end_lng', 'end_lat']))
                     area_trips_chunks_dgdf = cast(dask_geopandas.GeoDataFrame,
-                                                  dask_geopandas.read_parquet(area_trips_chunks_path, columns=['tour_type', 'mode', 'duration_minutes', 'destination_building_use_l1', 'destination_building_use_l2', 'end_lng', 'end_lat', 'geometry']))
-                    logger.debug(
-                        f'      Area trips chunks GeoDataFrame has {area_trips_chunks_dgdf.shape[0]} rows and {area_trips_chunks_dgdf.shape[1]} columns.')
-                    logger.debug(
-                        f'      Area trips chunks GeoDataFrame CRS: {area_trips_chunks_dgdf.crs.name}')
-                    logger.info(f'  Computing area trips chunks GeoDataFrame...')
-                    # TODO: repartion and then process in chunks instead of computing (combined file size is still many gigabytes)
-                    trips_gdf = area_trips_chunks_dgdf.compute()
+                                                  dask_geopandas.read_parquet(area_trips_chunks_path, columns=['mode', 'geometry']))
+                    logger.debug(f'    Computing DataFrame...')
+                    trips_df = area_trips_chunks_ddf.compute()
 
                     # count trip travel methods
                     logger.debug('    Counting trip travel methods...')
-                    statistics['methods'] = count_trip_travel_methods(trips_gdf)
+                    statistics['methods'] = count_trip_travel_methods(trips_df)
 
                     # calculate median trip commute time
                     logger.debug('    Calculating median trip commute time...')
-                    statistics['median_duration'] = count_median_commute_time(trips_gdf)
-
-                    # count possible conversions
-                    logger.debug('    Counting possible conversions...')
-                    statistics['possible_conversions'] = count_possible_conversions(
-                        trips_gdf, walk_gdf, bike_gdf)
+                    statistics['median_duration'] = count_median_commute_time(trips_df)
 
                     # get destination building uses for trips that use or could use public transit
                     logger.debug('    Counting destination building uses...')
                     statistics['destination_building_use'] = count_destination_building_use_in_service_area(
-                        trips_gdf, walk_gdf, bike_gdf)
+                        trips_df, trips_crs, walk_gdf, bike_gdf)
+
+                    # count the possible conversions in chunks (the geometry column is required, but it is huge)
+                    logger.debug('    Counting possible conversions...')
+                    for partition in tqdm.tqdm(area_trips_chunks_dgdf.to_delayed(), desc=f'Counting possible conversions for {area_name} ({year} {quarter} {day})', unit='partition', position=0):
+                        logger.debug('      Computing partition...')
+                        partition_gdf = partition.compute()
+
+                        logger.debug('      Counting...')
+                        results = count_possible_conversions(partition_gdf, walk_gdf, bike_gdf)
+
+                        for via, count in results.items():
+                            if via not in statistics['possible_conversions']:
+                                statistics['possible_conversions'][via] = 0
+                            statistics['possible_conversions'][via] += count
+
+                        del partition_gdf
+                        del partition
+                        gc.collect()
 
                     # save the statistics to the all_statistics dictionary so we can access them later
                     logger.debug(f'    Statistics for {area_name} added to all_statistics.')
@@ -513,7 +536,7 @@ class ReplicaProcessETL:
                     # )
 
                     processed_count += 1
-                    del trips_gdf
+                    del area_trips_chunks_ddf
                     del area_trips_chunks_dgdf
                     gc.collect()
 
@@ -648,49 +671,49 @@ class ReplicaProcessETL:
         bar.close()
 
 
-def count_trip_travel_methods(trips_gdf: geopandas.GeoDataFrame) -> dict[str, int]:
+def count_trip_travel_methods(trips_df: pandas.DataFrame) -> dict[str, int]:
     """Count the number of trips for each travel method."""
 
-    tour_types = trips_gdf['tour_type'].str.lower().unique()
+    tour_types = trips_df['tour_type'].str.lower().unique()
 
     stats = {}
 
     # for all
-    mode_counts = trips_gdf.groupby('mode').size()
+    mode_counts = trips_df.groupby('mode').size()
     mode_counts.index = mode_counts.index.str.lower()
     stats['__all'] = mode_counts.to_dict()
 
     # for each tour type (commute, undirected, etc.)
     for tour_type in tour_types:
-        filter = (trips_gdf['tour_type'] == tour_type.upper())
-        mode_counts = trips_gdf[filter].groupby('mode').size()
+        filter = (trips_df['tour_type'] == tour_type.upper())
+        mode_counts = trips_df[filter].groupby('mode').size()
         mode_counts.index = mode_counts.index.str.lower()
         stats[tour_type] = mode_counts.to_dict()
 
     return stats
 
 
-def count_median_commute_time(trips_gdf: geopandas.GeoDataFrame) -> dict[str, float]:
+def count_median_commute_time(trips_df: pandas.DataFrame) -> dict[str, float]:
     """Count the median commute time for each travel method."""
 
-    tour_types = trips_gdf['tour_type'].str.lower().unique()
+    tour_types = trips_df['tour_type'].str.lower().unique()
 
     stats = {}
 
     # for all
-    median_trip_duration = trips_gdf['duration_minutes'].median()
+    median_trip_duration = trips_df['duration_minutes'].median()
     stats['__all'] = median_trip_duration
 
     # for each tour type (commute, undirected, etc.)
     for tour_type in tour_types:
-        filter = (trips_gdf['tour_type'] == tour_type.upper())
-        median_trip_duration = trips_gdf[filter]['duration_minutes'].median()
+        filter = (trips_df['tour_type'] == tour_type.upper())
+        median_trip_duration = trips_df[filter]['duration_minutes'].median()
         stats[tour_type] = median_trip_duration
 
     return stats
 
 
-def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[str, int]:
+def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[Literal['via_walk', 'via_bike'], int]:
     """Count the number of possible conversions for each travel method."""
 
     # ensure CRS matches between trips and service areas
@@ -705,7 +728,10 @@ def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geop
     walk_gdf = walk_gdf.dissolve().reset_index(drop=True)
     bike_gdf = bike_gdf.dissolve().reset_index(drop=True)
 
-    stats = {}
+    stats: dict[Literal['via_walk', 'via_bike'], int] = {
+        'via_walk': 0,
+        'via_bike': 0,
+    }
 
     # get the trips that are not public transit
     transit_filter = (trips_gdf['mode'] != 'PUBLIC_TRANSIT')
@@ -713,7 +739,7 @@ def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geop
 
     # get the non-public transit trips that are within the walking service area
     logger.debug(
-        '      Finding possible conversions for non-public transit trips within waking service area...')
+        '        Finding possible conversions for non-public transit trips within waking service area...')
     trips_within_walk_service_area_gdf = geopandas.sjoin(
         non_public_transit_trips_gdf,
         walk_gdf,
@@ -724,7 +750,7 @@ def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geop
 
     # get the non-public transit trips that are within the biking service area
     logger.debug(
-        '      Finding possible conversions for non-public transit trips within biking service area...')
+        '        Finding possible conversions for non-public transit trips within biking service area...')
     trips_within_bike_service_area_gdf = geopandas.sjoin(
         non_public_transit_trips_gdf,
         bike_gdf,
@@ -736,7 +762,7 @@ def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geop
     return stats
 
 
-def count_destination_building_use_in_service_area(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]:
+def count_destination_building_use_in_service_area(trips_df: pandas.DataFrame, trips_crs: CRS, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]:
     """Count the destination building uses for trips within the walking and biking service areas that currently use or could use public transit."""
 
     stats: dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]] = {
@@ -744,17 +770,17 @@ def count_destination_building_use_in_service_area(trips_gdf: geopandas.GeoDataF
         'via_bike': {'type_counts': {}, 'subtype_counts': {}},
     }
 
-    end_points = as_points(trips_gdf, 'end_lng', 'end_lat')
+    end_points = as_points(trips_df, 'end_lng', 'end_lat', trips_crs)
 
-    # get the trips that are within the walking service area
+    # get the trips that end within the walking service area
     mask = end_points.within(walk_gdf.geometry.union_all()).reindex(
-        trips_gdf.index, fill_value=False)
-    distinations_within_walk_service_area_gdf = trips_gdf[mask]
+        trips_df.index, fill_value=False)
+    distinations_within_walk_service_area_gdf = trips_df[mask]
 
-    # get the trips that are within the biking service area
+    # get the trips that end within the biking service area
     mask = end_points.within(bike_gdf.geometry.union_all()).reindex(
-        trips_gdf.index, fill_value=False)
-    destinations_within_bike_service_area_gdf = trips_gdf[mask]
+        trips_df.index, fill_value=False)
+    destinations_within_bike_service_area_gdf = trips_df[mask]
 
     # count the destination building use occurrences
     type_counts__walk = distinations_within_walk_service_area_gdf\
