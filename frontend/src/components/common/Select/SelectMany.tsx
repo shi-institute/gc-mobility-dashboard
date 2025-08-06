@@ -13,6 +13,7 @@ interface SelectManyProps {
    */
   showId?: boolean;
   disabled?: boolean;
+  className?: string;
 }
 
 export function SelectMany({
@@ -21,6 +22,7 @@ export function SelectMany({
   selectedOptions = [],
   showId = true,
   disabled,
+  className,
 }: SelectManyProps) {
   const toOptValue = (option: string | SelectOption) =>
     typeof option === 'string' ? option : option.value;
@@ -55,6 +57,7 @@ export function SelectMany({
         }}
         value={''}
         disabled={disabled}
+        className={className}
       />
 
       <SelectionActions>
