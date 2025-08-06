@@ -124,7 +124,7 @@ def explode_and_hash(gdf: geopandas.GeoDataFrame, multiindex_column: str = 'acti
 
     # filter to omit the first and last segments (lines) since these are
     # short lines that indicate the start and end points of the activity
-    # and do not represent actual netwokr segments
+    # and do not represent actual network segments
     filter_condition = (segment_indices > 0) & (segment_indices < upper_bound)
     filtered_exploded = exploded[filter_condition]
 

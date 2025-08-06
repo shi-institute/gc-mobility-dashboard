@@ -26,7 +26,7 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame | str, name: str, layer_name: st
     for information about using tiles from tippecanoe in ArcGIS SDK for JavaScript clients.
 
     Args:
-        gdf (geopandas.GeoDataFrame | str): A GeoDataFrame containing line geometries or a path to a or FlatGeobuf file with the EPSG:3857 (web mercator) CRS.
+        gdf (geopandas.GeoDataFrame | str): A GeoDataFrame containing line geometries or a path to a GeoJSON or FlatGeobuf file with the EPSG:3857 (web mercator) CRS.
         name (str): The name of the vector tile layer.
         layer_name (str): The name of the layer in the vector tiles. This name will be used to identify the layer during styling.
         output_folder (Path): The output location for the vector tiles.
