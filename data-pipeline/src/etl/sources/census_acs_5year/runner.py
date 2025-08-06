@@ -1,5 +1,6 @@
 from etl.merge import merge_json_array_files
 from etl.sources.census_acs_5year.etl import CensusACS5YearEstimatesETL
+from etl.sources.census_acs_5year.tract_etl import CensusIntersectAreasETL
 
 
 def source_runner():
@@ -31,3 +32,7 @@ def source_runner():
         ],
         output_file='./data/census_acs_5year/time_series.json'
     )
+    
+    etl = CensusIntersectAreasETL()
+    etl.download_tract_geometries()
+    etl.intersect_with_areas('./input/replica_interest_area_polygons', year=2020)
