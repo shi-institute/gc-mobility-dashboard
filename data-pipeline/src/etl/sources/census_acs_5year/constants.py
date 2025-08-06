@@ -73,3 +73,12 @@ tables: dict[CensusDataTableName, CensusDataTableInfo] = {
         ]
     }
 }
+
+tiger_web_tracts_services = {
+    2019: {"layer_id": 8, "service": "tigerWMS_ACS2019"},
+    2020: {"layer_id": 6, "service": "tigerWMS_Census2020"},
+    2021: {"layer_id": 6, "service": "tigerWMS_ACS2021"},
+    2022: {"layer_id": 6, "service": "tigerWMS_ACS2022"},
+    2023: {"layer_id": 8, "service": "tigerWMS_ACS2023"},
+    2024: {"layer_id": 8, "service": "tigerWMS_ACS2024"}
+}
