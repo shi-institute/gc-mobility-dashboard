@@ -8,6 +8,7 @@ import math
 import multiprocessing
 import os
 import shutil
+import tempfile
 import time
 from multiprocessing.managers import DictProxy, ValueProxy
 from pathlib import Path
@@ -26,14 +27,12 @@ from etl.sources.replica.etl import ReplicaETL
 from etl.sources.replica.readers.partitions_to_gdf import partitions_to_gdf
 from etl.sources.replica.transformers.as_points import as_points
 from etl.sources.replica.transformers.count_segment_frequency import \
-    count_segment_frequency
-from etl.sources.replica.transformers.to_vector_tiles import to_vector_tiles
+    count_segment_frequency_multi_input
+from etl.sources.replica.transformers.to_vector_tiles import (
+    NoVectorDataError, to_vector_tiles)
 
 logger = logging.getLogger('replica_process_etl')
 logger.setLevel(logging.DEBUG)
-
-pyogrio_logger = logging.getLogger('pyogrio._io')
-pyogrio_logger.setLevel(logging.WARNING)
 
 replica_logger = logging.getLogger('replica_etl')
 
@@ -64,17 +63,12 @@ class ReplicaProcessETL:
     def __init__(self, parent: ReplicaETL, seasons: list[Season], area_geojson_paths: list[str] | list[Path], input_file_path_templates: InputFilePathTemplates):
         self.parent = parent
         self.seasons = seasons
-        self.seasons = [{
-            'region': 'south_atlantic',
-            'year': 2024,
-            'quarter': 'Q2',
-        }]
         self.output_folder = Path(self.parent.folder_path)
         self.input_files = input_file_path_templates
 
         area_geojson_paths = [Path(path) for path in area_geojson_paths]
         area_names = [os.path.splitext(path.name)[0] for path in area_geojson_paths]
-        self.areas = list(zip(area_geojson_paths, area_names))[5:6]
+        self.areas = list(zip(area_geojson_paths, area_names))
 
     def process(self):
         statistics = {}
@@ -88,6 +82,7 @@ class ReplicaProcessETL:
         )
         process.start()
         process.join()
+        process.close()
         statistics['synthetic_demographics'] = shared_stats.copy()
         elapsed_time = time.time() - start_time
         formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
@@ -452,10 +447,12 @@ class ReplicaProcessETL:
                                 '        '
                             )
 
-                        process = multiprocessing.Process(target=process_area)
-                        process.start()
-                        process.join()
+                            del gdf
+                            del gdf_union
+                            del filtered_partition_gdf
+                            gc.collect()
 
+                        process_area()
                         bar.update(1)
 
                 bar.close()
@@ -570,63 +567,50 @@ class ReplicaProcessETL:
                     area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
                 logger.debug(f'    Area trips chunks path: {area_trips_chunks_path}')
                 area_trips_chunks_dgdf = cast(dask_geopandas.GeoDataFrame,
-                                              dask_geopandas.read_parquet(area_trips_chunks_path, columns=['tour_type', 'mode', 'geometry']))
+                                              dask_geopandas.read_parquet(area_trips_chunks_path, columns=['activity_id', 'tour_type', 'mode', 'geometry']))
                 logger.debug(
                     f'    Area trips chunks GeoDataFrame has {area_trips_chunks_dgdf.shape[0]} rows and {area_trips_chunks_dgdf.shape[1]} columns.')
                 logger.debug(
                     f'    Area trips chunks GeoDataFrame CRS: {area_trips_chunks_dgdf.crs.name}')
-                logger.info(f'  Computing area trips chunks GeoDataFrame...')
-                # TODO: repartion and then process in chunks instead of computing (combined file size is still many gigabytes)
-                trips_gdf = area_trips_chunks_dgdf.compute()
 
-                # create a fake activity_id column, which is required for counting segment frequencies
-                logger.debug('  Creating fake activity_id column...')
-                trips_gdf = trips_gdf.reset_index(drop=True)
-                trips_gdf['activity_id'] = trips_gdf.index.astype(int)
-
-                # count segments and generate vector tiles for each travel mode
                 logger.info(f'  Building network segments...')
-                total_segment_exports = len(travel_modes)
-                current_segment_export = 0
-
-                for travel_mode in travel_modes:
-                    current_segment_export += 1
-
+                intermediate_chunks_folder = area_trips_chunks_path.parent / '_intermediate_segment_chunks'
+                os.makedirs(intermediate_chunks_folder, exist_ok=True)
+                for index, travel_mode in enumerate(travel_modes):
                     if travel_mode == '':
-                        logger.info(
-                            f'    ...building {day} network segments [{current_segment_export}/{total_segment_exports}]')
-
                         full_table_name = f'{region}_{year}_{quarter}__{day}'
-
-                        gdf = count_segment_frequency(trips_gdf)
-
+                        bar_label = f'{area_name} ({quarter} {year})'
                     else:
-                        logger.info(
-                            f'    ...building {day} network segments (commute:{travel_mode}) [{current_segment_export}/{total_segment_exports}]'
-                        )
-
                         full_table_name = f'{region}_{year}_{quarter}__{day}__travel_mode__{travel_mode}'
+                        bar_label = f'{area_name} ({quarter} {year}) (commute:{travel_mode})'
 
-                        filter = (trips_gdf['mode'] == travel_mode.upper())\
-                            & (trips_gdf['tour_type'] == 'COMMUTE')
-                        gdf = count_segment_frequency(
-                            trips_gdf[filter]
-                        )
+                    os.makedirs('./data/tmp', exist_ok=True)
+                    output_file_path = tempfile.NamedTemporaryFile(
+                        suffix='.fgb', delete=False, dir='./data/tmp').name
 
-                        del filter
+                    filter = None if travel_mode == '' else [
+                        ('mode', '==', travel_mode.upper()), ('tour_type', '==', 'COMMUTE')]
 
-                    logger.debug(
-                        f'       ...saving')
-                    original_logger_level = replica_logger.getEffectiveLevel()
-                    replica_logger.setLevel(logging.WARNING)
-                    self.parent._save(
-                        gdf,
-                        area_name,
-                        full_table_name,
-                        'network_segments',
-                        ['geoparquet'],
+                    # calculate the frequencies for the network segments (may be slow)
+                    frequency_bar = tqdm.tqdm(
+                        desc=f'Counting segment frequencies for {bar_label}',
+                        unit='step',
+                        leave=False,
+                        position=0,  # show above the other bar
                     )
-                    replica_logger.setLevel(original_logger_level)
+                    for progress in count_segment_frequency_multi_input(
+                        list(sorted(area_trips_chunks_path.glob('*.parquet'))),
+                        output_file_path,
+                        log_space='    ',
+                        intermediate_chunks_folder=intermediate_chunks_folder.as_posix(),
+                        step1_columns=['activity_id', 'tour_type', 'mode', 'geometry'],
+                        skip_step_1=index > 0,
+                        step_2_filter=filter,
+                        out_crs='EPSG:3857',
+                    ):
+                        frequency_bar.update(progress[0] - frequency_bar.n)
+                        frequency_bar.total = progress[1]
+                    frequency_bar.close()
 
                     # try to generate tiles for the network segments
                     logger.info(f'       ...generating tiles')
@@ -634,14 +618,14 @@ class ReplicaProcessETL:
                     try:
 
                         tile_bar = tqdm.tqdm(
-                            desc=f'Generating tiles for {area_name} ({quarter} {year}) {f'(commute:{travel_mode})' if travel_mode else ''}',
+                            desc=f'Generating tiles for {bar_label}',
                             unit='%',
                             total=100,
                             leave=False,
                             position=0,  # show above the other bar
                         )
                         for current_percent_complete in to_vector_tiles(
-                                gdf, f'Network Segments ({area_name}) ({quarter} {year})', full_table_name, tile_folder_path.as_posix(), 14):
+                                output_file_path, f'Network Segments ({area_name}) ({quarter} {year})', full_table_name, tile_folder_path.as_posix(), 14):
                             tile_bar.update(current_percent_complete - tile_bar.n)
                         tile_bar.close()
 
@@ -649,24 +633,33 @@ class ReplicaProcessETL:
                         zip_filename = f'{tile_folder_path}.vectortiles'
                         if os.path.exists(zip_filename):
                             os.remove(zip_filename)
-
                         os.system(
                             f'cd "{tile_folder_path}" && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
 
-                    except Exception:
-                        # this will happen if the geojson file is empty
+                    except NoVectorDataError:
+                        logger.warning(
+                            f'No vector data found for {bar_label}. Skipping tile generation.')
                         continue
+
+                    except Exception as ex:
+                        raise ex
 
                     finally:
                         # remove the tiles folder
-                        shutil.rmtree(tile_folder_path)
+                        shutil.rmtree(tile_folder_path, ignore_errors=True)
 
-                        # increment the progress bar
+                        # remove the output flatgeobuf file
+                        if os.path.exists(output_file_path):
+                            os.remove(output_file_path)
+
+                        # increment the main progress bar
                         bar.update(1)
 
-                    del gdf
-
-                del trips_gdf
+                # clean up: remove the intermediate chunks folder
+                if os.path.exists(intermediate_chunks_folder):
+                    logger.info(
+                        f'    Removing intermediate chunks folder: {intermediate_chunks_folder}')
+                    shutil.rmtree(intermediate_chunks_folder, ignore_errors=True)
 
         bar.close()
 

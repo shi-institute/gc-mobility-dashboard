@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 from etl.runner import etl_runner
 from TeeLogger import TeeLogger
 
+pyogrio_logger = logging.getLogger('pyogrio._io')
+pyogrio_logger.setLevel(logging.WARNING)
+
 if __name__ == "__main__":
     # check if the script is running in docker
     docker = False

@@ -290,6 +290,7 @@ class ReplicaETL:
             process = multiprocessing.Process(target=get_segments, args=(season.table_name,))
             process.start()
             process.join()  # wait for the process to finish
+            process.close()
             results_count += 1
 
         print(
@@ -528,6 +529,7 @@ class ReplicaETL:
             process = multiprocessing.Process(target=get_trips)
             process.start()
             process.join()  # wait for the process to finish
+            process.close()
             results_count += 1
 
         print(
