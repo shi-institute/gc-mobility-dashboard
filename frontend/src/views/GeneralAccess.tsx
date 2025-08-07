@@ -80,12 +80,38 @@ function Sections() {
   return [
     <DeveloperDetails data={data} />,
     <Section title="Service Statistics">
-      <Statistic.Number wrap label="Miles of service" data={[]} />
+      <Statistic.Number
+        wrap
+        label="Miles of service"
+        data={data?.map((area) => {
+          const meters_distance = area.coverage?.routes_distance_meters || 0;
+          const miles_distance = meters_distance / 1609.344; // convert meters to miles
+
+          return {
+            label: area.__label,
+            value: miles_distance.toFixed(2),
+          };
+        })}
+        unit="miles"
+      />
       <Statistic.Number wrap label="Number of stops" data={[]} />
       <Statistic.Number wrap label="Local funding per capita" data={[]} />
       <Statistic.Number wrap label="Boardings" data={[]} />
       <Statistic.Number wrap label="Alightings" data={[]} />
-      <Statistic.Number wrap label="Service coverage (area)" data={[]} />
+      <Statistic.Number
+        wrap
+        label="Service coverage"
+        data={data?.map((area) => {
+          const meters_area = area.coverage?.walk_service_area_area_square_meters || 0;
+          const miles_area = meters_area / 1609.344 / 1609.344; // convert square meters to square miles
+
+          return {
+            label: area.__label,
+            value: miles_area.toFixed(2),
+          };
+        })}
+        unit="square miles"
+      />
       <Statistic.Number wrap label="Service coverage (estimated households covered)" data={[]} />
     </Section>,
     <Section title="Area Demographics">

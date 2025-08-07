@@ -94,7 +94,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const replicaPaths = constructReplicaPaths(areas, seasons, travelMethod);
     const replicaPromises = constructReplicaPromises(replicaPaths);
     const greenlinkPromises = getGreenlinkPromises(seasons);
-    return replicaPromises.map(({ year, quarter, promises }) => {
+    return replicaPromises.map(({ area, year, quarter, promises }) => {
       const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter] || {};
 
       // merge all promises into a single object
@@ -102,6 +102,16 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
         ...promises,
         ...censusPromises,
         ...greenlinkPromisesForSeason,
+        coverage: (abortSignal?: AbortSignal) =>
+          greenlinkPromisesForSeason.coverage(abortSignal).then((data) => {
+            if (!data) {
+              return null;
+            }
+
+            return data.find(
+              (item) => item.year === year && item.quarter === quarter && item.area === area
+            );
+          }),
       };
     });
   }, [areas, seasons]);
@@ -298,6 +308,13 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
       year: __year,
       quarter: __quarter,
       promises: {
+        coverage: (abortSignal?: AbortSignal) =>
+          fetchData<ServiceCoverage[]>(
+            `./data/greenlink_gtfs/service_coverage_stats.json.deflate`,
+            abortSignal,
+            false,
+            true
+          ).catch(handleError('greenlink_coverage')),
         routes: (abortSignal?: AbortSignal) =>
           fetchData<GTFS.Routes>(`${gtfsFolder}/routes.geojson.deflate`, abortSignal).catch(
             handleError('greenlink_routes')

@@ -276,3 +276,17 @@ interface StopRidership {
   alighting: number;
   areas: string[] | null;
 }
+
+interface ServiceCoverage {
+  year: number;
+  quarter: 'Q2' | 'Q4';
+  /** The name of the area. If null, these stats apply to the entire network. */
+  area: string | null;
+  routes_distance_meters: number;
+  walk_service_area_perimeter_meters: number;
+  walk_service_area_area_square_meters: number;
+  bike_service_area_perimeter_meters: number;
+  bike_service_area_area_square_meters: number;
+  paratransit_service_area_perimeter_meters: number;
+  paratransit_service_area_area_square_meters: number;
+}
