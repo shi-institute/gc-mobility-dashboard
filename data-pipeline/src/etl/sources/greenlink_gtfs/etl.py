@@ -1,5 +1,6 @@
 import os
 import shutil
+from pathlib import Path
 from typing import Literal, Optional
 
 import geopandas
@@ -8,7 +9,8 @@ import requests
 from shapely import LineString
 
 from etl.downloader import Downloader
-from etl.geodesic import geodesic_buffer_series
+from etl.geodesic import (geodesic_area_series, geodesic_buffer_series,
+                          geodesic_length_series)
 
 type Quarter = Literal['Q2', 'Q4']
 type Season = tuple[int, Quarter]
@@ -25,6 +27,7 @@ class GreenlinkGtfsETL:
     service_area_overrides_folder = 'input/greenlink_gtfs/service_area_overrides'
 
     seasons: list[Season]
+    areas: list[tuple[Path, str]]  # list of tuples (geojson_path, area_name)
 
     transitland_feed_list_url = 'https://transit.land/api/v2/rest/feed_versions?feed_onestop_id=f-dnjq-greenlink&fetched_after={iso8601_start}&fetched_before={iso8601_end}'
     transitland_feed_download_url = 'https://transit.land/api/v2/rest/feed_versions/{feed_version_key}/download'
@@ -33,7 +36,7 @@ class GreenlinkGtfsETL:
     # so the next available season can be used instead
     pending_substitutions: list[Season] = []
 
-    def __init__(self, seasons: Optional[list[Season]] = None):
+    def __init__(self, seasons: Optional[list[Season]] = None, area_geojson_paths: Optional[list[str] | list[Path]] = None):
         """
         Initialize the GreentlinkGtfsETL with the seasons to process.
 
@@ -63,6 +66,10 @@ class GreenlinkGtfsETL:
                         "Invalid season format. Expected (year: int, quarter: 'Q2' or 'Q4'). Got: ({}, {}).".format(year, quarter))
 
         self.seasons = seasons
+
+        area_geojson_paths = [Path(path) for path in (area_geojson_paths or [])]
+        area_names = [os.path.splitext(path.name)[0] for path in area_geojson_paths]
+        self.areas = list(zip(area_geojson_paths, area_names))
 
         # create folder if it does not exist
         os.makedirs(self.folder_path, exist_ok=True)
@@ -108,9 +115,22 @@ class GreenlinkGtfsETL:
                 # clear the pending substitutions list
                 self.pending_substitutions.clear()
 
+        # generate service areas
+        print("\nGenerating service areas...")
         for season in self.seasons:
-            # generate service areas
             self.generate_service_areas(season)
+
+        # calculate service distance and coverage stats
+        print("\nCalculating service coverage stats...")
+        service_coverage_stats = []
+        for season in self.seasons:
+            stats = self.calculate_service_coverage(season)
+            service_coverage_stats += stats
+
+        # save the service coverage stats to a json file
+        stats_file_path = f'{self.folder_path}/service_coverage_stats.json'
+        pandas.DataFrame(service_coverage_stats)\
+            .to_json(stats_file_path, orient='records')
 
     def download(self, season: Season, transitland_api_key: Optional[str] = None) -> bool:
         year, quarter = season
@@ -284,6 +304,91 @@ class GreenlinkGtfsETL:
         paratransit_gdf = paratransit_gdf.to_crs('EPSG:4326')
         paratransit_gdf.to_file(output_file_path, driver='GeoJSON')
         print(f"Generated paratransit service area for {year} {quarter}.")
+
+    def calculate_service_coverage(self, season: Season) -> list[dict[str, int | float]]:
+        year, quarter = season
+        output_folder_path = f'{self.folder_path}/{year}/{quarter}'
+
+        # read the GeoJSON files
+        print(f'Opening GeoJSON files for {year} {quarter}...')
+        routes_file_path = os.path.join(output_folder_path, 'routes.geojson')
+        routes_gdf = geopandas.read_file(routes_file_path)
+
+        walk_service_area_file_path = os.path.join(output_folder_path, 'walk_service_area.geojson')
+        walk_service_area_gdf = geopandas.read_file(walk_service_area_file_path)
+
+        bike_service_area_file_path = os.path.join(output_folder_path, 'bike_service_area.geojson')
+        bike_service_area_gdf = geopandas.read_file(bike_service_area_file_path)
+
+        paratransit_service_area_file_path = os.path.join(
+            output_folder_path, 'paratransit_service_area.geojson')
+        paratransit_service_area_gdf = geopandas.read_file(paratransit_service_area_file_path)
+
+        all_geo_stats: list[dict[str, int | float]] = []
+
+        print(f'Calculating service coverage for {year} {quarter}...')
+
+        # calculate the distance of the routes in meters
+        distance_meters = geodesic_length_series(routes_gdf.geometry)
+
+        # calculate the service coverage for each service area
+        walk_perimeter, walk_area = geodesic_area_series(walk_service_area_gdf.geometry)
+        bike_perimeter, bike_area = geodesic_area_series(bike_service_area_gdf.geometry)
+        para_perimeter, para_area = geodesic_area_series(paratransit_service_area_gdf.geometry)
+
+        total_geo_stats = {
+            'year': year,
+            'quarter': quarter,
+            'routes_distance_meters': distance_meters,
+            'walk_service_area_perimeter_meters': walk_perimeter,
+            'walk_service_area_area_square_meters': walk_area,
+            'bike_service_area_perimeter_meters': bike_perimeter,
+            'bike_service_area_area_square_meters': bike_area,
+            'paratransit_service_area_perimeter_meters': para_perimeter,
+            'paratransit_service_area_area_square_meters': para_area
+        }
+        all_geo_stats.append(total_geo_stats)
+
+        # also calculate the service area stats for each area
+        for area_geojson_path, area_name in self.areas:
+            print(f'Calculating service coverage for area {area_name} for {year} {quarter}...')
+
+            area_gdf = geopandas.read_file(area_geojson_path)
+            area_routes = geopandas.overlay(
+                routes_gdf, area_gdf, how='intersection')
+            area_walk_service_area = geopandas.overlay(
+                walk_service_area_gdf, area_gdf, how='intersection')
+            area_bike_service_area = geopandas.overlay(
+                bike_service_area_gdf, area_gdf, how='intersection')
+            area_paratransit_service_area = geopandas.overlay(
+                paratransit_service_area_gdf, area_gdf, how='intersection')
+
+            # calculate the service area stats for the area
+            area_routes_distance_meters = geodesic_length_series(area_routes.geometry)
+            area_walk_perimeter, area_walk_area = geodesic_area_series(
+                area_walk_service_area.geometry)
+            area_bike_perimeter, area_bike_area = geodesic_area_series(
+                area_bike_service_area.geometry)
+            area_para_perimeter, area_para_area = geodesic_area_series(
+                area_paratransit_service_area.geometry)
+
+            # share the stats for the area
+            geo_stats = {
+                'year': year,
+                'quarter': quarter,
+                'area': area_name,
+                'routes_distance_meters': area_routes_distance_meters,
+                'walk_service_area_perimeter_meters': area_walk_perimeter,
+                'walk_service_area_area_square_meters': area_walk_area,
+                'bike_service_area_perimeter_meters': area_bike_perimeter,
+                'bike_service_area_area_square_meters': area_bike_area,
+                'paratransit_service_area_perimeter_meters': area_para_perimeter,
+                'paratransit_service_area_area_square_meters': area_para_area
+            }
+            all_geo_stats.append(geo_stats)
+
+        # share the stats
+        return all_geo_stats
 
 
 def convert_stops(stops_csv_file: str) -> str:
