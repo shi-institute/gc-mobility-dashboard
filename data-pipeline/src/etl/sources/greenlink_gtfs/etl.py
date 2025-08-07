@@ -5,10 +5,10 @@ from typing import Literal, Optional
 import geopandas
 import pandas
 import requests
-from geographiclib.geodesic import Geodesic
-from shapely import LineString, Point, Polygon
+from shapely import LineString
 
 from etl.downloader import Downloader
+from etl.geodesic import geodesic_buffer_series
 
 type Quarter = Literal['Q2', 'Q4']
 type Season = tuple[int, Quarter]
@@ -384,52 +384,3 @@ def convert_routes(trips_csv_file: str, routes_csv_file: str, shapes_geojson_fil
     with open(output_path, 'w') as file:
         file.write(json)
     return output_path
-
-
-def geodesic_buffer(point: Point, distance_meters: float, num_points: int = 360) -> Polygon | None:
-    """
-    Creates a geodesic buffer around a Shapely Point using geographiclib.
-
-    Args:
-        point (shapely.geometry.Point): The central point (lon, lat in WGS84).
-        distance_meters (float): The buffer distance in meters.
-        num_points (int): Number of points to approximate the circle.
-
-    Returns:
-        shapely.geometry.Polygon: The geodesic buffer polygon.
-    """
-    geod = Geodesic.WGS84  # type: ignore
-    buffer_points = []
-
-    for i in range(num_points):
-        azimuth = i * (360 / num_points)
-        # see https://geographiclib.sourceforge.io/html/python/code.html?highlight=direct#geographiclib.geodesic.Geodesic.Direct
-        buffer_point = geod.Direct(point.y, point.x, azimuth, distance_meters)
-        # see https://geographiclib.sourceforge.io/html/python/interface.html#dict
-        buffer_points.append((buffer_point['lon2'], buffer_point['lat2']))
-
-    if buffer_points:
-        return Polygon(buffer_points)
-    else:
-        return None
-
-
-def geodesic_buffer_series(points: geopandas.GeoSeries, distance_meters: float, num_points: int = 360) -> geopandas.GeoSeries:
-    """
-    Creates a geodesic buffer around a GeoSeries of Shapely Points using geographiclib.
-
-    The input GeoSeries will be converted to WGS84 (EPSG:4326) before buffering,
-    and then it will be converted back to the original CRS. If the original CRS
-    is missing, it will default to EPSG:4326.
-
-    Args:
-        points (geopandas.GeoSeries): The points to buffer.
-        distance_meters (float): The buffer distance in meters.
-        num_points (int): Number of points to approximate the circle.
-
-    Returns:
-        geopandas.GeoSeries: The geodesic buffer polygons.
-    """
-    results = points.to_crs('EPSG:4326').map(
-        lambda point: geodesic_buffer(point, distance_meters, num_points))
-    return geopandas.GeoSeries(results, crs=points.crs).to_crs(points.crs or 'EPSG:4326')
