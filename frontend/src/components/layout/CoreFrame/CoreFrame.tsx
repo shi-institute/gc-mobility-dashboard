@@ -66,7 +66,7 @@ export function CoreFrame(props: CoreFrameProps) {
                     );
                   })}
               </div>
-              <MainAreaWrapper>
+              <MainAreaWrapper style={{ padding: '1rem' }}>
                 {props.sectionsHeader}
                 <MainArea
                   disableSectionsGrid={props.disableSectionsGrid}
