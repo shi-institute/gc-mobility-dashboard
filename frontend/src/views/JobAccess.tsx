@@ -171,7 +171,7 @@ const HeaderComponent = styled.div<HeaderProps>`
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0rem 0.5rem;
     margin-top: 0.5rem;
   }
 
