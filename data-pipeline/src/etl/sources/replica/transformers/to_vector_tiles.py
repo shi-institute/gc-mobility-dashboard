@@ -55,7 +55,7 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, out
         '--projection', 'EPSG:3857',
         '--no-tile-compression',
         # dynamically drop features at a zoom level if a tile at that zoom level is too large (> 500 KB)
-        '--drop-fraction-as-needed',
+        '--drop-densest-as-needed',
         '--json-progress',
         input_geojson_path
     ]

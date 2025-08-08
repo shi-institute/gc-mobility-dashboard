@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import hashlib
 import itertools
 import json
 import logging
@@ -59,55 +60,119 @@ class ReplicaProcessETL:
     areas: list[tuple[Path, str]]
     output_folder: Path
     input_files: InputFilePathTemplates
+    areas_seasons_hash: str
+    data_geo_hash: str
+    days: list[Literal['saturday', 'thursday']]
 
-    def __init__(self, parent: ReplicaETL, seasons: list[Season], area_geojson_paths: list[str] | list[Path], input_file_path_templates: InputFilePathTemplates):
+    def __init__(self, parent: ReplicaETL, seasons: list[Season], area_geojson_paths: list[str] | list[Path], input_file_path_templates: InputFilePathTemplates, days: list[Literal['saturday', 'thursday']] = ['saturday', 'thursday']) -> None:
         self.parent = parent
         self.seasons = seasons
         self.output_folder = Path(self.parent.folder_path)
         self.input_files = input_file_path_templates
+        self.days = days
 
         area_geojson_paths = [Path(path) for path in area_geojson_paths]
         area_names = [os.path.splitext(path.name)[0] for path in area_geojson_paths]
         self.areas = list(zip(area_geojson_paths, area_names))
 
+        area_seasons_string_to_hash = ''.join(sorted(area_names)) + \
+            ''.join([str(season['region']) + str(season['year']) + season['quarter']
+                    for season in seasons])
+        self.areas_seasons_hash = hashlib.md5(
+            area_seasons_string_to_hash.encode('utf8')).hexdigest()
+
+        full_area_path = './input/replica_interest_area_polygons/full_area.geojson'
+        full_area_geometry_to_hash = geopandas.read_file(full_area_path).geometry.union_all().wkb
+        self.data_geo_hash = hashlib.md5(full_area_geometry_to_hash).hexdigest()
+
     def process(self):
         statistics = {}
 
-        start_time = time.time()
-        shared_count = multiprocessing.Manager().Value('i', 0)
-        shared_stats = multiprocessing.Manager().dict()
-        process = multiprocessing.Process(
-            target=self.mp__process_population,
-            args=(shared_count, shared_stats)
-        )
-        process.start()
-        process.join()
-        process.close()
-        statistics['synthetic_demographics'] = shared_stats.copy()
-        elapsed_time = time.time() - start_time
-        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-        logger.info('')
-        logger.info(
-            f'Population data processed for {shared_count.value} season-areas in {formatted_time}.')
-        logger.info('')
+        population_stats_cache_path = self.output_folder / \
+            f'population_stats_cache__{self.areas_seasons_hash}.json.tmp'
+        saturday_stats_cache_path = self.output_folder / \
+            f'saturday_stats_cache__{self.areas_seasons_hash}.json.tmp'
+        thursday_stats_cache_path = self.output_folder / \
+            f'thursday_stats_cache__{self.areas_seasons_hash}.json.tmp'
 
-        start_time = time.time()
-        [count, saturday_stats] = self.process_trips('saturday')
-        statistics['saturday_trip'] = saturday_stats
-        elapsed_time = time.time() - start_time
-        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-        logger.info('')
-        logger.info(f'Saturday trip data processed for {count} season-areas in {formatted_time}.')
-        logger.info('')
+        if population_stats_cache_path.exists():
+            with open(population_stats_cache_path, 'r') as file:
+                statistics['synthetic_demographics'] = json.load(file)
+                logger.info(
+                    f'Population stats retrieved from the cache.')
+        else:
+            start_time = time.time()
+            shared_count = multiprocessing.Manager().Value('i', 0)
+            shared_stats = multiprocessing.Manager().dict()
+            process = multiprocessing.Process(
+                target=self.mp__process_population,
+                args=(shared_count, shared_stats)
+            )
+            process.start()
+            process.join()
+            process.close()
 
-        start_time = time.time()
-        [count, thursday_stats] = self.process_trips('thursday')
-        statistics['thursday_trip'] = thursday_stats
-        elapsed_time = time.time() - start_time
-        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-        logger.info('')
-        logger.info(f'Thursday trip data processed for {count} season-areas in {formatted_time}.')
-        logger.info('')
+            statistics['synthetic_demographics'] = shared_stats.copy()
+
+            elapsed_time = time.time() - start_time
+            formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+            # save to cache
+            with open(population_stats_cache_path, 'w') as file:
+                json.dump(statistics['synthetic_demographics'], file)
+
+            logger.info('')
+            logger.info(
+                f'Population data processed for {shared_count.value} season-areas in {formatted_time}.')
+            logger.info('')
+
+        if 'saturday' in self.days:
+            if saturday_stats_cache_path.exists():
+                with open(saturday_stats_cache_path, 'r') as file:
+                    statistics['saturday_trip'] = json.load(file)
+                    logger.info(
+                        f'Saturday trip stats retrieved from the cache.')
+            else:
+                start_time = time.time()
+
+                [count, saturday_stats] = self.process_trips('saturday')
+                statistics['saturday_trip'] = saturday_stats
+
+                elapsed_time = time.time() - start_time
+                formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+                # save to cache
+                with open(saturday_stats_cache_path, 'w') as file:
+                    json.dump(statistics['saturday_trip'], file)
+
+                logger.info('')
+                logger.info(
+                    f'Saturday trip data processed for {count} season-areas in {formatted_time}.')
+                logger.info('')
+
+        if 'thursday' in self.days:
+            if thursday_stats_cache_path.exists():
+                with open(thursday_stats_cache_path, 'r') as file:
+                    statistics['thursday_trip'] = json.load(file)
+                    logger.info(
+                        f'Thursday trip stats retrieved from the cache.')
+            else:
+                start_time = time.time()
+
+                [count, thursday_stats] = self.process_trips('thursday')
+                statistics['thursday_trip'] = thursday_stats
+
+                elapsed_time = time.time() - start_time
+                formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+                # save to cache
+                with open(thursday_stats_cache_path, 'w') as file:
+                    json.dump(statistics['thursday_trip'], file)
+
+                logger.info('')
+                logger.info(
+                    f'Thursday trip data processed for {count} season-areas in {formatted_time}.')
+                logger.info('')
 
         # merge statistics for season + area combinations
         merged_statistics: dict[str, Any] = {}
@@ -131,27 +196,27 @@ class ReplicaProcessETL:
                     json.dump(area_stats, file,)
 
         start_time = time.time()
-        self.build_network_segments(['saturday', 'thursday'])
+        self.build_network_segments(self.days)
         elapsed_time = time.time() - start_time
         formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
         logger.info('')
         logger.info(f'Network segments built in {formatted_time}.')
         logger.info('')
 
-        # discard the chunks since we no longer need them
-        season_areas_days = list(itertools.product(
-            self.seasons, [area_name for _, area_name in self.areas], ['saturday', 'thursday']))
-        for _season, area_name, day in season_areas_days:
-            region = _season['region']
-            year = _season['year']
-            quarter = _season['quarter']
+        # # discard the chunks since we no longer need them
+        # season_areas_days = list(itertools.product(
+        #     self.seasons, [area_name for _, area_name in self.areas], self.days))
+        # for _season, area_name, day in season_areas_days:
+        #     region = _season['region']
+        #     year = _season['year']
+        #     quarter = _season['quarter']
 
-            area_trips_chunks_path = self.output_folder / \
-                area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
+        #     area_trips_chunks_path = self.output_folder / \
+        #         area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
 
-            logger.info(
-                f'Discarding trips chunks for {area_name} ({year} {quarter} {day})...')
-            shutil.rmtree(area_trips_chunks_path, ignore_errors=True)
+        #     logger.info(
+        #         f'Discarding trips chunks for {area_name} ({year} {quarter} {day})...')
+        #     shutil.rmtree(area_trips_chunks_path, ignore_errors=True)
 
     def mp__process_population(self, shared_count: ValueProxy[int], shared_stats: DictProxy[str, Any]) -> None:
         [count, population_stats] = self.process_population()
@@ -189,8 +254,6 @@ class ReplicaProcessETL:
                 'population_home': self.input_files['population_home'].format(region=region, year=year, quarter=quarter),
                 'population_school': self.input_files['population_school'].format(region=region, year=year, quarter=quarter),
                 'population_work': self.input_files['population_work'].format(region=region, year=year, quarter=quarter),
-                'walk_service_area': self.input_files['walk_service_area'].format(region=region, year=year, quarter=quarter),
-                'bike_service_area': self.input_files['bike_service_area'].format(region=region, year=year, quarter=quarter),
             }
 
             logger.info(f'Processing population data for {region} in {year} {quarter}')
@@ -210,16 +273,6 @@ class ReplicaProcessETL:
             population_work_input_path = self.output_folder / input_files['population_work']
             logger.debug(f'Population work input path: {population_work_input_path}')
             population_work_gdf = geopandas.read_file(population_work_input_path)
-
-            logger.info(f'    ...walking service area [4/5]')
-            walk_input_path = input_files['walk_service_area']
-            logger.debug(f'Walking service area input path: {walk_input_path}')
-            walk_gdf = geopandas.read_file(walk_input_path)
-
-            logger.info(f'    ...biking service area [5/5]')
-            bike_input_path = input_files['bike_service_area']
-            logger.debug(f'Biking service area input path: {bike_input_path}')
-            bike_gdf = geopandas.read_file(bike_input_path)
 
             for [area_geojson_path, area_name] in self.areas:
                 logger.info(f'  Processing area: {area_name}')
@@ -290,33 +343,6 @@ class ReplicaProcessETL:
                 logger.debug('Calculating commute mode population estimates...')
                 statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
                     'commute_mode').size().to_dict()
-
-                # count households
-                logger.debug('Counting households...')
-                statistics['synthetic_demographics']['households'] = population_filtered_df['household_id'].nunique()
-
-                # count total population
-                logger.debug('Counting total population...')
-                statistics['synthetic_demographics']['population'] = len(population_filtered_df)
-
-                # count households and population covered by the service areas (home-based)
-                logger.debug('Counting households and population in service areas...')
-
-                statistics['synthetic_demographics']['households_in_service_area'] = {}
-                statistics['synthetic_demographics']['households_in_service_area']['walk'] = population_home_filtered_gdf[
-                    population_home_filtered_gdf.intersects(walk_gdf.union_all())
-                ]['household_id'].nunique()
-                statistics['synthetic_demographics']['households_in_service_area']['bike'] = population_home_filtered_gdf[
-                    population_home_filtered_gdf.intersects(bike_gdf.union_all())
-                ]['household_id'].nunique()
-
-                statistics['synthetic_demographics']['population_in_service_area'] = {}
-                statistics['synthetic_demographics']['population_in_service_area']['walk'] = population_home_filtered_gdf[
-                    population_home_filtered_gdf.intersects(walk_gdf.union_all())
-                ]['person_id'].nunique()
-                statistics['synthetic_demographics']['population_in_service_area']['bike'] = population_home_filtered_gdf[
-                    population_home_filtered_gdf.intersects(bike_gdf.union_all())
-                ]['person_id'].nunique()
 
                 # save the statistics to the all_statistics dictionary so we can access them later
                 logger.debug(f'Statistics for {area_name} added to all_statistics.')
@@ -458,6 +484,16 @@ class ReplicaProcessETL:
 
                         def process_area():
                             logger.info(f'    Processing area: {area_name}')
+                            chunk_name = f'{region}_{year}_{quarter}__chunk_{output_chunk_index + 1}'
+
+                            # skip the area if it is already complete
+                            complete_indicator_path = self.output_folder / area_name / \
+                                f'{day}_trip' / f'{region}_{year}_{quarter}' / \
+                                '_chunks' / f'{chunk_name}__{self.data_geo_hash}.success'
+                            if complete_indicator_path.exists():
+                                logger.debug(
+                                    f'      Skipping {area_name} since it is already complete.')
+                                return
 
                             # open the geojson file
                             logger.debug(
@@ -480,11 +516,15 @@ class ReplicaProcessETL:
                             self.parent._save(
                                 filtered_partition_gdf,
                                 area_name,
-                                f'{region}_{year}_{quarter}__chunk_{output_chunk_index + 1}',
+                                chunk_name,
                                 f'{day}_trip/{region}_{year}_{quarter}/_chunks',
                                 'geoparquet',
                                 '        '
                             )
+
+                            # create an indicator file to show that this chunk is processed
+                            # for the current area
+                            complete_indicator_path.touch(exist_ok=True)
 
                             del gdf
                             del gdf_union
@@ -630,6 +670,13 @@ class ReplicaProcessETL:
                     filter = None if travel_mode == '' else [
                         ('mode', '==', travel_mode.upper()), ('tour_type', '==', 'COMMUTE')]
 
+                    # skip exploding and hashing if it has already been done
+                    done_chunks_count = len(list(area_trips_chunks_path.glob(
+                        f'*__{self.data_geo_hash}.success')))
+                    done_exploded_chunks_count = len(
+                        list(intermediate_chunks_folder.glob(f'*__{self.data_geo_hash}.success')))
+                    skip_explode = done_exploded_chunks_count == done_chunks_count
+
                     # calculate the frequencies for the network segments (may be slow)
                     frequency_bar = tqdm.tqdm(
                         desc=f'Counting segment frequencies for {bar_label}',
@@ -643,19 +690,20 @@ class ReplicaProcessETL:
                         log_space='    ',
                         intermediate_chunks_folder=intermediate_chunks_folder.as_posix(),
                         step1_columns=['activity_id', 'tour_type', 'mode', 'geometry'],
-                        skip_step_1=index > 0,
+                        skip_step_1=skip_explode or (index > 0),
                         step_2_filter=filter,
                         out_crs='EPSG:3857',
+                        success_hash=self.data_geo_hash,
                     ):
                         frequency_bar.update(progress[0] - frequency_bar.n)
                         frequency_bar.total = progress[1]
                     frequency_bar.close()
 
                     # try to generate tiles for the network segments
-                    logger.info(f'       ...generating tiles')
+                    logger.info(f'       ...generating tiles - {bar_label}')
                     tile_folder_path = self.output_folder / area_name / 'network_segments' / full_table_name
+                    os.makedirs(tile_folder_path, exist_ok=True)
                     try:
-
                         tile_bar = tqdm.tqdm(
                             desc=f'Generating tiles for {bar_label}',
                             unit='%',

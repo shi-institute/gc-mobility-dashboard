@@ -190,6 +190,7 @@ def count_segment_frequency_multi_input(
     step_2_filter: Optional[list[tuple[str, str, Any]] | list[list[tuple[str, str, Any]]]] = None,
     out_crs: str = 'EPSG:4326',
     log_space: str = '',
+    success_hash: Optional[str] = None,
 ) -> Generator[tuple[int, int], None, None]:
     """
     Counts the frequency of segments across multiple input files, links them to their frequencies, and saves the result.
@@ -216,6 +217,8 @@ def count_segment_frequency_multi_input(
         out_crs (str, optional): The coordinate reference system (CRS) to convert the segment geometries to.
             Defaults to 'EPSG:4326'.
         log_space (str, optional): A string to prepend to log messages. Defaults to ''.
+        success_hash (Optional[str], optional): If provided, a success file will be created for each chunk with the
+            hash in the name. This can be used to track successful processing of chunks. Defaults to None.
 
     Yields:
         Generator[tuple[int, int], None, None]: Yields tuples of the current step and total steps for progress tracking.
@@ -272,6 +275,13 @@ def count_segment_frequency_multi_input(
             chunk_file_path = f'{temporary_chunks_folder}/chunk_{file_index}.parquet'
             result.to_parquet(chunk_file_path, index=True)
 
+            # if there is a success_hash, create a .success file with the hash in the name
+            if success_hash:
+                success_file_path = chunk_file_path.replace(
+                    '.parquet', f'__{success_hash}.success')
+                with open(success_file_path, 'w') as success_file:
+                    success_file.write('')
+
             del result
             gc.collect()
 
@@ -283,7 +293,7 @@ def count_segment_frequency_multi_input(
     logger.info(f'{log_space}Counting segment frequencies...')
     logger.debug(f'{log_space}  Reading all segment hashes...')
     logger.debug(f'{log_space}    Temporary chunks folder: {temporary_chunks_folder}')
-    segment_hashes_df = dask.dataframe.read_parquet(
+    segment_hashes_df = dask.dataframe.read_parquet(  # use dask instead of pandas because it ignores the success files
         temporary_chunks_folder,
         columns=['geometry_hash'],
         engine='pyarrow',
