@@ -40,6 +40,7 @@ await Promise.all(
 await cp(pipelineDataDir, publicDataDir, {
   recursive: true,
   force: true,
+  dereference: true,
   filter: (source, destination) => {
     // always copy directories
     const isDirectory = !source.split('/').pop().includes('.');
