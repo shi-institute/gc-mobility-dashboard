@@ -5,7 +5,6 @@ import subprocess
 from typing import Any, Generator
 
 import geopandas
-import pyogrio
 
 
 class NoVectorDataError(ValueError):
@@ -13,7 +12,7 @@ class NoVectorDataError(ValueError):
     pass
 
 
-def to_vector_tiles(gdf: geopandas.GeoDataFrame | str, name: str, layer_name: str, output_folder: str, zoomLevel: int = -1) -> Generator[float, None, None]:
+def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, output_folder: str, zoomLevel: int = -1) -> Generator[float, None, None]:
     """Converts a GeoDataFrame of lines to vector tiles using tippecanoe.
 
     This function saves the GeoDataFrame to a GeoJSON file, then uses tippecanoe
@@ -26,53 +25,25 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame | str, name: str, layer_name: st
     for information about using tiles from tippecanoe in ArcGIS SDK for JavaScript clients.
 
     Args:
-        gdf (geopandas.GeoDataFrame | str): A GeoDataFrame containing line geometries or a path to a GeoJSON or FlatGeobuf file with the EPSG:3857 (web mercator) CRS.
+        gdf (geopandas.GeoDataFrame): A GeoDataFrame containing line geometries.
         name (str): The name of the vector tile layer.
         layer_name (str): The name of the layer in the vector tiles. This name will be used to identify the layer during styling.
         output_folder (Path): The output location for the vector tiles.
         zoomLevel (int): A number from 0 to 22 indicating the zoom level for the vector tiles. Indicate -1 for auto detection. See https://github.com/felt/tippecanoe?tab=readme-ov-file#zoom-levels
     """
-    input_fgb_path = None
-    should_delete_temp_file = False
+    input_geojson_path = os.path.join(output_folder, f'{layer_name}.geojson')
+    should_delete_temp_file = True
 
-    if isinstance(gdf, str):
-        # require .geojson or .fgb file
-        if not gdf.endswith(('.geojson', '.fgb')):
-            raise ValueError(
-                f"Input file must be a GeoJSON file or a FlatGeobuf file. Found: {gdf}")
+    if len(gdf) == 0:
+        raise NoVectorDataError(f"GeoDataFrame has no features.")
 
-        # if gdf is a string, assume it's a path to a GeoDataFrame file
-        if not os.path.exists(gdf):
-            raise FileNotFoundError(f"File not found: {gdf}")
+    # ensure the output folder exists and is empty
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+    os.makedirs(output_folder, exist_ok=True)
 
-        # ensure that the CRS is EPSG:3857 (web mercator)
-        # without reading the whole file into memory
-        info = pyogrio.read_info(gdf)
-        crs = info['crs']
-        if (crs is None or crs != 'EPSG:3857'):
-            raise ValueError(
-                f"GeoDataFrame must be in EPSG:3857 (web mercator) CRS. Found: {crs}")
-
-        # skip if the input file has no features (note that this is not always computed)
-        if info['features'] == 0:
-            raise NoVectorDataError(f"GeoDataFrame file {gdf} has no features.")
-
-        input_fgb_path = gdf
-
-    else:
-        input_fgb_path = os.path.join(output_folder, f'{layer_name}.fgb')
-        should_delete_temp_file = True
-
-        if len(gdf) == 0:
-            raise NoVectorDataError(f"GeoDataFrame has no features.")
-
-        # ensure the output folder exists and is empty
-        if os.path.exists(output_folder):
-            shutil.rmtree(output_folder)
-        os.makedirs(output_folder, exist_ok=True)
-
-        # reproject to Web Mercator and save to file so we can use it with tippecanoe
-        gdf.to_crs('EPSG:3857').to_file(input_fgb_path, driver='FlatGeobuf')
+    # reproject to Web Mercator and save to file so we can use it with tippecanoe
+    gdf.to_crs('EPSG:3857').to_file(input_geojson_path, driver='GeoJSON')
 
     # generate vector tiles using tippecanoe - see https://github.com/felt/tippecanoe
     command = [
@@ -86,7 +57,7 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame | str, name: str, layer_name: st
         # dynamically drop features at a zoom level if a tile at that zoom level is too large (> 500 KB)
         '--drop-fraction-as-needed',
         '--json-progress',
-        input_fgb_path
+        input_geojson_path
     ]
 
     process = subprocess.Popen(
@@ -176,8 +147,8 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame | str, name: str, layer_name: st
         json.dump(style, file, indent=2)
 
     # delete the generated GeoJSON file
-    if should_delete_temp_file and os.path.exists(input_fgb_path):
-        os.remove(input_fgb_path)
+    if should_delete_temp_file and os.path.exists(input_geojson_path):
+        os.remove(input_geojson_path)
 
 
 def create_vector_tile_server_index(name: str) -> dict[str, Any]:

@@ -664,7 +664,7 @@ class ReplicaProcessETL:
                             position=0,  # show above the other bar
                         )
                         for current_percent_complete in to_vector_tiles(
-                                output_file_path, f'Network Segments ({area_name}) ({quarter} {year})', full_table_name, tile_folder_path.as_posix(), 14):
+                                geopandas.read_file(output_file_path), f'Network Segments ({area_name}) ({quarter} {year})', full_table_name, tile_folder_path.as_posix(), 14):
                             tile_bar.update(current_percent_complete - tile_bar.n)
                         tile_bar.close()
 
