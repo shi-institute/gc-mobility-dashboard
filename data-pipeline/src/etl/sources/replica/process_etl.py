@@ -620,7 +620,7 @@ class ReplicaProcessETL:
                         full_table_name = f'{region}_{year}_{quarter}__{day}'
                         bar_label = f'{area_name} ({quarter} {year})'
                     else:
-                        full_table_name = f'{region}_{year}_{quarter}__{day}__travel_mode__{travel_mode}'
+                        full_table_name = f'{region}_{year}_{quarter}__{day}__commute__{travel_mode}'
                         bar_label = f'{area_name} ({quarter} {year}) (commute:{travel_mode})'
 
                     os.makedirs('./data/tmp', exist_ok=True)
