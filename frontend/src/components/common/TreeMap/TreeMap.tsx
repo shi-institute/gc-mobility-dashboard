@@ -146,7 +146,7 @@ export function TreeMap(props: TreeMapProps) {
     <div style={{ position: 'relative', ...props.style }}>
       <div
         ref={containerRef}
-        style={{ width: '100%', height: '100%', position: 'absolute', overflow: 'auto' }}
+        style={{ width: '100%', height: '100%', position: 'absolute', overflow: 'hidden' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
@@ -186,7 +186,7 @@ export function TreeMap(props: TreeMapProps) {
                   fillOpacity={0.7}
                   stroke="white"
                   strokeWidth={1}
-                  style={{ cursor: 'pointer', transition: 'fill-opacity 0.2s' }}
+                  style={{ cursor: 'default', transition: 'fill-opacity 0.2s' }}
                   onMouseEnter={() => setHoveredNode(leaf)}
                   onMouseLeave={() => setHoveredNode(null)}
                 />
@@ -235,32 +235,65 @@ export function TreeMap(props: TreeMapProps) {
         </svg>
 
         {hoveredNode && mousePosition && (
-          <div
-            style={{
-              position: 'fixed',
-              left: mousePosition.x + 10,
-              top: mousePosition.y - 10,
-              backgroundColor: '#222E5D',
-              color: 'white',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              pointerEvents: 'none',
-              zIndex: 1000,
-              maxWidth: '250px',
-            }}
-          >
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {hoveredNode
-                .ancestors()
-                .reverse()
-                .map((d: TreeMapHierarchyNode) => d.data.name || 'Unknown')
-                .join(' → ')}
+          <Tooltip mousePosition={mousePosition ?? { x: 0, y: 0 }}>
+            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+              {(() => {
+                const nodeNames = hoveredNode
+                  .ancestors()
+                  .reverse()
+                  .map((d: TreeMapHierarchyNode) => d.data.name || 'Unknown');
+
+                if (nodeNames.length === 0) return 'Unknown Node';
+
+                if (nodeNames.length === 1) return nodeNames[0];
+
+                return nodeNames[0] + ' → ' + nodeNames.slice(1).join(': ');
+              })()}
             </div>
-            <div>Value: {format(hoveredNode.value || 0)}</div>
-          </div>
+            <div>Est. Population: {format(hoveredNode.value || 0)}</div>
+          </Tooltip>
         )}
       </div>
+    </div>
+  );
+}
+
+interface TooltipProps {
+  children: React.ReactNode;
+  mousePosition: {
+    x: number;
+    y: number;
+  };
+}
+
+function Tooltip(props: TooltipProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rect = useRect(ref);
+
+  // show the tooltop to the left of the mouse position
+  // unless it would be off the screen
+  if (!props.mousePosition || !rect) return null;
+  const leftOffset = props.mousePosition.x - rect.width;
+  const left = leftOffset < 0 ? props.mousePosition.x : leftOffset; // Ensure tooltip doesn't go off-screen
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: 'fixed',
+        left: left,
+        top: props.mousePosition.y - rect.height,
+        backgroundColor: 'var(--color-secondary)',
+        color: 'white',
+        padding: '8px 12px',
+        borderRadius: 'var(--button-radius)',
+        fontSize: '0.875rem',
+        pointerEvents: 'none',
+        zIndex: 1000,
+        maxWidth: '360px',
+      }}
+    >
+      {props.children}
     </div>
   );
 }
