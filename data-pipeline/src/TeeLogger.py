@@ -1,8 +1,9 @@
 import sys
-import time
 
 
 class TeeLogger:
+    last_message_was_omitted = False
+
     def __init__(self, logfile):
         self.terminal = sys.stdout  # store the original stdout
         self.encoding = self.terminal.encoding  # expose encoding from the original stdout
@@ -14,6 +15,20 @@ class TeeLogger:
     def write(self, message):
         if isinstance(message, bytes):
             message = message.decode(self.encoding or "utf-8", "replace")  # decode bytes to str
+
+        # messages that start with ◘ are not written to the log file
+        if message.startswith('◘'):
+            message = message[1:]
+            self.terminal.write(message)
+            self.last_message_was_omitted = True
+            return
+
+        # print() will also send \n, so we need to also not write it to the log file
+        # if the last message was omitted
+        if self.last_message_was_omitted and message == "\n":
+            self.terminal.write(message)
+            self.last_message_was_omitted = False
+            return
 
         self.terminal.write(message)  # print to terminal
         self.log.write(message)  # write to log file

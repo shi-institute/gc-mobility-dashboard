@@ -92,7 +92,122 @@ def etl_runner(etls: Optional[list[str]] = None) -> None:
         # run the source runner
         print(f"\nRunning ETL for {source_name}...")
         try:
-            runner_func()
+            with_restart_when_stalled(runner_func)()
         except Exception as e:
             print(f"Error running ETL for {source_name}: {e}")
             raise
+
+
+def with_restart_when_stalled(func):
+    """
+    Decorator to restart the ETL process if it stalls for more than 8 minutes.
+
+    Monitors the log file directory for activity. If the file has not written
+    anything for 5 minutes, show a notice. If it has been another 3 minutes since
+    the notice, restart the ETL process.
+
+    The log files are expected to be in the ./data/logs directory. The most recent
+    directory is monitored for activity, not a specific log file.
+    """
+
+    import multiprocessing
+    import threading
+    import time
+    from pathlib import Path
+
+    class ProcessManager:
+        """
+        A class to manage the ETL process.
+        It allows starting, stopping, and checking the status of the process.
+        """
+
+        def __init__(self):
+            self.process = None
+
+        def is_alive(self):
+            return self.process is not None and self.process.is_alive()
+
+        def terminate(self):
+            if self.process is not None:
+                pid = self.process.pid
+                print(f'◘Terminating process with PID: {pid}')
+                self.process.terminate()
+                self.process.join()
+                self.process = None
+                print(f'Process terminated (PID: ${pid}).')
+
+        def start(self):
+            if self.process:
+                print('Process already exists. Try terminating it first.')
+
+            self.process = multiprocessing.Process(target=func)
+            self.process.start()
+
+        def join(self):
+            if self.process:
+                self.process.join()
+
+    def wrapper():
+        log_dir = Path("./data/logs")
+        if not log_dir.exists():
+            print('Log directory does not exist. Cannot monitor for stalling.')
+            func()
+            return
+
+        log_files = list(log_dir.glob('*.log'))
+        if not log_files:
+            print('No log files found in the log directory. Cannot monitor for stalling.')
+            func()
+            return
+
+        log_file = max(log_files, key=lambda f: f.stat().st_mtime)
+
+        check_interval = 60  # seconds
+        inactive_threshold = 300  # 5 minutes
+        restart_threshold = 180  # 3 more minutes
+
+        pm = ProcessManager()
+
+        restart_flag = {'value': False}
+
+        def monitor_log():
+            nonlocal restart_flag
+            last_modified = log_file.stat().st_mtime
+            notice_shown = False
+
+            while True:
+                time.sleep(check_interval)
+                current_modified = log_file.stat().st_mtime
+
+                if current_modified == last_modified:
+                    if not notice_shown and time.time() - last_modified > inactive_threshold:
+                        print(
+                            f'◘No activity for {inactive_threshold}s. Will restart in {restart_threshold}s if still idle.'
+                        )
+                        notice_shown = True
+                    elif time.time() - last_modified > inactive_threshold + restart_threshold:
+                        print('Restarting ETL process due to inactivity...')
+                        restart_flag['value'] = True
+                        pm.terminate()  # terminate the current process so that the consumer knows it has to restart
+                        break  # exit the loop to end the monitoring thread
+                else:
+                    last_modified = current_modified
+                    notice_shown = False
+
+        # keep starting the ETL process until it finishes normally
+        while True:
+            restart_flag['value'] = False
+            pm.start()
+            t = threading.Thread(target=monitor_log, daemon=True)
+            t.start()
+            pm.join()  # wait for the process to finish or be terminated
+
+            # if the process was not restarted due to inactivity, break the loop
+            if not restart_flag['value']:
+                break
+
+            # otherwise, wait a few seconds before restarting so that there
+            # is enough time for the process to terminate
+            time.sleep(3)
+
+    return wrapper
