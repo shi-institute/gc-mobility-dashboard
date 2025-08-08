@@ -287,6 +287,7 @@ interface ServiceCoverage {
   /** The name of the area. If null, these stats apply to the entire network. */
   area: string | null;
   routes_distance_meters: number;
+  stops_count: number;
   walk_service_area_perimeter_meters: number;
   walk_service_area_area_square_meters: number;
   bike_service_area_perimeter_meters: number;
