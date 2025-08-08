@@ -45,7 +45,7 @@ export function TreeMap(props: TreeMapProps) {
             ? props.data.children.map((d) => d.name)
             : []
         )
-        .range(d3.schemeTableau10);
+        .range(d3.schemeObservable10);
 
       const hierarchy = d3
         .hierarchy<TreeMapEntry>(props.data)
@@ -192,12 +192,7 @@ export function TreeMap(props: TreeMapProps) {
                 />
                 {showText && (
                   <>
-                    <defs>
-                      <clipPath id={`clip-${index}`}>
-                        <rect width={nodeWidth} height={nodeHeight} />
-                      </clipPath>
-                    </defs>
-                    <text clipPath={`url(#clip-${index})`} style={{ pointerEvents: 'none' }}>
+                    <text style={{ pointerEvents: 'none' }}>
                       {allTextLines.map((line, lineIndex) => {
                         const isLastLine = lineIndex === allTextLines.length - 1;
                         const currentFontSize = isLastLine ? valueFontSize : baseFontSize;
