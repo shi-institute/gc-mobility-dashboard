@@ -1,9 +1,3 @@
-/**
- * Interactive TreeMap component using D3.js - displays hierarchical data as sized rectangles
- * Input: TreeMapEntry with { name, value } leaves or { name, children[] } nodes
- * Output: Responsive SVG treemap with hover tooltips and auto-scaling text
- */
-
 import * as d3 from 'd3';
 import React, { useMemo, useRef, useState } from 'react';
 import { useRect } from '../../../hooks';
@@ -12,6 +6,10 @@ export { Section };
 interface TreeMapProps {
   data: TreeMapEntry;
   style?: React.CSSProperties;
+  /** The domain for the ordinal scale. If not provided, it will be calculated from the first level of children in the input data. */
+  domain?: readonly string[];
+  /** A color scheme. See `d3.schemeObservable10` as an example. */
+  colorScheme?: readonly string[];
 }
 
 type TreeMapEntry = { name: string; value: number } | { name: string; children: TreeMapEntry[] };
@@ -41,11 +39,15 @@ export function TreeMap(props: TreeMapProps) {
       const colorScale = d3
         .scaleOrdinal<string, string>()
         .domain(
-          'children' in props.data && props.data.children
-            ? props.data.children.map((d) => d.name)
-            : []
+          props.domain ||
+            ('children' in props.data && props.data.children
+              ? props.data.children
+                  .map((d) => d.name)
+                  .sort((a, b) => a.localeCompare(b))
+                  .toReversed()
+              : [])
         )
-        .range(d3.schemeObservable10);
+        .range(props.colorScheme || d3.schemeObservable10);
 
       const hierarchy = d3
         .hierarchy<TreeMapEntry>(props.data)
@@ -56,8 +58,8 @@ export function TreeMap(props: TreeMapProps) {
         .treemap<TreeMapEntry>()
         .tile(d3.treemapSquarify)
         .size([rect.width, rect.height])
-        .paddingOuter(2)
-        .paddingInner(1)
+        .paddingOuter(0)
+        .paddingInner(2)
         .round(true);
 
       return { root: treemapLayout(hierarchy), color: colorScale };
@@ -150,13 +152,7 @@ export function TreeMap(props: TreeMapProps) {
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <svg
-          ref={svgRef}
-          width={rect.width}
-          height={rect.height}
-          className="border border-gray-300"
-          style={{ font: '10px sans-serif', display: 'block', backgroundColor: '#f8f9fa' }}
-        >
+        <svg ref={svgRef} width={rect.width} height={rect.height}>
           {root.leaves().map((leaf, index) => {
             const nodeWidth = leaf.x1 - leaf.x0;
             const nodeHeight = leaf.y1 - leaf.y0;
@@ -189,6 +185,8 @@ export function TreeMap(props: TreeMapProps) {
                   style={{ cursor: 'default', transition: 'fill-opacity 0.2s' }}
                   onMouseEnter={() => setHoveredNode(leaf)}
                   onMouseLeave={() => setHoveredNode(null)}
+                  rx={3}
+                  ry={3}
                 />
                 {showText && (
                   <>
@@ -219,7 +217,7 @@ export function TreeMap(props: TreeMapProps) {
                             y={`${1.2 + lineIndex * 1.1}em`}
                             fillOpacity={isLastLine ? 0.8 : 1}
                             fontSize={`${currentFontSize}px`}
-                            fontWeight={isLastLine ? 'normal' : 'bold'}
+                            fontWeight={isLastLine ? 'normal' : '600'}
                             fill="#333"
                           >
                             {displayText}

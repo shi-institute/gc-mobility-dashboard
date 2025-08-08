@@ -1,4 +1,5 @@
 import styled from '@emotion/styled';
+import * as d3 from 'd3';
 import { CoreFrame, Section, TreeMap } from '../components';
 import { AppNavigation } from '../components/navigation';
 import { useAppData } from '../hooks';
@@ -20,6 +21,25 @@ export function JobAccess() {
 }
 
 function Sections() {
+  const { jobDataByArea, domain, colorScheme } = useJobData();
+
+  return [
+    ...jobDataByArea.map((areaData) => {
+      return (
+        <Section title={areaData.name} noGrid flexParent>
+          <TreeMap
+            data={areaData}
+            style={{ flexGrow: 1, flexShrink: 1 }}
+            domain={domain}
+            colorScheme={colorScheme}
+          />
+        </Section>
+      );
+    }),
+  ];
+}
+
+function useJobData() {
   const { data } = useAppData();
 
   const jobDataByArea = (data || [])
@@ -88,35 +108,41 @@ function Sections() {
       };
     });
 
-  if (!Array.isArray(jobDataByArea) || jobDataByArea.length === 0) {
-    return [
-      <div style={{ textAlign: 'center', gridColumn: '1 / -1' }}>
-        <p style={{ color: 'var(--text-secondary)' }}>No data available for the selected filters</p>
-      </div>,
-    ];
-  }
-
-  return [
-    ...jobDataByArea.map((areaData) => {
-      return (
-        <Section title={areaData.name} noGrid flexParent>
-          <TreeMap data={areaData} style={{ flexGrow: 1, flexShrink: 1 }} />
-        </Section>
-      );
-    }),
+  const domain = jobDataByArea[0]?.children.map((d) => d.name).sort((a, b) => a.localeCompare(b));
+  const colorScheme = [
+    ...d3.schemeObservable10.slice(0, 6).toReversed(),
+    ...d3.schemeObservable10.slice(6),
   ];
+
+  return { jobDataByArea, domain, colorScheme };
 }
 
 interface HeaderProps {}
 
 function Header(props: HeaderProps) {
+  const { domain, colorScheme } = useJobData();
+
   return (
     <HeaderComponent {...props}>
-      <h2>Job Access Statistics</h2>
+      <h2>Job Access Summaries</h2>
       <p>
-        The tree maps below visualize the daily average number of people, in the selected quarter
-        and region, who use various transport modes to reach jobs across different sectors.
+        The tree maps below visualize the daily average number of people who use any transport modes
+        to reach their jobs, grouped by job sector.
       </p>
+      <div className="swatches">
+        {domain.map((name, index) => {
+          const color = colorScheme[index % colorScheme.length];
+
+          return (
+            <div className="swatch">
+              <svg width={16} height={16}>
+                <rect width={16} height={16} rx={3} ry={3} fill={color} />
+              </svg>
+              <span>{name}</span>
+            </div>
+          );
+        })}
+      </div>
     </HeaderComponent>
   );
 }
@@ -124,7 +150,7 @@ function Header(props: HeaderProps) {
 const HeaderComponent = styled.div<HeaderProps>`
   text-align: center;
   padding: 0.5rem 0 1.5rem 0;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid lightgray;
 
   /* span the entire grid width */
   grid-column: 1 / -1;
@@ -135,8 +161,25 @@ const HeaderComponent = styled.div<HeaderProps>`
   }
 
   p {
-    margin: 8px 0 0;
+    margin: 0.5rem 0;
     font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  .swatches {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
     color: var(--text-primary);
   }
 `;
