@@ -1,7 +1,8 @@
 import styled from '@emotion/styled';
 import * as d3 from 'd3';
-import { CoreFrame, Section, TreeMap } from '../components';
+import { CoreFrame, Section, SidebarContent, TreeMap } from '../components';
 import { AppNavigation } from '../components/navigation';
+import { ComparisonModeSwitch, SelectedArea, SelectedSeason } from '../components/options';
 import { useAppData } from '../hooks';
 import { notEmpty } from '../utils';
 
@@ -16,6 +17,7 @@ export function JobAccess() {
       header={<AppNavigation />}
       sectionsHeader={<Header />}
       sections={Sections()}
+      sidebar={<Sidebar />}
     />
   );
 }
@@ -108,7 +110,8 @@ function useJobData() {
       };
     });
 
-  const domain = jobDataByArea[0]?.children.map((d) => d.name).sort((a, b) => a.localeCompare(b));
+  const domain =
+    jobDataByArea[0]?.children.map((d) => d.name).sort((a, b) => a.localeCompare(b)) || [];
   const colorScheme = [
     ...d3.schemeObservable10.slice(0, 6).toReversed(),
     ...d3.schemeObservable10.slice(6),
@@ -183,3 +186,20 @@ const HeaderComponent = styled.div<HeaderProps>`
     color: var(--text-primary);
   }
 `;
+
+function Sidebar() {
+  const { areasList, seasonsList } = useAppData();
+
+  return (
+    <SidebarContent>
+      <h1>Options</h1>
+
+      <h2>Filters</h2>
+      <SelectedArea areasList={areasList} />
+      <SelectedSeason seasonsList={seasonsList} />
+
+      <h2>Compare</h2>
+      <ComparisonModeSwitch />
+    </SidebarContent>
+  );
+}
