@@ -112,7 +112,20 @@ function Sections() {
         })}
         unit="square miles"
       />
-      <Statistic.Number wrap label="Service coverage (estimated households covered)" data={[]} />
+      <Statistic.Percent
+        wrap
+        label="Household access"
+        data={data?.map((area) => {
+          const area_households = area.statistics?.synthetic_demographics.households || 0;
+          const area_households_covered =
+            area.statistics?.synthetic_demographics.households_in_service_area?.walk || 0;
+
+          return {
+            label: area.__label,
+            value: ((area_households_covered / area_households) * 100).toFixed(1),
+          };
+        })}
+      />
     </Section>,
     <Section title="Area Demographics">
       <Statistic.Number

@@ -164,6 +164,10 @@ interface ReplicaSyntheticDemographicsStatisitcs {
     transit?: number;
     biking?: number;
   };
+  households?: number;
+  population?: number;
+  households_in_service_area?: { walk: number; bike: number };
+  population_in_service_area?: { walk: number; bike: number };
 }
 
 interface ReplicaTripStatistics {
