@@ -1,4 +1,5 @@
 export { debounce } from './debounce';
+export { generateHash } from './generateHash';
 export { inflateResponse } from './inflateResponse';
 export { notEmpty } from './notEmpty';
 export { quadraticBezierToPolygon } from './quadraticBezierToPolygon';

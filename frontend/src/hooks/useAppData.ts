@@ -1,6 +1,6 @@
 import type { Style as MapboxStyle, VectorSource as MapboxVectorSource } from 'mapbox-gl';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { inflateResponse } from '../utils';
+import { generateHash, inflateResponse } from '../utils';
 
 export function createAppDataContext(
   areas: AppDataHookParameters['areas'],
@@ -94,7 +94,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const replicaPaths = constructReplicaPaths(areas, seasons, travelMethod);
     const replicaPromises = constructReplicaPromises(replicaPaths);
     const greenlinkPromises = getGreenlinkPromises(seasons);
-    return replicaPromises.map(({ year, quarter, promises }) => {
+    return replicaPromises.map(({ area, year, quarter, promises }) => {
       const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter] || {};
 
       // merge all promises into a single object
@@ -102,6 +102,16 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
         ...promises,
         ...censusPromises,
         ...greenlinkPromisesForSeason,
+        coverage: (abortSignal?: AbortSignal) =>
+          greenlinkPromisesForSeason.coverage(abortSignal).then((data) => {
+            if (!data) {
+              return null;
+            }
+
+            return data.find(
+              (item) => item.year === year && item.quarter === quarter && item.area === area
+            );
+          }),
       };
     });
   }, [areas, seasons]);
@@ -146,11 +156,20 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   return { data, loading, errors, areasList, seasonsList, travelMethodList };
 }
 
+const globalResultCache: Record<string, unknown> = {};
+
 async function fetchData<T = Record<string, unknown>>(
   input: RequestInfo | URL,
   abortSignal?: AbortSignal,
-  skipInflate = false
+  skipInflate = false,
+  rememberResult = true
 ): Promise<T> {
+  const inputHash = await generateHash(typeof input === 'string' ? input : JSON.stringify(input));
+
+  if (rememberResult && globalResultCache[inputHash]) {
+    return globalResultCache[inputHash] as T;
+  }
+
   return fetch(input, {
     signal: abortSignal,
   })
@@ -173,7 +192,12 @@ async function fetchData<T = Record<string, unknown>>(
         throw new Error('Received HTML response instead of JSON. This may indicate a 404 error.');
       }
 
-      return JSON.parse(text);
+      const parsedData = JSON.parse(text) as T;
+
+      if (rememberResult) {
+        globalResultCache[inputHash] = parsedData;
+      }
+      return parsedData;
     });
 }
 
@@ -284,6 +308,13 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
       year: __year,
       quarter: __quarter,
       promises: {
+        coverage: (abortSignal?: AbortSignal) =>
+          fetchData<ServiceCoverage[]>(
+            `./data/greenlink_gtfs/service_coverage_stats.json.deflate`,
+            abortSignal,
+            false,
+            true
+          ).catch(handleError('greenlink_coverage')),
         routes: (abortSignal?: AbortSignal) =>
           fetchData<GTFS.Routes>(`${gtfsFolder}/routes.geojson.deflate`, abortSignal).catch(
             handleError('greenlink_routes')
