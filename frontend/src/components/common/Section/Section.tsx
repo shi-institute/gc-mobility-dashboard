@@ -15,30 +15,39 @@ interface SectionProps {
    * **Use `SectionEntry` components for individual entries within the section.**
    */
   children: React.ReactNode;
+  /** If true, do not use grid layout for children */
+  noGrid?: boolean;
+  /** If true, use flex instead of block for the wrapper that contains the title and the children. */
+  flexParent?: boolean;
 }
 
 export function Section(props: SectionProps) {
   const TitleTag = `h${props.level || 2}` as keyof JSX.IntrinsicElements;
 
   return (
-    <SectionComponent>
+    <SectionComponent noGrid={props.noGrid} flexParent={props.flexParent}>
       <TitleTag className="section-title">{props.title}</TitleTag>
       <div className="section-content">{props.children}</div>
     </SectionComponent>
   );
 }
 
-const SectionComponent = styled.section`
+const SectionComponent = styled.section<{ noGrid?: boolean; flexParent?: boolean }>`
   container-type: inline-size;
   container-name: section;
   inline-size: 100%; /* required because container-type: inline-size collapses inline-size to 0 with auto values */
 
+  display: ${(props) => (props.flexParent ? 'flex' : 'block')};
+  flex-direction: column;
+
   .section-content {
-    display: grid;
+    display: ${(props) => (props.noGrid ? (props.flexParent ? 'flex' : 'block') : 'grid')};
     grid-template-columns: [left] repeat(4, 1fr) [right];
     grid-auto-rows: minmax(3rem, min-content);
     grid-auto-flow: dense;
     gap: 0.5rem;
+
+    flex-grow: 1;
 
     @container section (max-width: 899px) {
       grid-template-columns: [left] repeat(3, 1fr) [right];
@@ -58,5 +67,7 @@ const SectionComponent = styled.section`
     color: var(--color-text-primary);
     text-align: left;
     line-height: 1.2;
+    flex-grow: 0;
+    flex-shrink: 0;
   }
 `;
