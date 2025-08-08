@@ -312,17 +312,23 @@ class GreenlinkGtfsETL:
         # read the GeoJSON files
         print(f'Opening GeoJSON files for {year} {quarter}...')
         routes_file_path = os.path.join(output_folder_path, 'routes.geojson')
-        routes_gdf = geopandas.read_file(routes_file_path)
+        routes_gdf = geopandas.read_file(routes_file_path, columns=['geometry'])
+
+        stops_file_path = os.path.join(output_folder_path, 'stops.geojson')
+        stops_gdf = geopandas.read_file(stops_file_path, columns=['geometry'])
 
         walk_service_area_file_path = os.path.join(output_folder_path, 'walk_service_area.geojson')
-        walk_service_area_gdf = geopandas.read_file(walk_service_area_file_path)
+        walk_service_area_gdf = geopandas.read_file(
+            walk_service_area_file_path, columns=['geometry'])
 
         bike_service_area_file_path = os.path.join(output_folder_path, 'bike_service_area.geojson')
-        bike_service_area_gdf = geopandas.read_file(bike_service_area_file_path)
+        bike_service_area_gdf = geopandas.read_file(
+            bike_service_area_file_path, columns=['geometry'])
 
         paratransit_service_area_file_path = os.path.join(
             output_folder_path, 'paratransit_service_area.geojson')
-        paratransit_service_area_gdf = geopandas.read_file(paratransit_service_area_file_path)
+        paratransit_service_area_gdf = geopandas.read_file(
+            paratransit_service_area_file_path, columns=['geometry'])
 
         all_geo_stats: list[dict[str, int | float]] = []
 
@@ -330,6 +336,9 @@ class GreenlinkGtfsETL:
 
         # calculate the distance of the routes in meters
         distance_meters = geodesic_length_series(routes_gdf.geometry)
+
+        # count the number of stops
+        stops_count = len(stops_gdf)
 
         # calculate the service coverage for each service area
         walk_perimeter, walk_area = geodesic_area_series(walk_service_area_gdf.geometry)
@@ -340,6 +349,7 @@ class GreenlinkGtfsETL:
             'year': year,
             'quarter': quarter,
             'routes_distance_meters': distance_meters,
+            'stops_count': stops_count,
             'walk_service_area_perimeter_meters': walk_perimeter,
             'walk_service_area_area_square_meters': walk_area,
             'bike_service_area_perimeter_meters': bike_perimeter,
@@ -353,18 +363,17 @@ class GreenlinkGtfsETL:
         for area_geojson_path, area_name in self.areas:
             print(f'Calculating service coverage for area {area_name} for {year} {quarter}...')
 
-            area_gdf = geopandas.read_file(area_geojson_path)
-            area_routes = geopandas.overlay(
-                routes_gdf, area_gdf, how='intersection')
-            area_walk_service_area = geopandas.overlay(
-                walk_service_area_gdf, area_gdf, how='intersection')
-            area_bike_service_area = geopandas.overlay(
-                bike_service_area_gdf, area_gdf, how='intersection')
-            area_paratransit_service_area = geopandas.overlay(
-                paratransit_service_area_gdf, area_gdf, how='intersection')
+            area_gdf = geopandas.read_file(area_geojson_path, columns=['geometry'])
+            area_routes = routes_gdf.overlay(area_gdf, how='intersection')
+            area_stops = stops_gdf.overlay(area_gdf, how='intersection')
+            area_walk_service_area = walk_service_area_gdf.overlay(area_gdf, how='intersection')
+            area_bike_service_area = bike_service_area_gdf.overlay(area_gdf, how='intersection')
+            area_paratransit_service_area = paratransit_service_area_gdf.overlay(
+                area_gdf, how='intersection')
 
             # calculate the service area stats for the area
             area_routes_distance_meters = geodesic_length_series(area_routes.geometry)
+            area_stops_count = len(area_stops)
             area_walk_perimeter, area_walk_area = geodesic_area_series(
                 area_walk_service_area.geometry)
             area_bike_perimeter, area_bike_area = geodesic_area_series(
@@ -378,6 +387,7 @@ class GreenlinkGtfsETL:
                 'quarter': quarter,
                 'area': area_name,
                 'routes_distance_meters': area_routes_distance_meters,
+                'stops_count': area_stops_count,
                 'walk_service_area_perimeter_meters': area_walk_perimeter,
                 'walk_service_area_area_square_meters': area_walk_area,
                 'bike_service_area_perimeter_meters': area_bike_perimeter,

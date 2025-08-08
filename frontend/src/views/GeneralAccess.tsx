@@ -96,7 +96,16 @@ function Sections() {
         })}
         unit="miles"
       />
-      <Statistic.Number wrap label="Number of stops" data={[]} />
+      <Statistic.Number
+        wrap
+        label="Number of stops"
+        data={data?.map((area) => {
+          return {
+            label: area.__label,
+            value: area.coverage?.stops_count || NaN,
+          };
+        })}
+      />
       <Statistic.Number wrap label="Local funding per capita" data={[]} />
       {ridershipDataExists ? (
         <>
