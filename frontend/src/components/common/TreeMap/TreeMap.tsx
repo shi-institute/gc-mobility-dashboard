@@ -5,11 +5,13 @@
  */
 
 import * as d3 from 'd3';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { useRect } from '../../../hooks';
 export { Section };
 
 interface TreeMapProps {
   data: TreeMapEntry;
+  style?: React.CSSProperties;
 }
 
 type TreeMapEntry = { name: string; value: number } | { name: string; children: TreeMapEntry[] };
@@ -26,26 +28,9 @@ export function TreeMap(props: TreeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredNode, setHoveredNode] = useState<TreeMapHierarchyNode | null>(null);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
-  const [dimensions, setDimensions] = useState({ width: 900, height: 500 });
+  const rect = useRect(containerRef);
 
   const format = d3.format(',d');
-
-  // Dynamic container sizing with ResizeObserver
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width: containerWidth, height: containerHeight } = entry.contentRect;
-        const newWidth = Math.max(700, Math.min(containerWidth - 40, 1000));
-        const newHeight = Math.max(450, Math.min(containerHeight - 40, 550));
-        setDimensions({ width: newWidth, height: newHeight });
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
-  }, []);
 
   // TreeMap data processing and layout calculation
   const { root, color } = useMemo(() => {
@@ -70,7 +55,7 @@ export function TreeMap(props: TreeMapProps) {
       const treemapLayout = d3
         .treemap<TreeMapEntry>()
         .tile(d3.treemapSquarify)
-        .size([dimensions.width, dimensions.height])
+        .size([rect.width, rect.height])
         .paddingOuter(2)
         .paddingInner(1)
         .round(true);
@@ -81,7 +66,7 @@ export function TreeMap(props: TreeMapProps) {
       console.warn('TreeMap layout error:', error);
       return { root: null, color: null };
     }
-  }, [props.data, dimensions]);
+  }, [props.data, rect.width, rect.height]);
 
   // Text line breaking algorithm for TreeMap labels
   const breakTextIntoLines = (text: string, maxWidth: number, fontSize: number) => {
@@ -158,124 +143,129 @@ export function TreeMap(props: TreeMapProps) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative overflow-auto"
-      style={{ width: '100%', height: '100%' }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-    >
-      <svg
-        ref={svgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        className="border border-gray-300"
-        style={{ font: '10px sans-serif', display: 'block', backgroundColor: '#f8f9fa' }}
+    <div style={{ position: 'relative', ...props.style }}>
+      <div
+        ref={containerRef}
+        style={{ width: '100%', height: '100%', position: 'absolute', overflow: 'auto' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
-        {root.leaves().map((leaf, index) => {
-          const nodeWidth = leaf.x1 - leaf.x0;
-          const nodeHeight = leaf.y1 - leaf.y0;
-          const minDimension = Math.min(nodeWidth, nodeHeight);
-
-          // Get color from parent node for consistent coloring
-          let colorNode: TreeMapHierarchyNode = leaf;
-          while (colorNode.depth > 1 && colorNode.parent) colorNode = colorNode.parent;
-          const fillColor = color ? color(colorNode.data.name) : '#8884d8';
-
-          const { base: baseFontSize, value: valueFontSize } = calculateFontSizes(minDimension);
-          const nameLines = breakTextIntoLines(leaf.data.name || '', nodeWidth - 16, baseFontSize);
-          const valueText = format(leaf.value || 0);
-          const allTextLines = [...nameLines, valueText];
-          const showText = nodeWidth > 30 && nodeHeight > 20;
-
-          return (
-            <g key={`leaf-${index}`} transform={`translate(${leaf.x0},${leaf.y0})`}>
-              <rect
-                width={nodeWidth}
-                height={nodeHeight}
-                fill={fillColor}
-                fillOpacity={0.7}
-                stroke="white"
-                strokeWidth={1}
-                style={{ cursor: 'pointer', transition: 'fill-opacity 0.2s' }}
-                onMouseEnter={() => setHoveredNode(leaf)}
-                onMouseLeave={() => setHoveredNode(null)}
-              />
-              {showText && (
-                <>
-                  <defs>
-                    <clipPath id={`clip-${index}`}>
-                      <rect width={nodeWidth} height={nodeHeight} />
-                    </clipPath>
-                  </defs>
-                  <text clipPath={`url(#clip-${index})`} style={{ pointerEvents: 'none' }}>
-                    {allTextLines.map((line, lineIndex) => {
-                      const isLastLine = lineIndex === allTextLines.length - 1;
-                      const currentFontSize = isLastLine ? valueFontSize : baseFontSize;
-                      const lineHeight = currentFontSize * 1.2;
-                      const yPositionPx = lineHeight + lineIndex * lineHeight * 0.9;
-
-                      // Better vertical bounds checking
-                      if (yPositionPx > nodeHeight - currentFontSize) return null;
-
-                      // Ensure text fits horizontally by double-checking width
-                      const estimatedWidth = line.length * currentFontSize * 0.6;
-                      const displayText =
-                        estimatedWidth > nodeWidth - 16
-                          ? line.substring(
-                              0,
-                              Math.floor((nodeWidth - 16) / (currentFontSize * 0.6)) - 1
-                            ) + '…'
-                          : line;
-
-                      return (
-                        <tspan
-                          key={lineIndex}
-                          x={8}
-                          y={`${1.2 + lineIndex * 1.1}em`}
-                          fillOpacity={isLastLine ? 0.8 : 1}
-                          fontSize={`${currentFontSize}px`}
-                          fontWeight={isLastLine ? 'normal' : 'bold'}
-                          fill="#333"
-                        >
-                          {displayText}
-                        </tspan>
-                      );
-                    })}
-                  </text>
-                </>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-
-      {hoveredNode && mousePosition && (
-        <div
-          style={{
-            position: 'fixed',
-            left: mousePosition.x + 10,
-            top: mousePosition.y - 10,
-            backgroundColor: '#222E5D',
-            color: 'white',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            maxWidth: '250px',
-          }}
+        <svg
+          ref={svgRef}
+          width={rect.width}
+          height={rect.height}
+          className="border border-gray-300"
+          style={{ font: '10px sans-serif', display: 'block', backgroundColor: '#f8f9fa' }}
         >
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-            {hoveredNode
-              .ancestors()
-              .reverse()
-              .map((d: TreeMapHierarchyNode) => d.data.name || 'Unknown')
-              .join(' → ')}
+          {root.leaves().map((leaf, index) => {
+            const nodeWidth = leaf.x1 - leaf.x0;
+            const nodeHeight = leaf.y1 - leaf.y0;
+            const minDimension = Math.min(nodeWidth, nodeHeight);
+
+            // Get color from parent node for consistent coloring
+            let colorNode: TreeMapHierarchyNode = leaf;
+            while (colorNode.depth > 1 && colorNode.parent) colorNode = colorNode.parent;
+            const fillColor = color ? color(colorNode.data.name) : '#8884d8';
+
+            const { base: baseFontSize, value: valueFontSize } = calculateFontSizes(minDimension);
+            const nameLines = breakTextIntoLines(
+              leaf.data.name || '',
+              nodeWidth - 16,
+              baseFontSize
+            );
+            const valueText = format(leaf.value || 0);
+            const allTextLines = [...nameLines, valueText];
+            const showText = nodeWidth > 30 && nodeHeight > 20;
+
+            return (
+              <g key={`leaf-${index}`} transform={`translate(${leaf.x0},${leaf.y0})`}>
+                <rect
+                  width={nodeWidth}
+                  height={nodeHeight}
+                  fill={fillColor}
+                  fillOpacity={0.7}
+                  stroke="white"
+                  strokeWidth={1}
+                  style={{ cursor: 'pointer', transition: 'fill-opacity 0.2s' }}
+                  onMouseEnter={() => setHoveredNode(leaf)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                />
+                {showText && (
+                  <>
+                    <defs>
+                      <clipPath id={`clip-${index}`}>
+                        <rect width={nodeWidth} height={nodeHeight} />
+                      </clipPath>
+                    </defs>
+                    <text clipPath={`url(#clip-${index})`} style={{ pointerEvents: 'none' }}>
+                      {allTextLines.map((line, lineIndex) => {
+                        const isLastLine = lineIndex === allTextLines.length - 1;
+                        const currentFontSize = isLastLine ? valueFontSize : baseFontSize;
+                        const lineHeight = currentFontSize * 1.2;
+                        const yPositionPx = lineHeight + lineIndex * lineHeight * 0.9;
+
+                        // Better vertical bounds checking
+                        if (yPositionPx > nodeHeight - currentFontSize) return null;
+
+                        // Ensure text fits horizontally by double-checking width
+                        const estimatedWidth = line.length * currentFontSize * 0.6;
+                        const displayText =
+                          estimatedWidth > nodeWidth - 16
+                            ? line.substring(
+                                0,
+                                Math.floor((nodeWidth - 16) / (currentFontSize * 0.6)) - 1
+                              ) + '…'
+                            : line;
+
+                        return (
+                          <tspan
+                            key={lineIndex}
+                            x={8}
+                            y={`${1.2 + lineIndex * 1.1}em`}
+                            fillOpacity={isLastLine ? 0.8 : 1}
+                            fontSize={`${currentFontSize}px`}
+                            fontWeight={isLastLine ? 'normal' : 'bold'}
+                            fill="#333"
+                          >
+                            {displayText}
+                          </tspan>
+                        );
+                      })}
+                    </text>
+                  </>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        {hoveredNode && mousePosition && (
+          <div
+            style={{
+              position: 'fixed',
+              left: mousePosition.x + 10,
+              top: mousePosition.y - 10,
+              backgroundColor: '#222E5D',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              pointerEvents: 'none',
+              zIndex: 1000,
+              maxWidth: '250px',
+            }}
+          >
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+              {hoveredNode
+                .ancestors()
+                .reverse()
+                .map((d: TreeMapHierarchyNode) => d.data.name || 'Unknown')
+                .join(' → ')}
+            </div>
+            <div>Value: {format(hoveredNode.value || 0)}</div>
           </div>
-          <div>Value: {format(hoveredNode.value || 0)}</div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
