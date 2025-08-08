@@ -173,7 +173,7 @@ poetry.toml
 pyrightconfig.json
 
 # Data files
-data/
+/data
 
 # Input files - ignort all files in each input folder except README.md files
 /input/*/*
