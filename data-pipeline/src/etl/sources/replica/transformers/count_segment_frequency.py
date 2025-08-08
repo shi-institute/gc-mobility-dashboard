@@ -292,14 +292,6 @@ def count_segment_frequency_multi_input(
     logger.debug(f'{log_space}  Counting frequencies...')
     segment_hash_frequencies = count_frequency(segment_hashes_df, 'geometry_hash')
 
-    # for some bizarre reason, we need to write to file and then immediately read it back in order
-    # for the indices to match in the next step
-    logger.debug(f'{log_space}  Cycling...')
-    temporary_file_path = tempfile.NamedTemporaryFile(delete=False, suffix='.parquet').name
-    segment_hash_frequencies.to_parquet(temporary_file_path, index=True)
-    segment_hash_frequencies = pandas.read_parquet(temporary_file_path)
-    os.remove(temporary_file_path)
-
     yield (current_step, total_steps)
 
     # Part 3. Look through each chunk and join the segment hashes with the associated partition
@@ -313,19 +305,21 @@ def count_segment_frequency_multi_input(
             columns=['geometry', 'geometry_hash'],
             filters=[step_2_filter] if step_2_filter is not None else None,
         ).to_crs(out_crs)
-        # so we can join by a common column later
-        chunk_gdf['first_occurrence_index'] = chunk_gdf.index
 
         logger.debug(f'{log_space}  Joining with segment frequencies...')
-        chunk_gdf = chunk_gdf.join(
+        chunk_gdf = chunk_gdf.merge(
             segment_hash_frequencies,
-            on='first_occurrence_index',
+            left_index=True,
+            right_on='first_occurrence_index',
             how='left',
-            rsuffix='_freq',
-        )
-        chunk_gdf = chunk_gdf[chunk_gdf['frequency'] > 0]  # ignore chunks without an occurence
-        chunk_gdf = chunk_gdf.drop(columns=[
-            'first_occurrence_index', 'first_occurrence_index_freq', 'geometry_hash_freq', 'geometry_hash'])
+        ).set_index('first_occurrence_index')
+        chunk_gdf.index.name = None
+
+        # drop all columns except frequency and frequency_bucket
+        chunk_gdf = chunk_gdf[['frequency', 'frequency_bucket', 'geometry']]
+
+        # ignore rows without an occurence
+        chunk_gdf = chunk_gdf[chunk_gdf['frequency'] > 0]
 
         # save to the outpit file path in append mode
         logger.debug(f'{log_space}  Saving chunk {chunk_index} to output file: {output_file_path}')
@@ -335,8 +329,10 @@ def count_segment_frequency_multi_input(
             else:
                 chunk_gdf.to_parquet(output_file_path, engine='pyarrow', append=True)
         else:
-            # infer the driver based on the file extension
-            chunk_gdf.to_file(output_file_path, mode='w' if chunk_index == 0 else 'a')
+            # write to the output file, appending to the same file each interation of the loop
+            chunk_gdf\
+                .to_crs(out_crs)\
+                .to_file(output_file_path, mode='w' if chunk_index == 0 else 'a')
 
         yield (current_step, total_steps)
 
