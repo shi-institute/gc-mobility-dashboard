@@ -125,7 +125,7 @@ class ReplicaProcessETL:
         for season_str, season_stats in merged_statistics.items():
             for area, area_stats in season_stats.items():
                 statistics_path = self.output_folder / \
-                    f'{area}/statistics/replica_{season_str}.json'
+                    f'{area}/statistics/replica__{season_str}.json'
                 os.makedirs(os.path.dirname(statistics_path), exist_ok=True)
                 with open(statistics_path, 'w') as file:
                     json.dump(area_stats, file,)
@@ -189,6 +189,8 @@ class ReplicaProcessETL:
                 'population_home': self.input_files['population_home'].format(region=region, year=year, quarter=quarter),
                 'population_school': self.input_files['population_school'].format(region=region, year=year, quarter=quarter),
                 'population_work': self.input_files['population_work'].format(region=region, year=year, quarter=quarter),
+                'walk_service_area': self.input_files['walk_service_area'].format(region=region, year=year, quarter=quarter),
+                'bike_service_area': self.input_files['bike_service_area'].format(region=region, year=year, quarter=quarter),
             }
 
             logger.info(f'Processing population data for {region} in {year} {quarter}')
@@ -208,6 +210,16 @@ class ReplicaProcessETL:
             population_work_input_path = self.output_folder / input_files['population_work']
             logger.debug(f'Population work input path: {population_work_input_path}')
             population_work_gdf = geopandas.read_file(population_work_input_path)
+
+            logger.info(f'    ...walking service area [4/5]')
+            walk_input_path = input_files['walk_service_area']
+            logger.debug(f'Walking service area input path: {walk_input_path}')
+            walk_gdf = geopandas.read_file(walk_input_path)
+
+            logger.info(f'    ...biking service area [5/5]')
+            bike_input_path = input_files['bike_service_area']
+            logger.debug(f'Biking service area input path: {bike_input_path}')
+            bike_gdf = geopandas.read_file(bike_input_path)
 
             for [area_geojson_path, area_name] in self.areas:
                 logger.info(f'  Processing area: {area_name}')
@@ -278,6 +290,33 @@ class ReplicaProcessETL:
                 logger.debug('Calculating commute mode population estimates...')
                 statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
                     'commute_mode').size().to_dict()
+
+                # count households
+                logger.debug('Counting households...')
+                statistics['synthetic_demographics']['households'] = population_filtered_df['household_id'].nunique()
+
+                # count total population
+                logger.debug('Counting total population...')
+                statistics['synthetic_demographics']['population'] = len(population_filtered_df)
+
+                # count households and population covered by the service areas (home-based)
+                logger.debug('Counting households and population in service areas...')
+
+                statistics['synthetic_demographics']['households_in_service_area'] = {}
+                statistics['synthetic_demographics']['households_in_service_area']['walk'] = population_home_filtered_gdf[
+                    population_home_filtered_gdf.intersects(walk_gdf.union_all())
+                ]['household_id'].nunique()
+                statistics['synthetic_demographics']['households_in_service_area']['bike'] = population_home_filtered_gdf[
+                    population_home_filtered_gdf.intersects(bike_gdf.union_all())
+                ]['household_id'].nunique()
+
+                statistics['synthetic_demographics']['population_in_service_area'] = {}
+                statistics['synthetic_demographics']['population_in_service_area']['walk'] = population_home_filtered_gdf[
+                    population_home_filtered_gdf.intersects(walk_gdf.union_all())
+                ]['person_id'].nunique()
+                statistics['synthetic_demographics']['population_in_service_area']['bike'] = population_home_filtered_gdf[
+                    population_home_filtered_gdf.intersects(bike_gdf.union_all())
+                ]['person_id'].nunique()
 
                 # save the statistics to the all_statistics dictionary so we can access them later
                 logger.debug(f'Statistics for {area_name} added to all_statistics.')
