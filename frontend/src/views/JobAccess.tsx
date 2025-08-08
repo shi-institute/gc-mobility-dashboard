@@ -10,7 +10,7 @@ export function JobAccess() {
     <CoreFrame
       outerStyle={{ height: '100%' }}
       sectionsStyle={{
-        gridTemplateColumns: 'repeat(auto-fit, minmax(600px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(300px, 100vw, 600px), 1fr))',
         gridAutoRows: 'minmax(200px, 1fr)',
       }}
       header={<AppNavigation />}
