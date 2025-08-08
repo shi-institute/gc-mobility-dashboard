@@ -112,6 +112,13 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
               (item) => item.year === year && item.quarter === quarter && item.area === area
             );
           }),
+        ridership: (abortSignal?: AbortSignal) =>
+          greenlinkPromisesForSeason.ridership(abortSignal).then((data) => {
+            if (!data) {
+              return null;
+            }
+            return data.filter((stop) => stop.areas?.includes(area));
+          }),
       };
     });
   }, [areas, seasons]);

@@ -77,6 +77,8 @@ function Sections() {
     ];
   }
 
+  const ridershipDataExists = data?.some((area) => area.ridership) || false;
+
   return [
     <DeveloperDetails data={data} />,
     <Section title="Service Statistics">
@@ -96,8 +98,36 @@ function Sections() {
       />
       <Statistic.Number wrap label="Number of stops" data={[]} />
       <Statistic.Number wrap label="Local funding per capita" data={[]} />
-      <Statistic.Number wrap label="Boardings" data={[]} />
-      <Statistic.Number wrap label="Alightings" data={[]} />
+      {ridershipDataExists ? (
+        <>
+          <Statistic.Number
+            wrap
+            label="Boardings"
+            data={data?.map((area) => {
+              const boardings = area.ridership?.map((stop) => stop.boarding) || [];
+              const boardingsTotal = boardings.reduce((sum, value) => sum + (value || 0), 0);
+
+              return {
+                label: area.__label,
+                value: boardingsTotal,
+              };
+            })}
+          />
+          <Statistic.Number
+            wrap
+            label="Alightings"
+            data={data?.map((area) => {
+              const alightings = area.ridership?.map((stop) => stop.alighting) || [];
+              const alightingsTotal = alightings.reduce((sum, value) => sum + (value || 0), 0);
+
+              return {
+                label: area.__label,
+                value: alightingsTotal,
+              };
+            })}
+          />
+        </>
+      ) : null}
       <Statistic.Number
         wrap
         label="Service coverage"
