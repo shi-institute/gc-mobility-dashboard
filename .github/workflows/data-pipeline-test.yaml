@@ -67,7 +67,6 @@ jobs:
       run_greenlink_ridership: ${{ steps.check_changed_dirs.outputs.run_greenlink_ridership }}
       run_census_acs_5year: ${{ steps.check_changed_dirs.outputs.run_census_acs_5year }}
       run_replica: ${{ steps.check_changed_dirs.outputs.run_replica }}
-      run_geocoder: ${{ steps.check_changed_dirs.outputs.run_geocoder }}
       run_generic_src: ${{ steps.check_changed_dirs.outputs.run_generic_src }}
     steps:
       - name: Checkout code
@@ -97,7 +96,6 @@ jobs:
           RUN_GREENLINK_GTFS_TEST="false"
           RUN_CENSUS_ACS_5YEAR_TEST="false"
           RUN_REPLICA_TEST="false"
-          RUN_GEOCODER_TEST="false"
           RUN_GENERIC_SRC_TEST="false"
 
           if [ -n "$CHANGED_FILES" ]; then
@@ -113,8 +111,6 @@ jobs:
                 RUN_CENSUS_ACS_5YEAR_TEST="true"
               elif [[ "$file" == "data-pipeline/src/etl/sources/replica/"* ]]; then
                 RUN_REPLICA_TEST="true"
-              elif [[ "$file" == "data-pipeline/src/etl/sources/geocoder/"* ]]; then
-                RUN_GEOCODER_TEST="true"
               elif [[ "$file" == "data-pipeline/src/"* ]] && [[ "$file" != "data-pipeline/src/etl/sources/"* ]]; then
                 RUN_GENERIC_SRC_TEST="true"
               fi
@@ -127,7 +123,6 @@ jobs:
                 RUN_GREENLINK_RIDERSHIP_TEST="false"
                 RUN_CENSUS_ACS_5YEAR_TEST="false"
                 RUN_REPLICA_TEST="false"
-                RUN_GEOCODER_TEST="false"
             fi
 
             NO_CHANGES="false"
@@ -141,7 +136,6 @@ jobs:
           echo "run_greenlink_ridership=$RUN_GREENLINK_RIDERSHIP_TEST" >> "$GITHUB_OUTPUT"
           echo "run_census_acs_5year=$RUN_CENSUS_ACS_5YEAR_TEST" >> "$GITHUB_OUTPUT"
           echo "run_replica=$RUN_REPLICA_TEST" >> "$GITHUB_OUTPUT"
-          echo "run_geocoder=$RUN_GEOCODER_TEST" >> "$GITHUB_OUTPUT"
           echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
 
           # hash "$GITHUB_OUTPUT" so we can include it in the check_previous_pass/update_pass_variable CURRENT_HASH variable
@@ -154,7 +148,6 @@ jobs:
           echo "Run Greenlink Ridership: $RUN_GREENLINK_RIDERSHIP_TEST"
           echo "Run Census ACS 5-Year: $RUN_CENSUS_ACS_5YEAR_TEST"
           echo "Run Replica: $RUN_REPLICA_TEST"
-          echo "Run Geocoder: $RUN_GEOCODER_TEST"
           echo "Run all: $RUN_GENERIC_SRC_TEST"
 
   authenticate_google_big_query:
@@ -284,49 +277,6 @@ jobs:
           artifact_name: "data__replica"
           input_dir: "${{ github.workspace }}/replica-input"
           etls: "greenlink_gtfs,replica"
-
-  test__geocoder:
-    name: "Test / Geocoder"
-    runs-on: ubuntu-latest
-    needs: [build, determine_tests_to_run]
-    if: needs.determine_tests_to_run.outputs.run_geocoder == 'true'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Create sample input data
-        env:
-          CSV1_CONTENT: |
-            Company Name,Address,City,State,ZIP Code,ZIP Four,County,Metro Area,Neighborhood
-            7-Eleven,7 Eleven,Fountain Inn,SC,29644,,Greenville,"Greenville, SC",
-            7-Eleven,1703 Easley Bridge Rd,Greenville,SC,29611,5320,Greenville,"Greenville, SC",
-            7-Eleven,2617 Wade Hampton Blvd,Greenville,SC,29615,1149,Greenville,"Greenville, SC",
-        run: |
-          mkdir -p ${{ github.workspace }}/pipeline-input/to_geocode
-
-          cat <<EOF > "${{ github.workspace }}/pipeline-input/to_geocode/file1.csv"
-          ${{ env.CSV1_CONTENT }}
-          EOF
-
-      - name: Run test (with data)
-        uses: ./.github/actions/prepare-pipeline-test
-        with:
-          artifact_name: "data__geocoder"
-          etls: "geocoder"
-          input_dir: "${{ github.workspace }}/pipeline-input"
-
-      - name: Delete input data
-        run: |
-          rm -rf ${{ github.workspace }}/pipeline-input/to_geocode
-          mkdir -p ${{ github.workspace }}/pipeline-input/to_geocode
-
-      - name: Run test (no data)
-        uses: ./.github/actions/prepare-pipeline-test
-        with:
-          artifact_name: "data__geocoder_nodata"
-          etls: "geocoder"
-          input_dir: "${{ github.workspace }}/pipeline-input"
 
   test__all:
     name: "Test / All ETLs"
