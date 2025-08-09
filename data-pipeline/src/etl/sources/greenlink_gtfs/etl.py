@@ -265,9 +265,13 @@ class GreenlinkGtfsETL:
         walkshed_override_file_path = f'{self.service_area_overrides_folder}/walkshed_{year}_{quarter}.geojson'
         output_file_path = f'{output_folder_path}/walk_service_area.geojson'
 
-        # copy the walkshed override file to the output folder if it is provided
+        # process the walkshed override file if it is provided
         if os.path.exists(walkshed_override_file_path):
-            shutil.copy(walkshed_override_file_path, output_file_path)
+            walk_gdf = geopandas\
+                .read_file(walkshed_override_file_path)\
+                .to_crs('EPSG:4326')\
+                .dissolve()\
+                .to_file(output_file_path)
             print(f"Using walkshed override for {year} {quarter}.")
 
         # otherwise, generate a walk-time service area
@@ -281,9 +285,13 @@ class GreenlinkGtfsETL:
         bikeshed_override_file_path = f'{self.service_area_overrides_folder}/bikeshed_{year}_{quarter}.geojson'
         output_file_path = f'{output_folder_path}/bike_service_area.geojson'
 
-        # copy the bikeshed override file to the output folder if it is provided
+        # process the bikeshed override file if it is provided
         if os.path.exists(bikeshed_override_file_path):
-            shutil.copy(bikeshed_override_file_path, output_file_path)
+            walk_gdf = geopandas\
+                .read_file(bikeshed_override_file_path)\
+                .to_crs('EPSG:4326')\
+                .dissolve()\
+                .to_file(output_file_path)
             print(f"Using bikeshed override for {year} {quarter}.")
 
         # otherwise, generate a bike-time service area
