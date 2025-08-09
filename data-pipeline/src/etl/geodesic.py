@@ -51,9 +51,16 @@ def geodesic_buffer_series(points: geopandas.GeoSeries, distance_meters: float, 
     Returns:
         geopandas.GeoSeries: The geodesic buffer polygons.
     """
-    results = points.to_crs('EPSG:4326').map(
-        lambda point: geodesic_buffer(point, distance_meters, num_points))
-    return geopandas.GeoSeries(results, crs=points.crs).to_crs(points.crs or 'EPSG:4326')
+    original_crs = points.crs or 'EPSG:4326'
+    points = points.to_crs('EPSG:4326')
+
+    geoseries = points.geometry
+    geoseries = geoseries[geoseries.geom_type.isin(['Point'])].copy()
+
+    results = points.map(lambda point: geodesic_buffer(point, distance_meters,
+                         num_points) if point is not None and point.geom_type == 'Point' else None)
+
+    return geopandas.GeoSeries(results, crs=points.crs).to_crs(original_crs)
 
 
 def geodesic_length(line: LineString) -> float:
