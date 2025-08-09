@@ -92,13 +92,13 @@ const StyledButton = styled.button`
   }
 
   &:active:not(.disabled) {
-    background-color: var(--subtle-fill-tertiary);
+    background-color: var(--subtle-fill-secondary);
     color: var(--text-secondary);
     box-shadow: inset 0 0 0 1px var(--control-stroke-default);
   }
 
   &.disabled {
-    background-color: var(--subtle-fill-disabled);
+    background-color: var(--subtle-fill-secondary);
     color: var(--text-disabled);
     cursor: not-allowed;
   }
