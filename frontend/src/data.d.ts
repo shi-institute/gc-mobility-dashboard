@@ -295,3 +295,34 @@ interface ServiceCoverage {
   paratransit_service_area_perimeter_meters: number;
   paratransit_service_area_area_square_meters: number;
 }
+
+interface EssentialServicesAccessStatistic {
+  area: string;
+  season: string;
+}
+
+interface EssentialServicesTripAccessStatistic extends EssentialServicesAccessStatistic {
+  replica_table: 'thursday_trip' | 'saturday_trip';
+  child_care__mean_travel_time?: number;
+  commercial_zone__mean_travel_time?: number;
+  healthcare__mean_travel_time?: number;
+  grocery_store__mean_travel_time?: number;
+}
+
+interface EssentialServicesPopulationAccessStatistic extends EssentialServicesAccessStatistic {
+  replica_table: 'population';
+  child_care__access_fraction?: number;
+  commercial_zone__access_fraction?: number;
+  healthcare__access_fraction?: number;
+  grocery_store__access_fraction?: number;
+}
+
+type EssentialServicesAccessStats =
+  | EssentialServicesTripAccessStatistic
+  | EssentialServicesPopulationAccessStatistic;
+
+type MergedEssentialServicesAccessStats = Omit<
+  EssentialServicesTripAccessStatistic,
+  'replica_table'
+> &
+  Omit<EssentialServicesPopulationAccessStatistic, 'replica_table'>;

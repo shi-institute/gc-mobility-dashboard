@@ -94,14 +94,18 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const replicaPaths = constructReplicaPaths(areas, seasons, travelMethod);
     const replicaPromises = constructReplicaPromises(replicaPaths);
     const greenlinkPromises = getGreenlinkPromises(seasons);
+    const essentialServicesPromises = getEssentialServicesPromises(areas, seasons);
     return replicaPromises.map(({ area, year, quarter, promises }) => {
       const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter] || {};
+      const essentialServicesPromisesForAreaAndSeason =
+        essentialServicesPromises[year + '_' + quarter + '__' + area] || {};
 
       // merge all promises into a single object
       return {
         ...promises,
         ...censusPromises,
         ...greenlinkPromisesForSeason,
+        ...essentialServicesPromisesForAreaAndSeason,
         coverage: (abortSignal?: AbortSignal) =>
           greenlinkPromisesForSeason.coverage(abortSignal).then((data) => {
             if (!data) {
@@ -310,6 +314,7 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
   const allPromises = seasons.map(([__quarter, __year]) => {
     const gtfsFolder = `./data/greenlink_gtfs/${__year}/${__quarter}`;
     const ridershipFolder = `./data/greenlink_ridership/${__year}/${__quarter}`;
+    const essentialServicesFolder = `./data/essential_services/${__year}/${__quarter}`;
 
     return {
       year: __year,
@@ -357,6 +362,73 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
   const groupedPromises: Record<string, (typeof allPromises)[number]['promises']> = {};
   for (const { year, quarter, promises } of allPromises) {
     const key = `${year}_${quarter}`;
+    groupedPromises[key] = promises;
+  }
+
+  return groupedPromises;
+}
+
+function getEssentialServicesPromises(
+  areas: AppDataHookParameters['areas'],
+  seasons: AppDataHookParameters['seasons']
+) {
+  const allPromises = seasons.flatMap(([__quarter, __year]) => {
+    return areas.map((__area) => {
+      const essentialServicesFolder = `./data/essential_services/${__year}/${__quarter}`;
+
+      return {
+        area: __area,
+        year: __year,
+        quarter: __quarter,
+        promises: {
+          essential_services_access_stats: (abortSignal?: AbortSignal) =>
+            fetchData<EssentialServicesAccessStats[]>(
+              `./data/essential_services/essential_services_stats.json.deflate`,
+              abortSignal,
+              false,
+              true
+            )
+              .then((data) => {
+                if (!data) {
+                  return null;
+                }
+                return Object.fromEntries(
+                  data
+                    .filter(
+                      (item) => item.season === `${__year}_${__quarter}` && item.area === __area
+                    )
+                    .flatMap((item) => Object.entries(item))
+                ) as MergedEssentialServicesAccessStats;
+              })
+              .catch(handleError('essential_services_access_stats')),
+          child_care_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/child_care.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('child_care_locations', true, true)),
+          grocery_store_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/grocery_store.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('grocery_store_locations', true, true)),
+          healthcare_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/healthcare.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('healthcare_locations', true, true)),
+          commercial_zone_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON<{ ZONING: string }>>(
+              `${essentialServicesFolder}/commercial_zone.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('commericial_zone_locations', true, true)),
+        },
+      };
+    });
+  });
+
+  const groupedPromises: Record<string, (typeof allPromises)[number]['promises']> = {};
+  for (const { area, year, quarter, promises } of allPromises) {
+    const key = `${year}_${quarter}__${area}`;
     groupedPromises[key] = promises;
   }
 
