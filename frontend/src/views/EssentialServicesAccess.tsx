@@ -60,7 +60,7 @@ function Sections() {
         label="Grocery Stores"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.grocery_store__access_fraction || NaN;
+          const stat = area.essential_services_access_stats?.grocery_store__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
       />
@@ -68,7 +68,7 @@ function Sections() {
         label="Healthcare"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.healthcare__access_fraction || NaN;
+          const stat = area.essential_services_access_stats?.healthcare__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
       />
@@ -76,7 +76,7 @@ function Sections() {
         label="Child Care Centers"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.child_care__access_fraction || NaN;
+          const stat = area.essential_services_access_stats?.child_care__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
       />
@@ -85,7 +85,7 @@ function Sections() {
         wrap
         data={data?.map((area) => {
           const stat =
-            area.essential_services_access_stats?.commercial_zone__access_fraction || NaN;
+            area.essential_services_access_stats?.commercial_zone__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
       />
@@ -95,7 +95,7 @@ function Sections() {
         label="Grocery Stores"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.grocery_store__mean_travel_time || NaN;
+          const stat = area.essential_services_access_stats?.grocery_store__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
@@ -104,7 +104,7 @@ function Sections() {
         label="Healthcare"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.healthcare__mean_travel_time || NaN;
+          const stat = area.essential_services_access_stats?.healthcare__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
@@ -113,7 +113,7 @@ function Sections() {
         label="Child Care Centers"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.child_care__mean_travel_time || NaN;
+          const stat = area.essential_services_access_stats?.child_care__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
@@ -123,7 +123,7 @@ function Sections() {
         wrap
         data={data?.map((area) => {
           const stat =
-            area.essential_services_access_stats?.commercial_zone__mean_travel_time || NaN;
+            area.essential_services_access_stats?.commercial_zone__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
