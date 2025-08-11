@@ -8,6 +8,7 @@ import {
   SelectTravelMethod,
 } from '../components/options';
 import { useAppData, useMapData } from '../hooks';
+import { notEmpty } from '../utils';
 
 export function EssentialServicesAccess() {
   const { data } = useAppData();
@@ -41,7 +42,7 @@ export function EssentialServicesAccess() {
               childCareCenters,
               commercialZones,
               ...areaPolygons,
-            ]}
+            ].filter(notEmpty)}
           />
         </div>
       }

@@ -184,7 +184,7 @@ export function useMapData(data: AppData) {
                   outFields: ['*'],
                   creator: (event) => {
                     const stopRidership = Object.entries(
-                      selectedAreasAndSeasonsRidership[event?.graphic.attributes.ID]
+                      selectedAreasAndSeasonsRidership[event?.graphic.attributes.ID] || {}
                     ).map(([season, ridership]) => {
                       return [
                         season,
@@ -321,16 +321,14 @@ export function useMapData(data: AppData) {
               content: [
                 new FieldsContent({
                   title: 'Grocery Store Details',
-                  fieldInfos: Object.keys(grocery_store_locations.features[0].properties).map(
-                    (fieldName) => {
-                      return {
-                        fieldName,
-                        label: fieldName
-                          .replace(/_/g, ' ')
-                          .replace(/\b\w/g, (c) => c.toUpperCase()),
-                      };
-                    }
-                  ),
+                  fieldInfos: Object.keys(
+                    grocery_store_locations.features[0]?.properties || {}
+                  ).map((fieldName) => {
+                    return {
+                      fieldName,
+                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                    };
+                  }),
                 }),
               ],
             }),
@@ -358,7 +356,7 @@ export function useMapData(data: AppData) {
               content: [
                 new FieldsContent({
                   title: 'Healthcare Facility Details',
-                  fieldInfos: Object.keys(healthcare_locations.features[0].properties).map(
+                  fieldInfos: Object.keys(healthcare_locations.features[0]?.properties || {}).map(
                     (fieldName) => {
                       return {
                         fieldName,
@@ -418,7 +416,7 @@ export function useMapData(data: AppData) {
               content: [
                 new FieldsContent({
                   title: 'Child Care Center Details',
-                  fieldInfos: Object.keys(child_care_locations.features[0].properties).map(
+                  fieldInfos: Object.keys(child_care_locations.features[0]?.properties || {}).map(
                     (fieldName) => {
                       return {
                         fieldName,
@@ -464,16 +462,14 @@ export function useMapData(data: AppData) {
               content: [
                 new FieldsContent({
                   title: 'Commercial Zone Details',
-                  fieldInfos: Object.keys(commercial_zone_locations.features[0].properties).map(
-                    (fieldName) => {
-                      return {
-                        fieldName,
-                        label: fieldName
-                          .replace(/_/g, ' ')
-                          .replace(/\b\w/g, (c) => c.toUpperCase()),
-                      };
-                    }
-                  ),
+                  fieldInfos: Object.keys(
+                    commercial_zone_locations.features[0]?.properties || {}
+                  ).map((fieldName) => {
+                    return {
+                      fieldName,
+                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                    };
+                  }),
                 }),
               ],
             }),

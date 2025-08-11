@@ -1,6 +1,6 @@
 import type { Style as MapboxStyle, VectorSource as MapboxVectorSource } from 'mapbox-gl';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { generateHash, inflateResponse } from '../utils';
+import { generateHash, inflateResponse, notEmpty } from '../utils';
 
 export function createAppDataContext(
   areas: AppDataHookParameters['areas'],
@@ -95,36 +95,45 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const replicaPromises = constructReplicaPromises(replicaPaths);
     const greenlinkPromises = getGreenlinkPromises(seasons);
     const essentialServicesPromises = getEssentialServicesPromises(areas, seasons);
-    return replicaPromises.map(({ area, year, quarter, promises }) => {
-      const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter] || {};
-      const essentialServicesPromisesForAreaAndSeason =
-        essentialServicesPromises[year + '_' + quarter + '__' + area] || {};
+    return replicaPromises
+      .map(({ area, year, quarter, promises }) => {
+        const greenlinkPromisesForSeason = greenlinkPromises[year + '_' + quarter];
+        const essentialServicesPromisesForAreaAndSeason =
+          essentialServicesPromises[year + '_' + quarter + '__' + area];
 
-      // merge all promises into a single object
-      return {
-        ...promises,
-        ...censusPromises,
-        ...greenlinkPromisesForSeason,
-        ...essentialServicesPromisesForAreaAndSeason,
-        coverage: (abortSignal?: AbortSignal) =>
-          greenlinkPromisesForSeason.coverage(abortSignal).then((data) => {
-            if (!data) {
-              return null;
-            }
+        if (!greenlinkPromisesForSeason || !essentialServicesPromisesForAreaAndSeason) {
+          console.warn(
+            `No Greenlink or Essential Services data found for area ${area} in season ${year} ${quarter}. Voiding data for area season.`
+          );
+          return null;
+        }
 
-            return data.find(
-              (item) => item.year === year && item.quarter === quarter && item.area === area
-            );
-          }),
-        ridership: (abortSignal?: AbortSignal) =>
-          greenlinkPromisesForSeason.ridership(abortSignal).then((data) => {
-            if (!data) {
-              return null;
-            }
-            return data.filter((stop) => stop.areas?.includes(area));
-          }),
-      };
-    });
+        // merge all promises into a single object
+        return {
+          ...promises,
+          ...censusPromises,
+          ...greenlinkPromisesForSeason,
+          ...essentialServicesPromisesForAreaAndSeason,
+          coverage: (abortSignal?: AbortSignal) =>
+            greenlinkPromisesForSeason.coverage(abortSignal).then((data) => {
+              if (!data) {
+                return null;
+              }
+
+              return data.find(
+                (item) => item.year === year && item.quarter === quarter && item.area === area
+              );
+            }),
+          ridership: (abortSignal?: AbortSignal) =>
+            greenlinkPromisesForSeason.ridership(abortSignal).then((data) => {
+              if (!data) {
+                return null;
+              }
+              return data.filter((stop) => stop.areas?.includes(area));
+            }),
+        };
+      })
+      .filter(notEmpty);
   }, [areas, seasons]);
 
   // manage the state of the fetch data, showing a loading state while the data is being fetched
@@ -314,7 +323,6 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
   const allPromises = seasons.map(([__quarter, __year]) => {
     const gtfsFolder = `./data/greenlink_gtfs/${__year}/${__quarter}`;
     const ridershipFolder = `./data/greenlink_ridership/${__year}/${__quarter}`;
-    const essentialServicesFolder = `./data/essential_services/${__year}/${__quarter}`;
 
     return {
       year: __year,
@@ -503,7 +511,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
                     ...style.sources.esri,
                     // resolve the relative URL to a complete path
                     url: new URL(
-                      paths.network_segments_style + '/../' + style.sources.esri.url,
+                      paths.network_segments_style + '/../' + style.sources.esri?.url,
                       window.location.origin
                     ).href,
                   },

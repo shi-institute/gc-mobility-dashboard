@@ -27,7 +27,9 @@ export function SelectOne({
 }: SelectOneProps) {
   function handleSelectionChange(evt: React.ChangeEvent<HTMLSelectElement>) {
     const newSelected = Array.from(evt.target.selectedOptions, (option) => option.value)[0];
-    onChange(newSelected);
+    if (newSelected) {
+      onChange(newSelected);
+    }
   }
 
   return (
