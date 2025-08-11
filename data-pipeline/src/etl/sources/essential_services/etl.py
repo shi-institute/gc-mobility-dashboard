@@ -31,7 +31,7 @@ class EssentialServicesETL:
         'C-2',  # major commercial thoroughfares oriented to customers travelling by automobile
         'C-3',  # light commercial and service land uses oriented to customers travelling by automobile
         'S-4',  # services district: commercial use, selling merchandise related to sergices, light industries, and outdoor warehousing
-        'NC',  # convient shopping areas and proffessional offices serving the daily needs of nearby neighborhoods
+        'NC',  # convenient shopping areas and professional offices serving the daily needs of nearby neighborhoods
     ]
     zoning_column = 'ZONING'
 
@@ -104,7 +104,7 @@ class EssentialServicesETL:
     def run(self) -> Self:
         self.calculate_childcare_access(day='thursday')
         self.calculate_grocery_store_access(day='thursday')
-        self.calculate_commericial_zone_access(day='thursday')
+        self.calculate_commercial_zone_access(day='thursday')
 
         # flatten the stats dictionary to a list of dictionaries for easier processing
         logger.info('Flattening stats dictionary for easier processing...')
@@ -196,7 +196,7 @@ class EssentialServicesETL:
 
         )
 
-    def calculate_commericial_zone_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+    def calculate_commercial_zone_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
         return self.calculate_access_to_points_of_interest(
             day=day,
             output_name='commercial_zone',

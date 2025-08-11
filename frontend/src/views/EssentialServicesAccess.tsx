@@ -80,7 +80,7 @@ function Sections() {
         })}
       />
       <Statistic.Percent
-        label="Commerical Zones"
+        label="Commercial Zones"
         wrap
         data={data?.map((area) => {
           const stat =
@@ -118,7 +118,7 @@ function Sections() {
         unit="minutes"
       />
       <Statistic.Number
-        label="Commerical Zones"
+        label="Commercial Zones"
         wrap
         data={data?.map((area) => {
           const stat =

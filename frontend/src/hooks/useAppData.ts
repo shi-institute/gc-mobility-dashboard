@@ -420,7 +420,7 @@ function getEssentialServicesPromises(
             fetchData<GeoJSON<{ ZONING: string }>>(
               `${essentialServicesFolder}/commercial_zone.geojson.deflate`,
               abortSignal
-            ).catch(handleError('commericial_zone_locations', true, true)),
+            ).catch(handleError('commercial_zone_locations', true, true)),
         },
       };
     });
