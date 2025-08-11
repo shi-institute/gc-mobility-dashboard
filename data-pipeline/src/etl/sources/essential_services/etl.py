@@ -82,23 +82,25 @@ class EssentialServicesETL:
 
         # collection zoning data paths by season
         zoning_data: dict[str, Path] = {}
-        for path in self.zoning_input_folder.iterdir():
-            if path.is_dir():
-                year, quarter = extract_season(path.name)
-                season = f'{year}_{quarter}'
+        if self.zoning_input_folder.exists():
+            for path in self.zoning_input_folder.iterdir():
+                if path.is_dir():
+                    year, quarter = extract_season(path.name)
+                    season = f'{year}_{quarter}'
 
-                data_file = next(path.glob('*.shp'), None)
-                if data_file is not None:
-                    # ensure the shapefile is valid and contains the zoning column
-                    try:
-                        gdf = geopandas.read_file(data_file, columns=[self.zoning_column], rows=0)
-                        if self.zoning_column in gdf.columns:
-                            zoning_data[season] = data_file
-                        else:
-                            logger.warning(
-                                f'Zoning shapefile {data_file} does not contain the required column {self.zoning_column}. Skipping...')
-                    except Exception as e:
-                        logger.error(f'Error reading zoning shapefile {data_file}: {e}')
+                    data_file = next(path.glob('*.shp'), None)
+                    if data_file is not None:
+                        # ensure the shapefile is valid and contains the zoning column
+                        try:
+                            gdf = geopandas.read_file(
+                                data_file, columns=[self.zoning_column], rows=0)
+                            if self.zoning_column in gdf.columns:
+                                zoning_data[season] = data_file
+                            else:
+                                logger.warning(
+                                    f'Zoning shapefile {data_file} does not contain the required column {self.zoning_column}. Skipping...')
+                        except Exception as e:
+                            logger.error(f'Error reading zoning shapefile {data_file}: {e}')
         self.zoning_data = zoning_data
 
     def run(self) -> Self:
