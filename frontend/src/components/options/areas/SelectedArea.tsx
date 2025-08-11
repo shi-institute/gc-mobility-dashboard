@@ -41,7 +41,11 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
           showId={false}
         />
       ) : (
-        <SelectOne onChange={handleChange} options={areasList} value={currentSelectedAreas[0]} />
+        <SelectOne
+          onChange={handleChange}
+          options={areasList}
+          value={currentSelectedAreas[0] || ''}
+        />
       )}
     </div>
   );

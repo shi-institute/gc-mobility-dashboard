@@ -264,7 +264,7 @@ function Comparison() {
           className="selected-scenario"
           options={['Scenario 1', 'Scenario 2', 'Scenario 3', 'Scenario 4']}
           onChange={(value) => {
-            const index = parseInt(value.split(' ')[1], 10) - 1;
+            const index = parseInt(value.split(' ')[1] || '-', 10) - 1;
             switchSelectedIndex(index);
           }}
           value={selectedIndex !== null ? `Scenario ${selectedIndex + 1}` : ''}

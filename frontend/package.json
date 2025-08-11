@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "npm run beforestart && vite",
     "build": "npm run beforestart && tsc -b && vite build",
-    "build:gispreview": "NODE_ENV=development npm run build",
+    "build:gispreview": "NODE_ENV=development npm run build && npm run zipdist",
     "beforestart": "node beforeStart.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/"
   },
   "dependencies": {
     "@arcgis/map-components": "^4.33.2",

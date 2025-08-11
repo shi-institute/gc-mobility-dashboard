@@ -115,6 +115,8 @@ jobs:
                 RUN_REPLICA_TEST="true"
               elif [[ "$file" == "data-pipeline/src/etl/sources/geocoder/"* ]]; then
                 RUN_GEOCODER_TEST="true"
+              elif [[ "$file" == "data-pipeline/src/etl/sources/essential_services/"* ]]; then
+                RUN_ESSENTIAL_SERVICES_TEST="true"
               elif [[ "$file" == "data-pipeline/src/"* ]] && [[ "$file" != "data-pipeline/src/etl/sources/"* ]]; then
                 RUN_GENERIC_SRC_TEST="true"
               fi
@@ -128,6 +130,7 @@ jobs:
                 RUN_CENSUS_ACS_5YEAR_TEST="false"
                 RUN_REPLICA_TEST="false"
                 RUN_GEOCODER_TEST="false"
+                RUN_ESSENTIAL_SERVICES_TEST="false"
             fi
 
             NO_CHANGES="false"
@@ -142,6 +145,7 @@ jobs:
           echo "run_census_acs_5year=$RUN_CENSUS_ACS_5YEAR_TEST" >> "$GITHUB_OUTPUT"
           echo "run_replica=$RUN_REPLICA_TEST" >> "$GITHUB_OUTPUT"
           echo "run_geocoder=$RUN_GEOCODER_TEST" >> "$GITHUB_OUTPUT"
+          echo "run_essential_services=$RUN_ESSENTIAL_SERVICES_TEST" >> "$GITHUB_OUTPUT"
           echo "run_generic_src=$RUN_GENERIC_SRC_TEST" >> "$GITHUB_OUTPUT"
 
           # hash "$GITHUB_OUTPUT" so we can include it in the check_previous_pass/update_pass_variable CURRENT_HASH variable
@@ -155,6 +159,7 @@ jobs:
           echo "Run Census ACS 5-Year: $RUN_CENSUS_ACS_5YEAR_TEST"
           echo "Run Replica: $RUN_REPLICA_TEST"
           echo "Run Geocoder: $RUN_GEOCODER_TEST"
+          echo "Run Essential Services: $RUN_ESSENTIAL_SERVICES_TEST"
           echo "Run all: $RUN_GENERIC_SRC_TEST"
 
   authenticate_google_big_query:
@@ -328,6 +333,39 @@ jobs:
           etls: "geocoder"
           input_dir: "${{ github.workspace }}/pipeline-input"
 
+  test__essential_services:
+    name: "Test / Essential Services"
+    runs-on: ubuntu-latest
+    needs: [build, determine_tests_to_run]
+    if: needs.determine_tests_to_run.outputs.run_essential_services == 'true'
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create sample input data
+        env:
+          CSV1_CONTENT: |
+            Company Name,Address,City,State,ZIP Code,ZIP Four,County,Metro Area,Neighborhood
+            7-Eleven,7 Eleven,Fountain Inn,SC,29644,,Greenville,"Greenville, SC",
+            7-Eleven,1703 Easley Bridge Rd,Greenville,SC,29611,5320,Greenville,"Greenville, SC",
+            7-Eleven,2617 Wade Hampton Blvd,Greenville,SC,29615,1149,Greenville,"Greenville, SC",
+        run: |
+          mkdir -p ${{ github.workspace }}/pipeline-input/to_geocode
+
+          cat <<EOF > "${{ github.workspace }}/pipeline-input/to_geocode/grocery_stores__2025-07-18.csv"
+          ${{ env.CSV1_CONTENT }}
+          EOF
+
+      - name: Run test
+        uses: ./.github/actions/prepare-pipeline-test
+        with:
+          artifact_name: "data__essential_services"
+          etls: "geocoder,greenlink_gtfs,replica,essential_services"
+          input_dir: "${{ github.workspace }}/pipeline-input"
+
   test__all:
     name: "Test / All ETLs"
     runs-on: ubuntu-latest
@@ -443,6 +481,8 @@ jobs:
         test__greenlink_ridership,
         test__census_acs_5year,
         test__replica,
+        test__geocoder,
+        test__essential_services,
         test__all,
       ]
     if: ${{ !cancelled() && fromJSON(needs.determine_tests_to_run.outputs.no_changes) != true && fromJSON(needs.check_previous_pass.outputs.successfully_passed) != true }} # always run even if any of the pipeline-related jobs in needs are skipped (skip if there were no tests to run)

@@ -48,7 +48,7 @@ export function GeneralAccess() {
               routes,
               stops,
               ...areaPolygons,
-            ]}
+            ].filter(notEmpty)}
           />
         </div>
       }
@@ -172,7 +172,7 @@ function Sections() {
         label="Population total"
         data={data?.map((area) => ({
           label: area.__label,
-          value: area.population_total?.[0].population__total || 0,
+          value: area.population_total?.[0]?.population__total || 0,
         }))}
       />
       <SectionEntry>

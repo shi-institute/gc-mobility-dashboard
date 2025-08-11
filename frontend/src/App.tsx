@@ -10,6 +10,7 @@ import {
   TAB_5_FRAGMENT,
 } from './components/navigation';
 import { AppDataContext, AppDataHookParameters, createAppDataContext } from './hooks/useAppData';
+import { notEmpty } from './utils';
 import {
   DevModeComponentsAll,
   EssentialServicesAccess,
@@ -39,11 +40,19 @@ export default function App() {
   const seasons = useMemo(() => {
     const seasons = (searchParams.get('seasons')?.split(',') || [])
       .map((str) => {
-        return str
+        const parts = str
           .trim()
           .split(':')
           .map((v) => v.trim());
+
+        if (parts.length !== 2) {
+          console.warn(`Invalid season format: ${str}. Expected format is 'Q2:2020'`);
+          return undefined;
+        }
+
+        return parts as [string, string];
       })
+      .filter(notEmpty)
       .map(([quarter, year]) => [quarter, parseInt(year)] as const)
       .filter((v): v is ['Q2' | 'Q4', number] => {
         const quarter = v[0];

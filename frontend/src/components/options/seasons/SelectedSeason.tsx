@@ -56,7 +56,11 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
       {isComparing ? (
         <SelectMany options={options} onChange={handleChange} selectedOptions={selectedOptions} />
       ) : (
-        <SelectOne onChange={handleChange} options={options} value={selectedOptions[0]?.value} />
+        <SelectOne
+          onChange={handleChange}
+          options={options}
+          value={selectedOptions[0]?.value || ''}
+        />
       )}
     </div>
   );

@@ -1,8 +1,10 @@
+import Color from '@arcgis/core/Color';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
-import { CustomContent } from '@arcgis/core/popup/content';
+import { CustomContent, FieldsContent } from '@arcgis/core/popup/content';
 import PopupTemplate from '@arcgis/core/PopupTemplate.js';
 import { SimpleRenderer } from '@arcgis/core/renderers';
-import { SimpleFillSymbol } from '@arcgis/core/symbols';
+import SizeVariable from '@arcgis/core/renderers/visualVariables/SizeVariable';
+import { SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol } from '@arcgis/core/symbols';
 import { useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useAppData } from '.';
@@ -149,6 +151,13 @@ export function useMapData(data: AppData) {
             title: `Routes (${__year} ${__quarter})`,
             id: `routes__${__year}_${__quarter}`,
             data: routes,
+            renderer: new SimpleRenderer({
+              symbol: new SimpleLineSymbol({
+                color: new Color([220, 119, 24, 1]),
+                width: 2,
+                style: 'solid',
+              }),
+            }),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -175,7 +184,7 @@ export function useMapData(data: AppData) {
                   outFields: ['*'],
                   creator: (event) => {
                     const stopRidership = Object.entries(
-                      selectedAreasAndSeasonsRidership[event?.graphic.attributes.ID]
+                      selectedAreasAndSeasonsRidership[event?.graphic.attributes.ID] || {}
                     ).map(([season, ridership]) => {
                       return [
                         season,
@@ -271,6 +280,204 @@ export function useMapData(data: AppData) {
     );
   }, [data]);
 
+  const groceryStores = useMemo(() => {
+    return (
+      (data || [])
+        .filter(notEmpty)
+        .filter(requireKey('grocery_store_locations'))
+        // only keep the first occurrence because it would be confusing to show grocery stores on top of each other over time
+        .slice(0, 1)
+        .map(({ grocery_store_locations, __quarter, __year }) => {
+          return {
+            title: `Grocery Stores (${__year} ${__quarter})`,
+            id: `grocery-stores__${__year}_${__quarter}`,
+            data: grocery_store_locations,
+            renderer: new SimpleRenderer({
+              symbol: new SimpleMarkerSymbol({
+                angle: 60,
+                color: new Color([71, 245, 170, 1]),
+                outline: new SimpleLineSymbol({
+                  color: new Color([39, 98, 84, 1]),
+                  style: 'solid',
+                  width: 1,
+                }),
+                style: 'triangle',
+              }),
+              visualVariables: [
+                new SizeVariable({
+                  valueExpression: '$view.scale',
+                  stops: [
+                    { size: 2, value: 360000 },
+                    { size: 4, value: 240000 },
+                    { size: 12, value: 12000 },
+                    { size: 20, value: 0 },
+                  ],
+                }),
+              ],
+            }),
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `{Company Name} (${__year} ${__quarter})`,
+              content: [
+                new FieldsContent({
+                  title: 'Grocery Store Details',
+                  fieldInfos: Object.keys(
+                    grocery_store_locations.features[0]?.properties || {}
+                  ).map((fieldName) => {
+                    return {
+                      fieldName,
+                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                    };
+                  }),
+                }),
+              ],
+            }),
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  const healthcareFacilities = useMemo(() => {
+    return (
+      (data || [])
+        .filter(notEmpty)
+        .filter(requireKey('healthcare_locations'))
+        // only keep the first occurrence because it would be confusing to show healthcare facilities on top of each other over time
+        .slice(0, 1)
+        .map(({ healthcare_locations, __quarter, __year }) => {
+          return {
+            title: `Healthcare Facilities (${__year} ${__quarter})`,
+            id: `healthcare-facilities__${__year}_${__quarter}`,
+            data: healthcare_locations,
+            popupEnabled: true,
+            // TODO: add a facy renderer with a medical symbol
+            popupTemplate: new PopupTemplate({
+              title: `{Name} (${__year} ${__quarter})`,
+              content: [
+                new FieldsContent({
+                  title: 'Healthcare Facility Details',
+                  fieldInfos: Object.keys(healthcare_locations.features[0]?.properties || {}).map(
+                    (fieldName) => {
+                      return {
+                        fieldName,
+                        label: fieldName
+                          .replace(/_/g, ' ')
+                          .replace(/\b\w/g, (c) => c.toUpperCase()),
+                      };
+                    }
+                  ),
+                }),
+              ],
+            }),
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  const childCareCenters = useMemo(() => {
+    return (
+      (data || [])
+        .filter(notEmpty)
+        .filter(requireKey('child_care_locations'))
+        // only keep the first occurrence because it would be confusing to show child care centers on top of each other over time
+        .slice(0, 1)
+        .map(({ child_care_locations, __quarter, __year }) => {
+          return {
+            title: `Child Care Centers (${__year} ${__quarter})`,
+            id: `child-care-centers__${__year}_${__quarter}`,
+            data: child_care_locations,
+            renderer: new SimpleRenderer({
+              symbol: new SimpleMarkerSymbol({
+                angle: 0,
+                color: new Color([71, 100, 245, 1]),
+                outline: new SimpleLineSymbol({
+                  color: new Color([0, 47, 189, 1]),
+                  style: 'solid',
+                  width: 1,
+                }),
+                size: 8,
+                style: 'diamond',
+              }),
+              visualVariables: [
+                new SizeVariable({
+                  valueExpression: '$view.scale',
+                  stops: [
+                    { size: 2, value: 360000 },
+                    { size: 4, value: 240000 },
+                    { size: 12, value: 12000 },
+                    { size: 20, value: 0 },
+                  ],
+                }),
+              ],
+            }),
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `{Provider Name} (${__year} ${__quarter})`,
+              content: [
+                new FieldsContent({
+                  title: 'Child Care Center Details',
+                  fieldInfos: Object.keys(child_care_locations.features[0]?.properties || {}).map(
+                    (fieldName) => {
+                      return {
+                        fieldName,
+                        label: fieldName
+                          .replace(/_/g, ' ')
+                          .replace(/\b\w/g, (c) => c.toUpperCase()),
+                      };
+                    }
+                  ),
+                }),
+              ],
+            }),
+            // renderer: createInterestAreaRenderer(),
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
+  const commercialZones = useMemo(() => {
+    return (
+      (data || [])
+        .filter(notEmpty)
+        .filter(requireKey('commercial_zone_locations'))
+        // only keep the first occurrence because it would be confusing to show commercial zones on top of each other over time
+        .slice(0, 1)
+        .map(({ commercial_zone_locations, __quarter, __year }) => {
+          return {
+            title: `Commercial Zones (${__year} ${__quarter})`,
+            id: `commercial-zones__${__year}_${__quarter}`,
+            data: commercial_zone_locations,
+            renderer: new SimpleRenderer({
+              symbol: new SimpleFillSymbol({
+                color: [255, 0, 255, 0.18],
+                outline: {
+                  color: [0, 0, 0, 0],
+                  width: 0,
+                },
+              }),
+            }),
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `{Name} (${__year} ${__quarter})`,
+              content: [
+                new FieldsContent({
+                  title: 'Commercial Zone Details',
+                  fieldInfos: Object.keys(
+                    commercial_zone_locations.features[0]?.properties || {}
+                  ).map((fieldName) => {
+                    return {
+                      fieldName,
+                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                    };
+                  }),
+                }),
+              ],
+            }),
+          } satisfies GeoJSONLayerInit;
+        })[0]
+    );
+  }, [data]);
+
   return {
     networkSegments,
     areaPolygons,
@@ -279,6 +486,10 @@ export function useMapData(data: AppData) {
     walkServiceAreas,
     cyclingServiceAreas,
     paratransitServiceAreas,
+    groceryStores,
+    healthcareFacilities,
+    childCareCenters,
+    commercialZones,
   };
 }
 
