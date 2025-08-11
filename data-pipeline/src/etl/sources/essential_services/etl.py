@@ -68,7 +68,7 @@ class EssentialServicesETL:
             if path.name.startswith('geocoded_healthcare__'):
                 year, quarter = extract_season(path.name.split('__')[-1])
                 season = f'{year}_{quarter}'
-                childcare_data[season] = path
+                healthcare_data[season] = path
         self.healthcare_data = healthcare_data
 
         # collect grocery store data paths by season
