@@ -82,10 +82,11 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const censusPromises = useMemo(() => {
     const censusData = getCensusData();
     return {
-      households: () => censusData.households,
-      race_ethnicity: () => censusData.race_ethnicity,
-      population_total: () => censusData.population_total,
-      educational_attainment: () => censusData.educational_attainment,
+      // households: () => censusData.households,
+      // race_ethnicity: () => censusData.race_ethnicity,
+      // population_total: () => censusData.population_total,
+      // educational_attainment: () => censusData.educational_attainment,
+      census_acs_5year: () => censusData.combined,
     };
   }, []);
 
@@ -111,7 +112,40 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
         // merge all promises into a single object
         return {
           ...promises,
-          ...censusPromises,
+          census_acs_5year: () =>
+            censusPromises.census_acs_5year().then((data) => {
+              if (!data) {
+                return null;
+              }
+
+              const areaData = data
+                // omit items that do not belong to an area
+                .filter((item) => item.areas && item.areas.length > 0)
+                // omit items that are empty
+                .filter((item) => !!item.NAME)
+                // omit items that do not belong to the current area
+                .filter((item) => item.areas.includes(area));
+
+              // group the data by YEAR
+              const groupedData = Object.entries(Object.groupBy(areaData, (d) => d.YEAR))
+                // convert the year range to the end year as an integer
+                .map(([yearRange, items]) => {
+                  const endYear = yearRange.split('-')[1];
+                  if (!endYear) {
+                    return null;
+                  }
+
+                  return [parseInt(endYear), items] as const;
+                })
+                .filter(notEmpty);
+
+              // get the data for the closest year to the current year
+              const closestYear = groupedData.reduce((prev, curr) => {
+                return Math.abs(curr[0] - year) < Math.abs(prev[0] - year) ? curr : prev;
+              });
+
+              return closestYear[1];
+            }),
           ...greenlinkPromisesForSeason,
           ...essentialServicesPromisesForAreaAndSeason,
           coverage: (abortSignal?: AbortSignal) =>
@@ -298,22 +332,41 @@ function getCensusData() {
     race_ethnicity: `./data/census_acs_5year/DP05/time_series.json.deflate`,
     population_total: `./data/census_acs_5year/S0101/time_series.json.deflate`,
     educational_attainment: `./data/census_acs_5year/S1501/time_series.json.deflate`,
+    combined: `./data/census_acs_5year/time_series.json.deflate`,
   };
 
-  const households = fetchData<CensusHouseholdsTimeSeries>(paths.households).catch(
-    handleError('households')
-  );
-  const race_ethnicity = fetchData<CensusRaceEthnicityTimeSeries>(paths.race_ethnicity).catch(
-    handleError('race_ethnicity')
-  );
-  const population_total = fetchData<CensusPopulationTotalTimeSeries>(paths.population_total).catch(
-    handleError('population_total')
-  );
+  const households = fetchData<CensusHouseholdsTimeSeries>(
+    paths.households,
+    undefined,
+    undefined,
+    true
+  ).catch(handleError('households'));
+  const race_ethnicity = fetchData<CensusRaceEthnicityTimeSeries>(
+    paths.race_ethnicity,
+    undefined,
+    undefined,
+    true
+  ).catch(handleError('race_ethnicity'));
+  const population_total = fetchData<CensusPopulationTotalTimeSeries>(
+    paths.population_total,
+    undefined,
+    undefined,
+    true
+  ).catch(handleError('population_total'));
   const educational_attainment = fetchData<CensusEducationalAttainmentTimeSeries>(
-    paths.educational_attainment
+    paths.educational_attainment,
+    undefined,
+    undefined,
+    true
   ).catch(handleError('educational_attainment'));
+  const combined = fetchData<CombinedCensusDataTimeSeries>(
+    paths.combined,
+    undefined,
+    undefined,
+    true
+  ).catch(handleError('combined'));
 
-  return { households, race_ethnicity, population_total, educational_attainment };
+  return { households, race_ethnicity, population_total, educational_attainment, combined };
 }
 
 /**

@@ -2,6 +2,7 @@ type CensusHouseholdsTimeSeries = CensusHouseholdsValue[];
 type CensusRaceEthnicityTimeSeries = CensusRaceEthnicityValue[];
 type CensusPopulationTotalTimeSeries = CensusPopulationTotalValue[];
 type CensusEducationalAttainmentTimeSeries = CensusEducationalAttainmentValue[];
+type CombinedCensusDataTimeSeries = CombinedCensusData[];
 type ReplicaNetworkSegments = GeoJSON<{ frequency: number; frequency_bucket: number }>;
 type ReplicaAreaPolygon = GeoJSON<{ name: string }>;
 type ReplicaSyntheticPeople = ReplicaSyntheticPerson[];
@@ -46,6 +47,15 @@ interface CensusEducationalAttainmentValue extends CoreCensusValue {
   educational_attainment__bachelor_degree: number;
   educational_attainment__graduate_or_professional_degree: number;
 }
+
+type CombinedCensusData = {
+  areas: string[];
+  /** The Census ACS year range */
+  YEAR: string;
+} & CensusHouseholdsValue &
+  CensusRaceEthnicityValue &
+  CensusPopulationTotalValue &
+  CensusEducationalAttainmentValue;
 
 type ArrayString = string;
 type LineString = string;

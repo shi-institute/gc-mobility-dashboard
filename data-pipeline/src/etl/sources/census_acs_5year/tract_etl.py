@@ -52,7 +52,7 @@ class CensusIntersectAreasETL:
         results: list[list[dict[str, str | int | list[str]]]] = []
         for year in self.years:
             results.append(
-                self.intersect_with_areas(year, use_acs_year_range_for_year=True)
+                self.intersect_with_area_centroids(year, use_acs_year_range_for_year=True)
             )
 
         # save the results as a single JSON file
@@ -149,9 +149,9 @@ class CensusIntersectAreasETL:
         else:
             logger.error("\n✗ No data downloaded successfully")
 
-    def intersect_with_areas(self, year: int = 2020, *, use_acs_year_range_for_year: bool = False) -> list[dict[str, str | int | list[str]]]:
+    def intersect_with_area_centroids(self, year: int = 2020, *, use_acs_year_range_for_year: bool = False) -> list[dict[str, str | int | list[str]]]:
         """
-        Spatially intersect areas with census tracts to assign GEOIDs.
+        Spatially intersect areas with census tract centroids to assign GEOIDs.
 
         Args:
             areas_folder_path: Folder containing GeoJSON files
@@ -169,6 +169,15 @@ class CensusIntersectAreasETL:
         logger.debug(f"    Loaded {len(tract_gdf)} census tracts")
 
         logger.debug(f"    Found {len(self.areas)} files to process")
+
+        # convert to centroids
+        logger.debug("  Converting tract geometries to centroids...")
+        original_crs = tract_gdf.crs
+        if original_crs is None:
+            raise ValueError("Tract GeoDataFrame has no CRS defined")
+        tract_gdf = tract_gdf.to_crs('EPSG:9835')  # ensure CRS is Lambert Cylindrical Equal Area
+        tract_gdf.geometry = tract_gdf.geometry.centroid
+        tract_gdf = tract_gdf.to_crs(original_crs)
 
         all_area_intersections: list[tuple[str, list[str]]] = []
 
