@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 
-interface SectionEntryProps {
+export interface SectionEntryProps {
   /** The component or element to be rendered inside this entry */
   children: React.ReactElement;
   /** Whether this section entry will be hidden from the section. Hiding an entry may cause other entries to be repositioned. */

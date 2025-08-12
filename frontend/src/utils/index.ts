@@ -5,4 +5,5 @@ export { inflateResponse } from './inflateResponse';
 export { notEmpty } from './notEmpty';
 export { quadraticBezierToPolygon } from './quadraticBezierToPolygon';
 export { requireKey } from './requireKey';
+export { toTidyNominal } from './toTidyNominal';
 export { withOpacity } from './withOpacity';
