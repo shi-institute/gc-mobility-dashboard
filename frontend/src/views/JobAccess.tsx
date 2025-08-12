@@ -11,6 +11,7 @@ export function JobAccess() {
     <CoreFrame
       outerStyle={{ height: '100%' }}
       sectionsStyle={{
+        display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(300px, 100%, 600px), 1fr))',
         gridAutoRows: 'minmax(200px, 1fr)',
       }}

@@ -16,7 +16,7 @@ export function RoadsVsTransit() {
         </div>
       }
       sections={[<Comparison />]}
-      disableSectionsGrid
+      disableSectionColumns
     />
   );
 }
