@@ -167,14 +167,42 @@ function Sections() {
       />
     </Section>,
     <Section title="Area Demographics">
-      <Statistic.Number
-        wrap
-        label="Population total"
-        data={data?.map((area) => ({
-          label: area.__label,
-          value: area.population_total?.[0]?.population__total || 0,
-        }))}
-      />
+      {(() => {
+        if (data?.length === 1) {
+          const censusData = data[0]!.census_acs_5year;
+          const censusYearRange = censusData?.[0]?.YEAR;
+
+          return (
+            <Statistic.Number
+              wrap
+              label={
+                `Population estimate` + (censusYearRange ? ` (ACS ${censusYearRange})` : ' (ACS)')
+              }
+              data={data?.map((area) => ({
+                label: area.__label,
+                value:
+                  censusData
+                    ?.map((item) => item.population__total)
+                    .reduce((sum, value) => sum + (value || 0), 0) || NaN,
+              }))}
+            />
+          );
+        }
+
+        return (
+          <Statistic.Number
+            wrap
+            label="Population estimate (ACS)"
+            data={data?.map((area) => ({
+              label: area.__label,
+              value:
+                area.census_acs_5year
+                  ?.map((item) => item.population__total)
+                  .reduce((sum, value) => sum + (value || 0), 0) || NaN,
+            }))}
+          />
+        );
+      })()}
 
       <Statistic.Figure
         wrap={{ f: { gridColumn: '1 / -1' } }}
