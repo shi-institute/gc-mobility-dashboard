@@ -593,11 +593,29 @@ function Sections() {
 
           return {
             label: area.__label,
-            value: (possibleConversions / allTrips).toFixed(2),
+            value: ((possibleConversions / allTrips) * 100).toFixed(2),
           };
         })}
       />
-      <Statistic.Percent wrap label="Households without a vehicle (ACS)" data={[]} />
+      <Statistic.Percent
+        wrap
+        label="Households without a vehicle (ACS)"
+        data={data?.map((area) => {
+          const households =
+            area.census_acs_5year
+              ?.map((item) => item.households__total)
+              .reduce((sum, value) => sum + (value || 0), 0) || NaN;
+          const householdsNoVehicle =
+            area.census_acs_5year
+              ?.map((item) => item.households__no_vehicle)
+              .reduce((sum, value) => sum + (value || 0), 0) || NaN;
+
+          return {
+            label: area.__label,
+            value: ((householdsNoVehicle / households) * 100).toFixed(2),
+          };
+        })}
+      />
       <Statistic.Number
         wrap
         label="Median commute time (all modes)"
