@@ -10,6 +10,7 @@ export { SelectMany } from './Select/SelectMany';
 export { SelectOne } from './Select/SelectOne';
 export { SidebarContent } from './SidebarContent/SidebarContent';
 export { Statistic } from './Statistic';
+export { PlotContainer } from './Statistic/plot/PlotContainer';
 export { Tab } from './Tabs/Tab';
 export { Tabs } from './Tabs/Tabs';
 export { TreeMap } from './TreeMap/TreeMap';
