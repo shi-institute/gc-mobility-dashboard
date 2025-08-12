@@ -21,8 +21,8 @@ interface CoreFrameProps {
   /** The sidebar element. On widths >= 1280px, it is rendered directly. On smaller widths, it should support an overlay mode with a button that floats in the bottom-right corner to open it. */
   sidebar?: React.ReactElement;
 
-  /** disables grid mode for the sections  area */
-  disableSectionsGrid?: boolean;
+  /** disables columns for the sections area */
+  disableSectionColumns?: boolean;
 }
 
 export function CoreFrame(props: CoreFrameProps) {
@@ -69,7 +69,7 @@ export function CoreFrame(props: CoreFrameProps) {
               <MainAreaWrapper style={{ padding: '1rem' }}>
                 {props.sectionsHeader}
                 <MainArea
-                  disableSectionsGrid={props.disableSectionsGrid}
+                  disableSectionColumns={props.disableSectionColumns}
                   style={props.sectionsStyle}
                 >
                   {[props.map, ...(props.sections || [])][activeMobileSection]}
@@ -82,7 +82,7 @@ export function CoreFrame(props: CoreFrameProps) {
               <MainAreaWrapper>
                 {props.sectionsHeader}
                 <MainArea
-                  disableSectionsGrid={props.disableSectionsGrid}
+                  disableSectionColumns={props.disableSectionColumns}
                   style={props.sectionsStyle}
                 >
                   {props.sections?.map((section) => section)}
@@ -178,17 +178,19 @@ const MainAreaWrapper = styled.div`
   box-sizing: border-box;
 `;
 
-const MainArea = styled.div<{ disableSectionsGrid?: boolean }>`
+const MainArea = styled.div<{ disableSectionColumns?: boolean }>`
   flex-grow: 1;
   flex-shrink: 0;
 
-  display: ${(props) => (props.disableSectionsGrid ? 'block' : 'grid')};
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  grid-auto-rows: min-content;
-  gap: 1rem;
+  display: block;
+  columns: ${(props) => (props.disableSectionColumns ? 'unset' : '3 420px')};
+  display: block;
+
+  & > * {
+    break-inside: avoid-column;
+  }
 
   @container core (max-width: 899px) {
-    grid-auto-rows: 1fr;
     & > * {
       height: 100% !important;
     }
