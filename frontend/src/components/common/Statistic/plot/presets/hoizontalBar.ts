@@ -63,6 +63,16 @@ export function horizontalBar(params: HorizontalBarParams) {
         x2: Math.min(parseFloat(d[params.x] as string), domainX[1]),
         y1: i * (barHeight + barGap),
         y2: i * (barHeight + barGap) + barHeight,
+        fill: (() => {
+          let fillString = d[params.fill || params.y] as string;
+          const domainIndex = params.domainY.indexOf(fillString);
+
+          if (domainIndex >= 0) {
+            return d3.schemeObservable10[domainIndex];
+          }
+
+          return fillString;
+        })(),
       };
     });
 
@@ -104,7 +114,7 @@ export function horizontalBar(params: HorizontalBarParams) {
       (addTickToEndY ? tickSize : 0),
     marks: [
       Plot.rect(rectData, {
-        fill: params.fill || params.y,
+        fill: 'fill',
         x1: 'x1',
         x2: 'x2',
         y1: 'y1',

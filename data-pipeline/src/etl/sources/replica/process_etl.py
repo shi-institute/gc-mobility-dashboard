@@ -86,7 +86,7 @@ class ReplicaProcessETL:
         self.data_geo_hash = hashlib.md5(full_area_geometry_to_hash).hexdigest()
 
     def process(self):
-        statistics = {}
+        statistics: dict[str, Any] = {}
 
         population_stats_cache_path = self.output_folder / \
             f'population_stats_cache__{self.areas_seasons_hash}.json.tmp'
@@ -174,6 +174,18 @@ class ReplicaProcessETL:
                     f'Thursday trip data processed for {count} season-areas in {formatted_time}.')
                 logger.info('')
 
+        if 'saturday' in self.days:
+            [count, saturday_rider_stats] = self.calculate_public_transit_population_statistics(
+                'saturday')
+            statistics['saturday_rider'] = {
+                'saturday_trip': saturday_rider_stats
+            }
+
+        if 'thursday' in self.days:
+            [count, thursday_rider_stats] = self.calculate_public_transit_population_statistics(
+                'thursday')
+            statistics['thursday_rider'] = thursday_rider_stats
+
         # merge statistics for season + area combinations
         merged_statistics: dict[str, Any] = {}
         for stats_dict in statistics.values():
@@ -193,15 +205,15 @@ class ReplicaProcessETL:
                     f'{area}/statistics/replica__{season_str}.json'
                 os.makedirs(os.path.dirname(statistics_path), exist_ok=True)
                 with open(statistics_path, 'w') as file:
-                    json.dump(area_stats, file,)
+                    json.dump(area_stats, file, indent=2)
 
-        start_time = time.time()
-        self.build_network_segments(self.days)
-        elapsed_time = time.time() - start_time
-        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-        logger.info('')
-        logger.info(f'Network segments built in {formatted_time}.')
-        logger.info('')
+        # start_time = time.time()
+        # self.build_network_segments(self.days)
+        # elapsed_time = time.time() - start_time
+        # formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+        # logger.info('')
+        # logger.info(f'Network segments built in {formatted_time}.')
+        # logger.info('')
 
         # # discard the chunks since we no longer need them
         # season_areas_days = list(itertools.product(
@@ -320,29 +332,7 @@ class ReplicaProcessETL:
                                                                                 'person_id'])
 
                 logger.info(f'  Calculating statistics for {area_name}...')
-                statistics: dict[Any, Any] = {
-                    'synthetic_demographics': {},
-                }
-
-                # calculate race population estimates
-                logger.debug('Calculating race population estimates...')
-                statistics['synthetic_demographics']['race'] = population_filtered_df.groupby(
-                    'race').size().to_dict()
-
-                # calculate ethnicity population estimates
-                logger.debug('Calculating ethnicity population estimates...')
-                statistics['synthetic_demographics']['ethnicity'] = population_filtered_df.groupby(
-                    'ethnicity').size().to_dict()
-
-                # calculate education attainment population estimates
-                logger.debug('Calculating education attainment population estimates...')
-                statistics['synthetic_demographics']['education'] = population_filtered_df.groupby(
-                    'education').size().to_dict()
-
-                # calculate normal communte mode population estimates
-                logger.debug('Calculating commute mode population estimates...')
-                statistics['synthetic_demographics']['commute_mode'] = population_filtered_df.groupby(
-                    'commute_mode').size().to_dict()
+                statistics = self.calculate_population_statistics(population_filtered_df)
 
                 # save the statistics to the all_statistics dictionary so we can access them later
                 logger.debug(f'Statistics for {area_name} added to all_statistics.')
@@ -412,6 +402,33 @@ class ReplicaProcessETL:
 
         # return the statistics for all areas in this season so that we can access them later
         return (processed_count, all_statistics)
+
+    def calculate_population_statistics(self, population_df: pandas.DataFrame) -> dict[str, Any]:
+        statistics: dict[Any, Any] = {
+            'synthetic_demographics': {},
+        }
+
+        # calculate race population estimates
+        logger.debug('Calculating race population estimates...')
+        statistics['synthetic_demographics']['race'] = population_df.groupby(
+            'race').size().to_dict()
+
+        # calculate ethnicity population estimates
+        logger.debug('Calculating ethnicity population estimates...')
+        statistics['synthetic_demographics']['ethnicity'] = population_df.groupby(
+            'ethnicity').size().to_dict()
+
+        # calculate education attainment population estimates
+        logger.debug('Calculating education attainment population estimates...')
+        statistics['synthetic_demographics']['education'] = population_df.groupby(
+            'education').size().to_dict()
+
+        # calculate normal communte mode population estimates
+        logger.debug('Calculating commute mode population estimates...')
+        statistics['synthetic_demographics']['commute_mode'] = population_df.groupby(
+            'commute_mode').size().to_dict()
+
+        return statistics
 
     def process_trips(self, day: Literal['saturday', 'thursday']) -> tuple[int, dict[str, Any]]:
         logger.info('Processing population data for the following regions and seasons:')
@@ -749,6 +766,73 @@ class ReplicaProcessETL:
                     shutil.rmtree(intermediate_chunks_folder, ignore_errors=True)
 
         bar.close()
+
+    def calculate_public_transit_population_statistics(self, day: Literal['saturday', 'thursday']) -> tuple[int, dict[Any, Any]]:
+        # create a statistics dictionary to hold the statistics for each area+seaso
+        all_statistics: dict[Any, Any] = {}
+        processed_count = 0
+
+        for season in self.seasons:
+            region = season['region']
+            year = season['year']
+            quarter = season['quarter']
+
+            for [_, area_name] in self.areas:
+                logger.info(f'  Processing area: {area_name}')
+
+                area_population_path = self.output_folder / area_name / \
+                    'population' / f'{region}_{year}_{quarter}_home.parquet'
+                area_trip_chunks_folder_path = self.output_folder / area_name / \
+                    f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
+                area_trip_chunk_paths = list(area_trip_chunks_folder_path.glob('*.parquet'))
+
+                area_statistics: dict[str, Any] = {}
+
+                for index, trip_chunk_path in enumerate(area_trip_chunk_paths):
+                    logger.info(
+                        f'  Processing trip chunk {index + 1} of {len(area_trip_chunk_paths)} for {area_name}...')
+
+                    logger.debug(f'    Reading trip chunk: {trip_chunk_path}')
+                    trips_df = pandas.read_parquet(trip_chunk_path, columns=['person_id', 'mode'], filters=[
+                                                   ('mode', '==', 'PUBLIC_TRANSIT')])
+                    logger.debug(
+                        f'    Trip chunk has {trips_df.shape[0]} rows and {trips_df.shape[1]} columns.')
+
+                    logger.debug('    Extracting unique public transit person IDs...')
+                    public_transit_user_ids = trips_df['person_id'].unique()
+
+                    logger.info(f'    Reading population data for public transit users...')
+                    public_transit_population_df = pandas.read_parquet(
+                        area_population_path,
+                        columns=['person_id', 'race', 'ethnicity', 'education', 'commute_mode'],
+                        filters=[('person_id', 'in', list(public_transit_user_ids))]
+                    )
+
+                    logger.info(f'    Calculating statistics for public transit users...')
+                    chunk_statistics = self.calculate_population_statistics(
+                        public_transit_population_df)
+                    for key, value in chunk_statistics.items():
+                        if key not in area_statistics:
+                            area_statistics[key] = value
+                        else:
+                            for subkey, subvalue in value.items():
+                                if subkey not in area_statistics[key]:
+                                    area_statistics[key][subkey] = subvalue
+                                else:
+                                    area_statistics[key][subkey] += subvalue
+
+                 # save the statistics to the all_statistics dictionary so we can access them later
+                logger.debug(f'Statistics for {area_name} added to all_statistics.')
+                season_str = f'{region}_{year}_{quarter}'
+                if season_str not in all_statistics:
+                    all_statistics[season_str] = {}
+                all_statistics[season_str][area_name] = {
+                    f'{day}_trip__public_transit_synthetic_population_demographics': area_statistics['synthetic_demographics']
+                }
+                processed_count += 1
+
+        # return the statistics for all areas in this season so that we can access them later
+        return (processed_count, all_statistics)
 
 
 def count_trip_travel_methods(trips_df: pandas.DataFrame) -> dict[str, int]:

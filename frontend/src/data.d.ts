@@ -127,12 +127,14 @@ interface ReplicaTrip {
 }
 
 interface ReplicaStatistics {
-  synthetic_demographics: ReplicaSyntheticDemographicsStatisitcs;
+  synthetic_demographics: ReplicaSyntheticDemographicsStatistics;
   saturday_trip: ReplicaTripStatistics;
   thursday_trip: ReplicaTripStatistics;
+  thursday_trip__public_transit_synthetic_population_demographics?: ReplicaSyntheticDemographicsStatistics;
+  saturday_trip__public_transit_synthetic_population_demographics?: ReplicaSyntheticDemographicsStatistics;
 }
 
-interface ReplicaSyntheticDemographicsStatisitcs {
+interface ReplicaSyntheticDemographicsStatistics {
   race: {
     white?: number;
     blac_african_american?: number;
