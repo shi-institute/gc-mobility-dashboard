@@ -1,9 +1,9 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import { useRef, useState } from 'react';
+import { ComponentProps, useRef, useState } from 'react';
 import { CoreFrame, OptionTrack, SelectOne } from '../components';
 import { AppNavigation } from '../components/navigation';
-import { useRect } from '../hooks';
+import { useAppData, useRect } from '../hooks';
 
 export function RoadsVsTransit() {
   return (
@@ -22,6 +22,12 @@ export function RoadsVsTransit() {
 }
 
 function Comparison() {
+  const { scenarios: scenariosData } = useAppData();
+  const scenarios = scenariosData.data?.scenarios?.scenarios || [];
+  const mileOptions = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map(
+    (m) => `${m} mile${m !== 1 ? 's' : ''}`
+  );
+
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
   const transitioning = selectedIndex !== delayedSelectedIndex;
@@ -46,6 +52,70 @@ function Comparison() {
     (selectedIndex === null && mode === 'column') ||
     (containterRect.height && containterRect.height < 640);
   hideSmallButtons;
+
+  const trackButtonProps = (index: number) => {
+    const optionLabel = mileOptions[index] || `Option ${index + 1}`;
+
+    const buttonScenarios = scenarios.filter(
+      (s) => s.pavementMiles === parseFloat(mileOptions[index]?.split(' ')[0] ?? '-1')
+    );
+
+    return {
+      size: selectedIndex === index ? 400 : undefined,
+      onClick: () => switchSelectedIndex(index),
+      transitioning,
+      as: delayedSelectedIndex === index ? 'div' : undefined,
+      style: {
+        right:
+          selectedIndex === index && mode === 'row' ? 'calc(-100% + var(--size) + 20px)' : 'unset',
+        top: (() => {
+          if (index === 0) {
+            return selectedIndex === index && mode === 'row'
+              ? '100px'
+              : selectedIndex === index && mode === 'column'
+              ? '120px'
+              : 'unset';
+          }
+
+          return selectedIndex === index && mode === 'column' ? '120px' : 'unset';
+        })(),
+        position: selectedIndex === index && mode === 'column' ? 'absolute' : 'relative',
+        left: selectedIndex === index && mode === 'column' ? '50%' : 'unset',
+      },
+      children: (
+        <>
+          <div
+            className="label"
+            style={{
+              position: 'absolute',
+              opacity: selectedIndex !== index ? 1 : 0,
+              transition: '120ms opacity',
+            }}
+          >
+            {optionLabel}
+          </div>
+          <article
+            className="expanded"
+            style={{
+              position: 'absolute',
+              opacity: selectedIndex === index ? 1 : 0,
+              transition: selectedIndex !== index ? '120ms opacity' : '1000ms opacity',
+            }}
+          >
+            <h2>{optionLabel}</h2>
+            {buttonScenarios.map((scenario, index) => (
+              <button
+                key={index}
+                style={{ fontSize: 'inherit', borderRadius: '0.1875em', borderWidth: '0.0625em' }}
+              >
+                {scenario.scenarioName}
+              </button>
+            ))}
+          </article>
+        </>
+      ),
+    } satisfies ComponentProps<typeof OptionTrack.Button>;
+  };
 
   return (
     <ComparisionContainer ref={containerRef}>
@@ -84,177 +154,28 @@ function Comparison() {
           }
           `}
         >
-          <OptionTrack.Button
-            size={selectedIndex === 0 ? 400 : undefined}
-            onClick={() => switchSelectedIndex(0)}
-            transitioning={transitioning}
-            as={delayedSelectedIndex === 0 ? 'div' : undefined}
-            style={{
-              right:
-                selectedIndex === 0 && mode === 'row'
-                  ? 'calc(-100% + var(--size) + 20px)'
-                  : 'unset',
-              top:
-                selectedIndex === 0 && mode === 'row'
-                  ? '100px'
-                  : selectedIndex === 0 && mode === 'column'
-                  ? '120px'
-                  : 'unset',
-              position: selectedIndex === 0 && mode === 'column' ? 'absolute' : 'relative',
-              left: selectedIndex === 0 && mode === 'column' ? '50%' : 'unset',
-            }}
-          >
-            <div
-              className="label"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex !== 0 ? 1 : 0,
-                transition: '120ms opacity',
-              }}
-            >
-              Option 1
-            </div>
-            <article
-              className="expanded"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex === 0 ? 1 : 0,
-                transition: selectedIndex !== 0 ? '120ms opacity' : '1000ms opacity',
-              }}
-            >
-              <h2>Option 1</h2>
-              <p>A message goes here</p>
-            </article>
-          </OptionTrack.Button>
+          <OptionTrack.Button {...trackButtonProps(0)} />
           {mode === 'column' ? (
             <OptionTrack.Button
               placeholderMode
               visible={selectedIndex === 0 || selectedIndex === 1}
             />
           ) : null}
-          <OptionTrack.Button
-            size={selectedIndex === 1 ? 400 : undefined}
-            onClick={() => switchSelectedIndex(1)}
-            transitioning={transitioning}
-            as={delayedSelectedIndex === 1 ? 'div' : undefined}
-            style={{
-              right:
-                selectedIndex === 1 && mode === 'row'
-                  ? 'calc(-100% + var(--size) + 20px)'
-                  : 'unset',
-              top: selectedIndex === 1 && mode === 'column' ? '120px' : 'unset',
-              position: selectedIndex === 1 && mode === 'column' ? 'absolute' : 'relative',
-              left: selectedIndex === 1 && mode === 'column' ? '50%' : 'unset',
-            }}
-          >
-            <div
-              className="label"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex !== 1 ? 1 : 0,
-                transition: '120ms opacity',
-              }}
-            >
-              Option 2
-            </div>
-            <article
-              className="expanded"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex === 1 ? 1 : 0,
-                transition: selectedIndex !== 1 ? '120ms opacity' : '1000ms opacity',
-              }}
-            >
-              <h2>Option 2</h2>
-              <p>A message goes here</p>
-            </article>
-          </OptionTrack.Button>
+          <OptionTrack.Button {...trackButtonProps(1)} />
           {mode === 'column' ? (
             <OptionTrack.Button
               placeholderMode
               visible={selectedIndex === 1 || selectedIndex === 2}
             />
           ) : null}
-          <OptionTrack.Button
-            size={selectedIndex === 2 ? 400 : undefined}
-            onClick={() => switchSelectedIndex(2)}
-            transitioning={transitioning}
-            as={delayedSelectedIndex === 2 ? 'div' : undefined}
-            style={{
-              right:
-                selectedIndex === 2 && mode === 'row'
-                  ? 'calc(-100% + var(--size) + 20px)'
-                  : 'unset',
-              top: selectedIndex === 2 && mode === 'column' ? '120px' : 'unset',
-              position: selectedIndex === 2 && mode === 'column' ? 'absolute' : 'relative',
-              left: selectedIndex === 2 && mode === 'column' ? '50%' : 'unset',
-            }}
-          >
-            <div
-              className="label"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex !== 2 ? 1 : 0,
-                transition: '120ms opacity',
-              }}
-            >
-              Option 3
-            </div>
-            <article
-              className="expanded"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex === 2 ? 1 : 0,
-                transition: selectedIndex !== 2 ? '120ms opacity' : '1000ms opacity',
-              }}
-            >
-              <h2>Option 3</h2>
-              <p>A message goes here</p>
-            </article>
-          </OptionTrack.Button>
+          <OptionTrack.Button {...trackButtonProps(2)} />
           {mode === 'column' ? (
             <OptionTrack.Button
               placeholderMode
               visible={selectedIndex === 2 || selectedIndex === 3}
             />
           ) : null}
-          <OptionTrack.Button
-            size={selectedIndex === 3 ? 400 : undefined}
-            onClick={() => switchSelectedIndex(3)}
-            transitioning={transitioning}
-            as={delayedSelectedIndex === 3 ? 'div' : undefined}
-            style={{
-              right:
-                selectedIndex === 3 && mode === 'row'
-                  ? 'calc(-100% + var(--size) + 20px)'
-                  : 'unset',
-              top: selectedIndex === 3 && mode === 'column' ? '120px' : 'unset',
-              position: selectedIndex === 3 && mode === 'column' ? 'absolute' : 'relative',
-              left: selectedIndex === 3 && mode === 'column' ? '50%' : 'unset',
-            }}
-          >
-            <div
-              className="label"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex !== 3 ? 1 : 0,
-                transition: '120ms opacity',
-              }}
-            >
-              Option 4
-            </div>
-            <article
-              className="expanded"
-              style={{
-                position: 'absolute',
-                opacity: selectedIndex === 3 ? 1 : 0,
-                transition: selectedIndex !== 3 ? '120ms opacity' : '1000ms opacity',
-              }}
-            >
-              <h2>Option 4</h2>
-              <p>A message goes here</p>
-            </article>
-          </OptionTrack.Button>
+          <OptionTrack.Button {...trackButtonProps(3)} />
           {mode === 'column' ? (
             <OptionTrack.Button placeholderMode visible={selectedIndex === 3} />
           ) : null}
@@ -262,12 +183,12 @@ function Comparison() {
 
         <SelectOne
           className="selected-scenario"
-          options={['Scenario 1', 'Scenario 2', 'Scenario 3', 'Scenario 4']}
+          options={mileOptions}
           onChange={(value) => {
-            const index = parseInt(value.split(' ')[1] || '-', 10) - 1;
+            const index = mileOptions.indexOf(value);
             switchSelectedIndex(index);
           }}
-          value={selectedIndex !== null ? `Scenario ${selectedIndex + 1}` : ''}
+          value={selectedIndex !== null ? mileOptions[selectedIndex] || '' : ''}
           placeholder="Imagine"
         ></SelectOne>
       </ComparisonComponent>
