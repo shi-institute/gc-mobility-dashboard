@@ -78,6 +78,18 @@ if (areaNames.length) {
   await buildSeasonIndex(publicDataDir + '/replica/' + areaNames[0] + '/statistics');
 }
 
+// buld an index of future routes
+const futureRoutesDir = joinPath(publicDataDir, 'future_routes');
+const futureRoutesExists = await stat(futureRoutesDir)
+  .then(() => true)
+  .catch(() => false);
+if (futureRoutesExists) {
+  const futureRoutesIndexPath = joinPath(futureRoutesDir, 'future_routes_index.txt');
+  const futureRoutesIndex = (await readdir(futureRoutesDir)).join('\n');
+  await writeFile(futureRoutesIndexPath, futureRoutesIndex, 'utf8');
+  console.log(`Future routes index written to: ${futureRoutesIndexPath}`);
+}
+
 if (!shouldLog) {
   console.log = originalConsoleLog;
 }

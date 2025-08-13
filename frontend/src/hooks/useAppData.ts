@@ -207,7 +207,82 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     };
   }, [dataPromises]);
 
-  return { data, loading, errors, areasList, seasonsList, travelMethodList };
+  // all track the state for the scenaio data promises
+  const [scenarioDataPromises, setScenarioDataPromises] = useState<Awaited<
+    ReturnType<typeof constructScenarioDataPromises>
+  > | null>(null);
+  useEffect(() => {
+    constructScenarioDataPromises()
+      .then((promises) => {
+        setScenarioDataPromises(promises);
+      })
+      .catch((error) => {
+        console.error('An error occurred while constructing scenario data promises.', error);
+        setScenarioDataPromises(null);
+      });
+  }, [setScenarioDataPromises]);
+  const [scenarioData, setScenarioData] = useState<
+    | (ResolvedData<Omit<NonNullable<typeof scenarioDataPromises>, 'futureRoutes'>> & {
+        futureRoutes: ResolvedData<
+          NonNullable<typeof scenarioDataPromises>['futureRoutes'][number]
+        >[];
+      })
+    | null
+  >(null);
+  const [scenarioLoading, setScenarioLoading] = useState(false);
+  const [scenarioErrors, setScenarioErrors] = useState<Error[] | null>(null);
+  useEffect(() => {
+    const abortController = new AbortController();
+    const { signal } = abortController;
+
+    if (scenarioLoading === false && scenarioDataPromises && scenarioData === null) {
+      setScenarioLoading(true);
+      setScenarioErrors(null);
+
+      const { futureRoutes, ...rest } = scenarioDataPromises;
+
+      const resolvedScenarios = resolveObjectOfPromises(rest, signal);
+      const resolvedFutureRoutes = resolveArrayOfPromiseRecords(futureRoutes, signal);
+
+      Promise.all([resolvedScenarios, resolvedFutureRoutes])
+        .then((fetchedData) => {
+          const [scenariosData, futureRoutesData] = fetchedData;
+          if (scenariosData && futureRoutesData) {
+            setScenarioData({ ...scenariosData, futureRoutes: futureRoutesData });
+          }
+        })
+        .catch((error) => {
+          if (!signal.aborted) {
+            setScenarioErrors((prevErrors) => (prevErrors ? [...prevErrors, error] : [error]));
+            console.error('An error occurred while fetching scenario data.', error);
+          }
+          return null;
+        })
+        .finally(() => {
+          if (!signal.aborted) {
+            setScenarioLoading(false);
+          }
+        });
+    }
+
+    return () => {
+      abortController.abort('fetch effect in useAppData for scenario data is being cleaned up');
+    };
+  }, [scenarioDataPromises, scenarioData]);
+
+  return {
+    data,
+    loading,
+    errors,
+    areasList,
+    seasonsList,
+    travelMethodList,
+    scenarios: {
+      data: scenarioData,
+      loading: scenarioLoading,
+      errors: scenarioErrors,
+    },
+  };
 }
 
 const globalResultCache: Record<string, unknown> = {};
@@ -273,19 +348,40 @@ async function resolveArrayOfPromiseRecords<T extends DataPromises>(
 ): Promise<ResolvedData<T[number]>[] | null> {
   return Promise.all(
     dataPromises.map(async (promises) => {
-      const results = await Promise.all(
-        Object.entries(promises).map(async ([key, fn]) => [key, await fn(abortSignal)] as const)
-      );
-
-      const data: Record<string, unknown> = {};
-      results.forEach(([key, result]) => {
-        if (promises.hasOwnProperty(key)) {
-          data[key] = result;
-        }
-      });
+      const data = await resolveObjectOfPromises(promises, abortSignal);
       return data as ResolvedData<T[number]>;
     })
   );
+}
+
+/**
+ * Resolves all promises from an object of promises.
+ * @param promises An object where each property is a function that returns a promise.
+ * @param abortSignal  A signal to abort the fetch requests. Generate one with `const abortController = new AbortController()` and provide `abortController.signal`. Abort with `abortController.abort()`.
+ * @returns An object with the resolved values of the promises, or null if any promise fails.
+ */
+async function resolveObjectOfPromises<T extends DataPromises[number]>(
+  promises: T,
+  abortSignal?: AbortSignal
+): Promise<ResolvedData<T> | null> {
+  const results = await Promise.all(
+    Object.entries(promises).map(async ([key, fn]) => {
+      if (typeof fn !== 'function') {
+        console.warn(`Skipping non-function promise for key: ${key}`);
+        return [key, null] as const; // Skip non-function promises
+      }
+
+      return [key, await fn(abortSignal)] as const;
+    })
+  );
+
+  const data: Record<string, unknown> = {};
+  results.forEach(([key, result]) => {
+    if (promises.hasOwnProperty(key)) {
+      data[key] = result;
+    }
+  });
+  return data as ResolvedData<T>;
 }
 
 function handleError(key: string, shouldThrow = true, supressIncorrectHeaderCheck = false) {
@@ -582,4 +678,66 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
       },
     };
   });
+}
+
+async function constructScenarioDataPromises() {
+  const futureRoutesList = await fetch('./data/future_routes/future_routes_index.txt')
+    .then((res) => res.text())
+    .then((text) => {
+      return text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    })
+    .catch((error) => {
+      console.error('Error fetching future routes index:', error);
+      return [];
+    });
+
+  const futureRoutesPromises = futureRoutesList.map((routeId) => {
+    const folderPath = './data/future_routes/' + routeId;
+
+    return {
+      __routeId: () => new Promise((resolve) => resolve(routeId)),
+      stats: (abortSignal?: AbortSignal) =>
+        fetchData<{
+          counts: { walk_convertable_count: number; bike_convertable_count: number };
+        }>(`${folderPath}/stats.json.deflate`, abortSignal).catch(
+          handleError(`future_route_stats_${routeId}`, true, true)
+        ),
+      route: (abortSignal?: AbortSignal) =>
+        fetchData<GeoJSON<unknown, 'LineString' | 'MultiLineString'>>(
+          `${folderPath}/route.geojson.deflate`,
+          abortSignal
+        ).catch(handleError(`future_route_${routeId}`, true, true)),
+      stops: (abortSignal?: AbortSignal) =>
+        fetchData<GeoJSON<unknown, 'Point'>>(
+          `${folderPath}/stops.geojson.deflate`,
+          abortSignal
+        ).catch(handleError(`future_route_stops_${routeId}`, true, true)),
+      walk_service_area: (abortSignal?: AbortSignal) =>
+        fetchData<GeoJSON<NorthsideDataProcessing, 'Polygon' | 'MultiPolygon'>>(
+          `${folderPath}/walkshed.geojson.deflate`,
+          abortSignal
+        ).catch(handleError(`future_route_walk_service_area_${routeId}`, true, true)),
+      bike_service_area: (abortSignal?: AbortSignal) =>
+        fetchData<GeoJSON<NorthsideDataProcessing, 'Polygon' | 'MultiPolygon'>>(
+          `${folderPath}/bikeshed.geojson.deflate`,
+          abortSignal
+        ).catch(handleError(`future_route_bike_service_area_${routeId}`, true, true)),
+      paratransit_service_area: (abortSignal?: AbortSignal) =>
+        fetchData<GeoJSON<NorthsideDataProcessing, 'Polygon' | 'MultiPolygon'>>(
+          `${folderPath}/paratransit_service_area.geojson.deflate`,
+          abortSignal
+        ).catch(handleError(`paratransit${routeId}`, true, true)),
+    };
+  });
+
+  return {
+    scenarios: (abortSignal?: AbortSignal) =>
+      fetchData<{ scenarios: Scenario[] }>(`./data/tab5_scenarios.json.deflate`, abortSignal).catch(
+        handleError('tab5_scenarios')
+      ),
+    futureRoutes: futureRoutesPromises,
+  };
 }
