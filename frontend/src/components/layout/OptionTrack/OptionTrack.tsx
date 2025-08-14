@@ -44,7 +44,18 @@ export function OptionTrack(props: OptionTrackProps) {
   // add resize listeners to each child node
   const eachChildNode = Children.toArray(props.children)
     .filter((child): child is React.ReactElement<any, typeof OptionButton> => {
-      return isValidElement(child) && child.type === OptionButton;
+      if (!isValidElement(child)) return false;
+
+      // diirect match
+      if (child.type === OptionButton) return true;
+
+      // functional component that returns OptionButton
+      if (typeof child.type === 'function') {
+        const rendered = (child.type as any)(child.props);
+        return isValidElement(rendered) && rendered.type === OptionButton;
+      }
+
+      return false;
     })
     .map((child, index) => {
       return <ClonedChild key={index} child={child} onResize={rerenderOnResize} />;

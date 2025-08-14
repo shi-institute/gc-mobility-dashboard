@@ -14,6 +14,8 @@ interface IconButtonProps {
    * A tooltip for the icon button, which is shown on mouse hover by the browser.
    */
   title?: string;
+
+  style?: React.CSSProperties;
 }
 
 /**
@@ -27,6 +29,7 @@ export function IconButton(props: IconButtonProps) {
         onClick={props.onClick}
         className={props.disabled ? 'disabled ' + props.className : props.className}
         title={props.title}
+        style={props.style}
       >
         {props.children}
       </StyledAnchorButton>
@@ -39,6 +42,7 @@ export function IconButton(props: IconButtonProps) {
       disabled={props.disabled}
       className={props.disabled ? 'disabled ' + props.className : props.className}
       title={props.title}
+      style={props.style}
     >
       {props.children}
     </StyledButton>
@@ -46,21 +50,23 @@ export function IconButton(props: IconButtonProps) {
 }
 
 const StyledButton = styled.button`
+  font-size: 1rem;
   appearance: none;
+  padding: 0;
   display: inline-flex;
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  min-inline-size: 2.25rem;
-  min-block-size: 2.25rem;
+  min-inline-size: 2.25em;
+  min-block-size: 2.25em;
   box-sizing: border-box;
   border: none;
-  box-shadow: inset 0 0 0 1px var(--control-stroke-default),
-    inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
+  box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+    inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay);
   border-radius: var(--button-radius);
   color: inherit;
   user-select: none;
-  background-color: #fff;
+  background-color: transparent;
   flex-wrap: nowrap;
   transition: 120ms;
   ${(props) => props.title && `cursor: help;`}
@@ -76,7 +82,7 @@ const StyledButton = styled.button`
   &:active:not(.disabled) {
     background-color: var(--subtle-fill-tertiary);
     color: var(--text-secondary);
-    box-shadow: inset 0 0 0 1px var(--control-stroke-default);
+    box-shadow: inset 0 0 0 0.063em var(--control-stroke-default);
   }
 
   &.disabled {
@@ -87,8 +93,8 @@ const StyledButton = styled.button`
 
   & > svg {
     fill: currentColor;
-    block-size: 1.5rem;
-    inline-size: 1.5rem;
+    block-size: 1.5em;
+    inline-size: 1.5em;
   }
 `;
 
