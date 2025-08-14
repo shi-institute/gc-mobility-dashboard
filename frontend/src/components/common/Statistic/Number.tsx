@@ -64,14 +64,14 @@ export function Number(props: NumberProps) {
               return (
                 <React.Fragment key={label + index}>
                   <span role="cell">{label}</span>
-                  <span role="cell">{value}</span>
+                  <span role="cell">{value.toLocaleString()}</span>
                 </React.Fragment>
               );
             })}
           </div>
         ) : (
           <div className="single-value">
-            {data}
+            {data.toLocaleString()}
             {props.unit ? <span className="unit"> {props.unit}</span> : null}
           </div>
         )}
