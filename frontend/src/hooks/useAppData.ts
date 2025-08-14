@@ -698,11 +698,10 @@ async function constructScenarioDataPromises() {
     const folderPath = './data/future_routes/' + routeId;
 
     return {
-      __routeId: () => new Promise((resolve) => resolve(routeId)),
+      __routeId: () => new Promise<string>((resolve) => resolve(routeId)),
+      __label: () => new Promise<string>((resolve) => resolve(`${routeId} (Future Route)`)),
       stats: (abortSignal?: AbortSignal) =>
-        fetchData<{
-          counts: { walk_convertable_count: number; bike_convertable_count: number };
-        }>(`${folderPath}/stats.json.deflate`, abortSignal).catch(
+        fetchData<FutureRouteStatistics>(`${folderPath}/stats.json.deflate`, abortSignal).catch(
           handleError(`future_route_stats_${routeId}`, true, true)
         ),
       route: (abortSignal?: AbortSignal) =>

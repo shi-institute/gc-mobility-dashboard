@@ -4,18 +4,18 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Literal, Self, cast
+from typing import Any, Literal, Self, cast
 
+import dask.dataframe
 import geopandas
 import pandas
-import requests
+import pyogrio
 import tqdm
 
-from etl.geodesic import geodesic_buffer_series
-from etl.sources.census_acs_5year.constants import tiger_web_tracts_services
-from etl.sources.replica.process_etl import Season
-from etl.sources.replica.transformers.count_segment_frequency import \
-    count_segment_frequency_multi_input
+from etl.geodesic import geodesic_area_series, geodesic_length_series
+from etl.sources.replica.process_etl import (
+    Season, count_destination_building_use_in_service_area,
+    count_median_commute_time, count_trip_travel_methods)
 
 logger = logging.getLogger('future_routes_etl')
 logger.setLevel(logging.DEBUG)
@@ -89,10 +89,22 @@ class FutureRoutesETL:
         for scenario_folder in scenarios:
             logger.info(f'Processing scenario: {scenario_folder.name}')
 
-            stats = {}
+            stats: dict[str, Any] = {}
 
             # find convertable trips for the scenario
-            stats['counts'] = self.find_convertable_trips(scenario_folder, day='thursday')
+            stats['possible_conversions'] = self.find_convertable_trips(
+                scenario_folder, day='thursday')
+
+            # find travel methods, median commute time, and destination building use for trips in the scenario
+            trip_stats = self.calculate_trip_statistics(
+                day='thursday', scenario_input_folder=scenario_folder)
+            for key, value in trip_stats.items():
+                stats[key] = value
+
+            # measure coverage for the scenario
+            coverage_stats = self.measure_coverage(scenario_input_folder=scenario_folder)
+            for key, value in coverage_stats.items():
+                stats[key] = value
 
             # copy all input files to the output folder
             for file in scenario_folder.glob('*.geojson'):
@@ -269,6 +281,131 @@ class FutureRoutesETL:
         del overall_bike_service_area
 
         return {
-            'walk_convertable_count': walk_sum,
-            'bike_convertable_count': bike_sum,
+            'via_walk': walk_sum,
+            'via_bike': bike_sum,
         }
+
+    def calculate_trip_statistics(self, day: Literal['saturday', 'thursday'], scenario_input_folder: Path) -> dict[str, Any]:
+        walk_service_area_path = scenario_input_folder / self.required_scenario_files['walkshed']
+        bike_service_area_path = scenario_input_folder / self.required_scenario_files['bikeshed']
+        season_str = f'{self.season['region']}_{self.season["year"]}_{self.season["quarter"]}'
+
+        walk_gdf = geopandas.read_file(walk_service_area_path, columns=['geometry'])
+        bike_gdf = geopandas.read_file(bike_service_area_path, columns=['geometry'])
+
+        trips_chunks_folder_path = self.replica_output_folder / 'full_area' / \
+            f'{day}_trip' / '_chunks' / f'{season_str}_{day}_trip'
+        trips_chunks_ddf = cast(dask.dataframe.DataFrame,
+                                dask.dataframe.read_parquet(trips_chunks_folder_path, columns=['tour_type', 'mode', 'duration_minutes', 'destination_building_use_l1', 'destination_building_use_l2', 'end_lng', 'end_lat']))
+        logger.debug(f'Computing DataFrame...')
+        trips_df = trips_chunks_ddf.compute()
+
+        # read the CRS from the first chunk geoparquet file since we will lose it when we read it to a dataframe instead of a geodataframe
+        metadata = pyogrio.read_info(next(trips_chunks_folder_path.glob('*.parquet')))
+        crs = metadata['crs']
+
+        statistics: dict[str, Any] = {
+            'methods': {},
+            'median_duration': {},
+            'destination_building_use': {}
+        }
+
+        # count trip travel methods
+        logger.debug('    Counting trip travel methods...')
+        statistics['methods'] = count_trip_travel_methods(trips_df)
+
+        # calculate median trip commute time
+        logger.debug('    Calculating median trip commute time...')
+        statistics['median_duration'] = count_median_commute_time(trips_df)
+
+        if not walk_service_area_path.exists() or not bike_service_area_path.exists():
+            logger.warning(
+                f'Missing walk or bike service area files in {scenario_input_folder.name}. Skipping building use analysis.')
+            return statistics
+
+        # get destination building uses for trips that use or could use public transit
+        logger.debug('    Counting destination building uses...')
+        statistics['destination_building_use'] = count_destination_building_use_in_service_area(
+            trips_df, crs, walk_gdf, bike_gdf)
+
+        return statistics
+
+    def measure_coverage(self, scenario_input_folder: Path) -> dict[str, Any]:
+        walk_service_area_path = scenario_input_folder / self.required_scenario_files['walkshed']
+        bike_service_area_path = scenario_input_folder / self.required_scenario_files['bikeshed']
+        route_path = scenario_input_folder / self.required_scenario_files['route']
+        stops_path = scenario_input_folder / self.required_scenario_files['stops']
+        season_str = f'{self.season['region']}_{self.season["year"]}_{self.season["quarter"]}'
+
+        logger.info(
+            f'Reading service areas from {walk_service_area_path} and {bike_service_area_path}...')
+        walk_gdf = geopandas.read_file(walk_service_area_path, columns=['geometry'])
+        bike_gdf = geopandas.read_file(bike_service_area_path, columns=['geometry'])
+
+        # get the total bounds for the walk and bike service areas
+        logger.debug('Calculating total bounds for service areas...')
+        walk_bounds = walk_gdf.total_bounds
+        bike_bounds = bike_gdf.total_bounds
+        total_bounds = [
+            min(walk_bounds[0], bike_bounds[0]),
+            min(walk_bounds[1], bike_bounds[1]),
+            max(walk_bounds[2], bike_bounds[2]),
+            max(walk_bounds[3], bike_bounds[3])
+        ]
+
+        population_home_path = self.replica_output_folder / \
+            'full_area' / 'population' / f'{season_str}_home.parquet'
+        logger.debug(
+            f'Reading population home data from {population_home_path} with bbox {total_bounds}...')
+        population_home_gdf = geopandas.read_parquet(
+            population_home_path,
+            columns=['household_id', 'person_id', 'geometry'],
+            bbox=total_bounds
+        )
+
+        statistics: dict[str, Any] = {
+            'synthetic_demographics': {}
+        }
+
+        # count households and population covered by the service areas (home-based)
+        logger.debug('Counting households and population in future service areas...')
+
+        statistics['synthetic_demographics']['households_in_service_area'] = {}
+        statistics['synthetic_demographics']['households_in_service_area']['walk'] = population_home_gdf[
+            population_home_gdf.intersects(walk_gdf.union_all())
+        ]['household_id'].nunique()
+        statistics['synthetic_demographics']['households_in_service_area']['bike'] = population_home_gdf[
+            population_home_gdf.intersects(bike_gdf.union_all())
+        ]['household_id'].nunique()
+
+        statistics['synthetic_demographics']['population_in_service_area'] = {}
+        statistics['synthetic_demographics']['population_in_service_area']['walk'] = population_home_gdf[
+            population_home_gdf.intersects(walk_gdf.union_all())
+        ]['person_id'].nunique()
+        statistics['synthetic_demographics']['population_in_service_area']['bike'] = population_home_gdf[
+            population_home_gdf.intersects(bike_gdf.union_all())
+        ]['person_id'].nunique()
+
+        # calculate the distance of the routes in meters
+        logger.debug('Calculating route distances...')
+        routes_gdf = geopandas.read_file(route_path, columns=['geometry'])
+        distance_meters = geodesic_length_series(routes_gdf.geometry)
+
+        # count the number of stops
+        logger.debug('Counting stops...')
+        stops_gdf = geopandas.read_file(stops_path, columns=['geometry'])
+        stops_count = len(stops_gdf)
+
+        # calculate the service coverage for each service area
+        logger.debug('Calculating service area coverage...')
+        walk_perimeter, walk_area = geodesic_area_series(walk_gdf.geometry)
+        bike_perimeter, bike_area = geodesic_area_series(bike_gdf.geometry)
+
+        statistics['route_distance_meters'] = distance_meters
+        statistics['stops_count'] = stops_count
+        statistics['walk_service_area_perimeter_meters'] = walk_perimeter
+        statistics['walk_service_area_area_square_meters'] = walk_area
+        statistics['bike_service_area_perimeter_meters'] = bike_perimeter
+        statistics['bike_service_area_area_square_meters'] = bike_area
+
+        return statistics

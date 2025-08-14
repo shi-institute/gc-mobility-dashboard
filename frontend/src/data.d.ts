@@ -339,6 +339,49 @@ type MergedEssentialServicesAccessStats = Omit<
 > &
   Omit<EssentialServicesPopulationAccessStatistic, 'replica_table'>;
 
+interface FutureRouteStatistics {
+  /** Mode statistics broken down by tour type */
+  methods: {
+    __all: ReplicaTripModeStatistics;
+    commute: ReplicaTripModeStatistics;
+    work_based: ReplicaTripModeStatistics;
+    undirected: ReplicaTripModeStatistics;
+    other_home_based: ReplicaTripModeStatistics;
+  };
+  /** The median duration in minutes broken down by tour type */
+  median_duration: {
+    __all: number;
+    commute: number;
+    work_based: number;
+    undirected: number;
+    other_home_based: number;
+  };
+  possible_conversions: {
+    via_walk?: number;
+    via_bike?: number;
+  };
+  destination_building_use?: {
+    via_walk: {
+      type_counts: ReplicaDesinationUseTypeStatistics;
+      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
+    };
+    via_bike: {
+      type_counts: ReplicaDesinationUseTypeStatistics;
+      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
+    };
+  };
+  synthetic_demographics: {
+    households_in_service_area: { walk: number; bike: number };
+    population_in_service_area: { walk: number; bike: number };
+  };
+  route_distance_meters: number;
+  stops_count: number;
+  walk_service_area_perimeter_meters: number;
+  walk_service_area_area_square_meters: number;
+  bike_service_area_perimeter_meters: number;
+  bike_service_area_area_square_meters: number;
+}
+
 interface NorthsideDataProcessing {
   neighborhood_name?: string | null;
   GISJOIN?: string | null;

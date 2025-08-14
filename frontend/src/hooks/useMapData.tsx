@@ -496,9 +496,21 @@ export function useMapData(data: AppData) {
   };
 }
 
-export function useFutureMapData(data: AppFutureRoutesData) {
+/**
+ * Returns layers for an ArcGIS map that represent future routes, stops, and service areas.
+ *
+ * @param data Future routes data from the useAppData hook.
+ * @param allowedRouteIds If porivded, only routes with these IDs will be included.
+ *                        If not provided, all future routes will be included.
+ * @returns
+ */
+export function useFutureMapData(data: AppFutureRoutesData, allowedRouteIds?: string[]) {
+  const filteredData = allowedRouteIds
+    ? data.filter((d) => allowedRouteIds.includes(d.__routeId))
+    : data;
+
   const futureRoutes = useMemo(() => {
-    return (data || [])
+    return filteredData
       .filter(notEmpty)
       .filter(requireKey('route'))
       .map(({ route, __routeId }) => {
@@ -515,10 +527,10 @@ export function useFutureMapData(data: AppFutureRoutesData) {
           }),
         } satisfies GeoJSONLayerInit;
       });
-  }, [data]);
+  }, [filteredData]);
 
   const futureStops = useMemo(() => {
-    return (data || [])
+    return filteredData
       .filter(notEmpty)
       .filter(requireKey('stops'))
       .map(({ stops, __routeId }) => {
@@ -530,10 +542,10 @@ export function useFutureMapData(data: AppFutureRoutesData) {
           popupEnabled: true,
         } satisfies GeoJSONLayerInit;
       });
-  }, [data]);
+  }, [filteredData]);
 
   const futureWalkServiceAreas = useMemo(() => {
-    return (data || [])
+    return filteredData
       .filter(notEmpty)
       .filter(requireKey('walk_service_area'))
       .map(({ walk_service_area, __routeId }) => {
@@ -545,10 +557,10 @@ export function useFutureMapData(data: AppFutureRoutesData) {
           visible: false,
         } satisfies GeoJSONLayerInit;
       });
-  }, [data]);
+  }, [filteredData]);
 
   const futureCyclingServiceAreas = useMemo(() => {
-    return (data || [])
+    return filteredData
       .filter(notEmpty)
       .filter(requireKey('bike_service_area'))
       .map(({ bike_service_area, __routeId }) => {
@@ -560,10 +572,10 @@ export function useFutureMapData(data: AppFutureRoutesData) {
           visible: false,
         } satisfies GeoJSONLayerInit;
       });
-  }, [data]);
+  }, [filteredData]);
 
   const futureParatransitServiceAreas = useMemo(() => {
-    return (data || [])
+    return filteredData
       .filter(requireKey('paratransit_service_area'))
       .filter(notEmpty)
       .map(({ paratransit_service_area, __routeId }) => {
@@ -575,7 +587,7 @@ export function useFutureMapData(data: AppFutureRoutesData) {
           visible: false,
         } satisfies GeoJSONLayerInit;
       });
-  }, [data]);
+  }, [filteredData]);
 
   return {
     futureRoutes,

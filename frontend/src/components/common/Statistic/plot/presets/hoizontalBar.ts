@@ -150,7 +150,17 @@ export function horizontalBar(params: HorizontalBarParams) {
         y: (d) => (d.y1 + d.y2) / 2,
         text: (d) => {
           const showPercent = d[params.x] <= 0.05;
-          return showPercent ? `${d3.format('.0%')(d[params.x])}` : '';
+          if (!showPercent) {
+            return '';
+          }
+
+          const legendName = d[params.y] as string;
+          const showLessThan = d[params.x] < 0.01;
+          if (showLessThan) {
+            return '< 1%' + ` (${legendName})`;
+          }
+
+          return `${d3.format('.0%')(d[params.x])}`;
         },
         dx: 6,
         textAnchor: 'start',

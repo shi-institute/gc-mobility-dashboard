@@ -577,7 +577,7 @@ function Sections() {
 
           return {
             label: area.__label,
-            value: (publicTransitTrips / allTrips).toFixed(2),
+            value: ((publicTransitTrips / allTrips) * 100).toFixed(2),
           };
         })}
       />
