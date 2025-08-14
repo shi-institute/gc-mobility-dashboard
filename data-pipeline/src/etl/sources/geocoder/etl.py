@@ -29,7 +29,7 @@ class GeocoderETL:
             print(f"⚠ Cannot access input folder: {e}")
             return False
 
-        success = False
+        success = True
 
         for file in csv_files:
             print(f"Processing {file.name}...")
@@ -47,7 +47,8 @@ class GeocoderETL:
                     continue
 
                 # Standardize columns
-                col_map = {'ZIP Code': 'ZIP', 'Street': 'Address', 'Zip': 'ZIP'}
+                col_map = {'ZIP Code': 'ZIP', 'Street': 'Address',
+                           'Zip': 'ZIP', 'ADDRESS': 'Address', 'ZIPCODE': 'ZIP'}
                 df = df.rename(columns=col_map)
 
                 if 'Address' not in df.columns:
