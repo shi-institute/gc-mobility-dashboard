@@ -1,7 +1,7 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import { ComponentProps, useRef, useState } from 'react';
-import { CoreFrame, OptionTrack, SelectOne } from '../components';
+import React, { ComponentProps, useRef, useState } from 'react';
+import { CoreFrame, IconButton, OptionTrack, SelectOne } from '../components';
 import { AppNavigation } from '../components/navigation';
 import { useAppData, useRect } from '../hooks';
 
@@ -94,24 +94,19 @@ function Comparison() {
           >
             {optionLabel}
           </div>
-          <article
+          <ButtonInterior
             className="expanded"
             style={{
-              position: 'absolute',
               opacity: selectedIndex === index ? 1 : 0,
               transition: selectedIndex !== index ? '120ms opacity' : '1000ms opacity',
             }}
           >
-            <h2>{optionLabel}</h2>
-            {buttonScenarios.map((scenario, index) => (
-              <button
-                key={index}
-                style={{ fontSize: 'inherit', borderRadius: '0.1875em', borderWidth: '0.0625em' }}
-              >
-                {scenario.scenarioName}
-              </button>
-            ))}
-          </article>
+            <TrackButtonExpandedContent
+              optionLabel={optionLabel}
+              scenarios={buttonScenarios}
+              transitioning={transitioning}
+            />
+          </ButtonInterior>
         </>
       ),
     } satisfies ComponentProps<typeof OptionTrack.Button>;
@@ -193,6 +188,189 @@ function Comparison() {
         ></SelectOne>
       </ComparisonComponent>
     </ComparisionContainer>
+  );
+}
+
+interface TrackButtonExpandedContentProps {
+  optionLabel: string;
+  scenarios: Scenario[];
+  transitioning: boolean;
+}
+
+function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
+  const [selectedScenarioIndex, _setSelectedScenarioIndex] = useState<number | null>(null);
+  const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  function setSelectedScenarioIndex(index: number | null) {
+    _setSelectedScenarioIndex(index);
+    setSelectedFeatureIndex(0);
+  }
+
+  const scenario =
+    selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
+  const feature = scenario?.features?.[selectedFeatureIndex];
+
+  if (scenario && !props.transitioning) {
+    if (!feature) {
+      return (
+        <div className="scenario-content">
+          <h2>{scenario.scenarioName}</h2>
+          <p>No data available for this scenario.</p>
+        </div>
+      );
+    }
+
+    const Shell = ({ children }: { children: React.ReactNode }) => {
+      return (
+        <>
+          <div className="backButton">
+            <IconButton
+              style={{ fontSize: 'inherit' }}
+              onClick={() => setSelectedScenarioIndex(null)}
+            >
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M10.733 19.79a.75.75 0 0 0 1.034-1.086L5.516 12.75H20.25a.75.75 0 0 0 0-1.5H5.516l6.251-5.955a.75.75 0 0 0-1.034-1.086l-7.42 7.067a.995.995 0 0 0-.3.58.754.754 0 0 0 .001.289.995.995 0 0 0 .3.579l7.419 7.067Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </IconButton>
+          </div>
+          <div className="scenario-content">
+            {selectedFeatureIndex > 0 ? (
+              <div className="leftButton">
+                <IconButton
+                  style={{ fontSize: 'inherit' }}
+                  onClick={() => setSelectedFeatureIndex(selectedFeatureIndex - 1)}
+                >
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M15.53 4.22a.75.75 0 0 1 0 1.06L8.81 12l6.72 6.72a.75.75 0 1 1-1.06 1.06l-7.25-7.25a.75.75 0 0 1 0-1.06l7.25-7.25a.75.75 0 0 1 1.06 0Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </IconButton>
+              </div>
+            ) : null}
+            {children}
+            {selectedFeatureIndex < scenario.features.length - 1 ? (
+              <div className="rightButton">
+                <IconButton
+                  style={{ fontSize: 'inherit' }}
+                  onClick={() => setSelectedFeatureIndex(selectedFeatureIndex + 1)}
+                >
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M8.47 4.22a.75.75 0 0 0 0 1.06L15.19 12l-6.72 6.72a.75.75 0 1 0 1.06 1.06l7.25-7.25a.75.75 0 0 0 0-1.06L9.53 4.22a.75.75 0 0 0-1.06 0Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </IconButton>
+              </div>
+            ) : null}
+          </div>
+        </>
+      );
+    };
+
+    if (feature.affects === 'stops') {
+      if (feature.type === 'infrastructure') {
+        return (
+          <Shell>
+            <span className="number">{feature.count}</span>
+            <h2>{feature.name}</h2>
+            <p className="description">{feature.description}</p>
+          </Shell>
+        );
+      }
+
+      if (feature.type === 'accessibility') {
+        return (
+          <Shell>
+            <span className="number">{feature.count} Stops</span>
+            <h2>{feature.name}</h2>
+            <p className="description">{feature.description}</p>
+          </Shell>
+        );
+      }
+    }
+
+    if (feature.affects === 'routes') {
+      if (feature.type === 'frequency') {
+        const oldRateMinutes = feature.before;
+        const newRateMinutes = feature.after;
+        const percentageChange = ((newRateMinutes - oldRateMinutes) / oldRateMinutes) * 100;
+        const isFaster = percentageChange < 0;
+
+        return (
+          <Shell>
+            <span className="number">
+              {parseFloat(Math.abs(percentageChange).toFixed(1))}
+              {isFaster ? '% faster' : '% slower'}
+            </span>
+            <h2>{feature.name}</h2>
+            <p className="description">{feature.description}</p>
+          </Shell>
+        );
+      }
+
+      if (feature.type === 'addition') {
+        return (
+          <Shell>
+            <span className="number">{feature.routeIds.length}</span>
+            <h2>New Route{feature.routeIds.length === 1 ? '' : 's'}</h2>
+            <p className="description">{feature.description}</p>
+          </Shell>
+        );
+      }
+    }
+
+    if (feature.affects === 'buses') {
+      if (feature.type === 'purchase') {
+        return (
+          <Shell>
+            <span className="number">{feature.count}</span>
+            <h2>{feature.name}</h2>
+            <p className="description">{feature.description}</p>
+          </Shell>
+        );
+      }
+    }
+
+    if (feature.affects === 'on-demand') {
+      if (feature.type === 'purchase') {
+        return (
+          <Shell>
+            <span className="number">{feature.count}</span>
+            <h2>New On-Demand Vans</h2>
+            <p className="description">{feature.description}</p>
+          </Shell>
+        );
+      }
+    }
+  }
+
+  return (
+    <div className="overview-content">
+      <h2>{props.optionLabel}</h2>
+      <p
+        style={{
+          margin: 0,
+          fontStyle: 'italic',
+          transform: 'translateY(-0.3em)',
+          height: '0.5em',
+          opacity: 0.8,
+        }}
+      >
+        Select an option:
+      </p>
+      <div className="buttons">
+        {props.scenarios.map((scenario, index) => (
+          <button key={index} onClick={() => setSelectedScenarioIndex(index)}>
+            <span className="label">{scenario.scenarioName}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -294,5 +472,134 @@ const ComparisonComponent = styled.div`
     bottom: 20px;
     right: 20px;
     width: 400px;
+  }
+`;
+
+const ButtonInterior = styled.article`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  & > .overview-content {
+    position: absolute;
+    inset: 0em;
+    padding: 2em 0 2em 0;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5em;
+
+    h2 {
+      margin: 0;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0em;
+
+      button {
+        width: 100%;
+        border: none;
+        padding: 0.825em;
+        appearance: none;
+        font-size: inherit;
+        font-family: inherit;
+        background-color: transparent;
+
+        .label {
+          position: relative;
+          padding: 0.54em 0.8em;
+          border-radius: 10em;
+          overflow: hidden;
+          box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+            inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay);
+
+          &::before {
+            content: '';
+            display: block;
+            position: absolute;
+            background-color: rgb(54, 190, 101, 0.3);
+            inset: 0;
+            border-radius: 10em;
+            z-index: -1;
+          }
+        }
+      }
+
+      button:hover:not(:disabled) {
+        .label {
+          background-color: var(--subtle-fill-secondary);
+        }
+      }
+
+      button:active:not(:disabled) {
+        .label {
+          background-color: var(--subtle-fill-tertiary);
+          color: var(--text-secondary);
+          box-shadow: inset 0 0 0 0.063em var(--control-stroke-default);
+        }
+      }
+    }
+  }
+
+  .backButton {
+    position: absolute;
+    left: 50%;
+    top: 1em;
+    transform: translateX(-50%);
+  }
+
+  & > .scenario-content {
+    width: 80%;
+    max-height: 80%;
+
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+    position: absolute;
+
+    .leftButton {
+      position: absolute;
+      left: -1.5em;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .rightButton {
+      position: absolute;
+      right: -1.5em;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .number {
+      background-color: white;
+      display: inline-block;
+      padding: 0.2em 1em;
+      font-size: 1.25em;
+      font-weight: 600;
+      border-radius: 10em;
+    }
+
+    h2 {
+      margin: 1em 0 0.7em 0;
+      line-height: 1;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .backButton:not(:hover):not(:active):not(:focus) button,
+  .rightButton:not(:hover):not(:active):not(:focus) button,
+  .leftButton:not(:hover):not(:active):not(:focus) button {
+    box-shadow: none;
   }
 `;
