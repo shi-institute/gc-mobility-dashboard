@@ -12,8 +12,8 @@
   --color-primary: var(--color-green1);
   --color-secondary: var(--color-blue);
 
-  --button-radius: 3px;
-  --surface-radius: 6px;
+  --button-radius: 0.188em;
+  --surface-radius: 0.375em;
 
   --card-background-default: hsla(0, 0%, 100%, 70%);
   --control-stroke-default: hsla(0, 0%, 0%, 7%);
