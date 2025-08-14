@@ -370,6 +370,16 @@ interface FutureRouteStatistics {
       subtype_counts: ReplicaDesinationUseSubTypeStatistics;
     };
   };
+  synthetic_demographics: {
+    households_in_service_area: { walk: number; bike: number };
+    population_in_service_area: { walk: number; bike: number };
+  };
+  route_distance_meters: number;
+  stops_count: number;
+  walk_service_area_perimeter_meters: number;
+  walk_service_area_area_square_meters: number;
+  bike_service_area_perimeter_meters: number;
+  bike_service_area_area_square_meters: number;
 }
 
 interface NorthsideDataProcessing {
