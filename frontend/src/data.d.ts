@@ -631,3 +631,14 @@ interface ScenarioOnDemandPurchaseFeature extends ScenarioOnDemandFeature {
   type: 'purchase';
   count: number;
 }
+
+interface OperatingFundInfo {
+  Source:
+    | 'Directly Generated'
+    | 'Federal Government'
+    | 'Local Government'
+    | 'State Government'
+    | 'Total';
+  Year: number;
+  Value: number;
+}

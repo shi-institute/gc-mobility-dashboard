@@ -149,6 +149,39 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
 
               return closestYear[1];
             }),
+          census_acs_5year__county_total_population: () =>
+            censusPromises.census_acs_5year().then((data) => {
+              if (!data) {
+                return null;
+              }
+
+              const availableEndYears = Array.from(
+                new Set(data.filter((data) => !!data.population__total).map((item) => item.YEAR))
+              )
+                .map((yearRange) => {
+                  const endYear = yearRange.split('-')[1];
+                  if (!endYear) {
+                    return null;
+                  }
+
+                  return parseInt(endYear);
+                })
+                .filter(notEmpty);
+
+              // find the closest year to the current year
+              const closestYear = availableEndYears.reduce((prev, curr) => {
+                return Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev;
+              });
+
+              // year population sum
+              const populationSum = data
+                .filter((item) => parseInt(item.YEAR.split('-')[1] || '') === closestYear)
+                .reduce((sum, item) => {
+                  return sum + (item.population__total || 0);
+                }, 0);
+
+              return populationSum ?? null;
+            }),
           ...greenlinkPromisesForSeason,
           ...essentialServicesPromisesForAreaAndSeason,
           coverage: (abortSignal?: AbortSignal) =>
@@ -167,6 +200,22 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
                 return null;
               }
               return data.filter((stop) => stop.areas?.includes(area));
+            }),
+          operating_funds: (abortSignal?: AbortSignal) =>
+            promises.operating_funds(abortSignal).then((data) => {
+              if (!data) {
+                return null;
+              }
+
+              const availableYears = Array.from(new Set(data.map((item) => item.Year)));
+
+              // get the closest year from available years based on the value of `year`
+              const closestYear = availableYears.reduce((prev, curr) => {
+                return Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev;
+              });
+
+              // filter the data to only include items for the closest year
+              return data.filter((item) => item.Year === closestYear);
             }),
         };
       })
@@ -678,6 +727,13 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
           fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
             handleError('population')
           ),
+        operating_funds: (abortSignal?: AbortSignal) =>
+          fetchData<OperatingFundInfo[]>(
+            `./data/operating_funds.json.deflate`,
+            abortSignal,
+            undefined,
+            true
+          ).catch(handleError('operating_funds', true, true)),
       },
     };
   });
