@@ -138,25 +138,31 @@ export function Map(props: MapProps) {
   >();
 
   const serviceAreaLayers = {
-    walk: layers?.find((layer) => layer.id.startsWith('walk-service-area__')),
-    bike: layers?.find((layer) => layer.id.startsWith('bike-service-area__')),
-    paratransit: layers?.find((layer) => layer.id.startsWith('paratransit-service-area__')),
+    walk: layers?.filter((layer) => layer.id.startsWith('walk-service-area__')) || [],
+    bike: layers?.filter((layer) => layer.id.startsWith('bike-service-area__')) || [],
+    paratransit: layers?.filter((layer) => layer.id.startsWith('paratransit-service-area__')) || [],
   };
 
   function toggleServiceAreaLayer(layerToShow: 'walk' | 'bike' | 'paratransit') {
     // get the current visibility
-    const isVisible = serviceAreaLayers[layerToShow]?.visible;
+    const isVisible = serviceAreaLayers[layerToShow]?.every((layer) => layer.visible) ?? false;
 
     // hide allservice area layers
-    Object.values(serviceAreaLayers).forEach((layerInfo) => {
-      if (layerInfo) {
-        layerInfo.layer.visible = false;
-      }
-    });
+    Object.values(serviceAreaLayers)
+      .flatMap((l) => l)
+      .forEach((layerInfo) => {
+        if (layerInfo) {
+          layerInfo.layer.visible = false;
+        }
+      });
 
     // toggle the clicked layer
     if (serviceAreaLayers[layerToShow]) {
-      serviceAreaLayers[layerToShow].layer.visible = !isVisible;
+      serviceAreaLayers[layerToShow].forEach((layerInfo) => {
+        if (layerInfo) {
+          layerInfo.layer.visible = !isVisible;
+        }
+      });
     }
   }
 
@@ -164,7 +170,7 @@ export function Map(props: MapProps) {
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
       <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85" ref={mapElem}>
-        {serviceAreaLayers.walk ? (
+        {serviceAreaLayers.walk.length ? (
           <arcgis-placement position="top-left">
             <IconButton
               title="Show walk service area"
@@ -185,7 +191,7 @@ export function Map(props: MapProps) {
           </arcgis-placement>
         ) : null}
 
-        {serviceAreaLayers.bike ? (
+        {serviceAreaLayers.bike.length ? (
           <arcgis-placement position="top-left">
             <IconButton
               title="Show bike service area"
@@ -201,7 +207,7 @@ export function Map(props: MapProps) {
           </arcgis-placement>
         ) : null}
 
-        {serviceAreaLayers.paratransit ? (
+        {serviceAreaLayers.paratransit.length ? (
           <arcgis-placement position="top-left">
             <IconButton
               title="Show paratransit service area"

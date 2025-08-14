@@ -1,18 +1,51 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import React, { ComponentProps, useRef, useState } from 'react';
-import { CoreFrame, IconButton, OptionTrack, SelectOne } from '../components';
+import { CoreFrame, IconButton, Map, OptionTrack, SelectOne } from '../components';
 import { AppNavigation } from '../components/navigation';
 import { useAppData, useRect } from '../hooks';
+import { useFutureMapData, useMapData } from '../hooks/useMapData';
+import { notEmpty } from '../utils';
 
 export function RoadsVsTransit() {
+  const { data, scenarios: scenariosData } = useAppData();
+  const {
+    areaPolygons,
+    routes,
+    stops,
+    walkServiceAreas,
+    cyclingServiceAreas,
+    paratransitServiceAreas,
+  } = useMapData(data);
+  const {
+    futureRoutes,
+    futureStops,
+    futureWalkServiceAreas,
+    futureCyclingServiceAreas,
+    futureParatransitServiceAreas,
+  } = useFutureMapData(scenariosData.data?.futureRoutes || []);
+
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
       header={<AppNavigation />}
       map={
         <div style={{ height: '100%' }}>
-          <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85"></arcgis-map>
+          <Map
+            layers={[
+              ...futureWalkServiceAreas,
+              walkServiceAreas,
+              ...futureCyclingServiceAreas,
+              cyclingServiceAreas,
+              ...futureParatransitServiceAreas,
+              paratransitServiceAreas,
+              ...futureRoutes,
+              routes,
+              ...futureStops,
+              stops,
+              ...areaPolygons,
+            ].filter(notEmpty)}
+          />
         </div>
       }
       sections={[<Comparison />]}

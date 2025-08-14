@@ -13,6 +13,9 @@ import { notEmpty, requireKey } from '../utils';
 import { createBusStopRenderer, createInterestAreaRenderer } from '../utils/renderers';
 
 type AppData = ReturnType<typeof useAppData>['data'];
+type AppFutureRoutesData = NonNullable<
+  ReturnType<typeof useAppData>['scenarios']['data']
+>['futureRoutes'];
 
 export function useMapData(data: AppData) {
   const networkSegments = useMemo(() => {
@@ -493,9 +496,109 @@ export function useMapData(data: AppData) {
   };
 }
 
+export function useFutureMapData(data: AppFutureRoutesData) {
+  const futureRoutes = useMemo(() => {
+    return (data || [])
+      .filter(notEmpty)
+      .filter(requireKey('route'))
+      .map(({ route, __routeId }) => {
+        return {
+          title: `Future Route (${__routeId})`,
+          id: `future_route__${__routeId}`,
+          data: route,
+          renderer: new SimpleRenderer({
+            symbol: new SimpleLineSymbol({
+              color: 'rgba(89, 220, 24, 0.8)',
+              width: 4,
+              style: 'solid',
+            }),
+          }),
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
+  const futureStops = useMemo(() => {
+    return (data || [])
+      .filter(notEmpty)
+      .filter(requireKey('stops'))
+      .map(({ stops, __routeId }) => {
+        return {
+          title: `Stops (${__routeId})`,
+          data: stops,
+          renderer: createBusStopRenderer(new Color('rgba(35, 148, 0, 1)')),
+          minScale: 240000, // do not show bus stops at scales larger than 1:240,000
+          popupEnabled: true,
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
+  const futureWalkServiceAreas = useMemo(() => {
+    return (data || [])
+      .filter(notEmpty)
+      .filter(requireKey('walk_service_area'))
+      .map(({ walk_service_area, __routeId }) => {
+        return {
+          title: `0.5-Mile Walking Radius from Stops (${__routeId})`,
+          id: `walk-service-area__${__routeId}`,
+          data: walk_service_area,
+          renderer: futureServiceAreaRenderer,
+          visible: false,
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
+  const futureCyclingServiceAreas = useMemo(() => {
+    return (data || [])
+      .filter(notEmpty)
+      .filter(requireKey('bike_service_area'))
+      .map(({ bike_service_area, __routeId }) => {
+        return {
+          title: `15-Minute Cycling Radius from Stops (at 15 mph) (${__routeId})`,
+          id: `bike-service-area__${__routeId}`,
+          data: bike_service_area,
+          renderer: futureServiceAreaRenderer,
+          visible: false,
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
+  const futureParatransitServiceAreas = useMemo(() => {
+    return (data || [])
+      .filter(requireKey('paratransit_service_area'))
+      .filter(notEmpty)
+      .map(({ paratransit_service_area, __routeId }) => {
+        return {
+          title: `Paratransit Service Area (${__routeId})`,
+          id: `paratransit-service-area__${__routeId}`,
+          data: paratransit_service_area,
+          renderer: futureServiceAreaRenderer,
+          visible: false,
+        } satisfies GeoJSONLayerInit;
+      });
+  }, [data]);
+
+  return {
+    futureRoutes,
+    futureStops,
+    futureWalkServiceAreas,
+    futureCyclingServiceAreas,
+    futureParatransitServiceAreas,
+  };
+}
+
 const serviceAreaRenderer = new SimpleRenderer({
   symbol: new SimpleFillSymbol({
-    color: [255, 255, 255, 0.32],
+    color: new Color('rgba(255, 255, 255, 0.32)'),
+    outline: {
+      color: [0, 0, 0, 0.36],
+      width: 1,
+    },
+  }),
+});
+
+const futureServiceAreaRenderer = new SimpleRenderer({
+  symbol: new SimpleFillSymbol({
+    color: new Color('rgba(128, 255, 135, 0.24)'),
     outline: {
       color: [0, 0, 0, 0.36],
       width: 1,

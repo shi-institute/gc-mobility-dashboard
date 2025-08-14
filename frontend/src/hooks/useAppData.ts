@@ -706,12 +706,12 @@ async function constructScenarioDataPromises() {
           handleError(`future_route_stats_${routeId}`, true, true)
         ),
       route: (abortSignal?: AbortSignal) =>
-        fetchData<GeoJSON<unknown, 'LineString' | 'MultiLineString'>>(
+        fetchData<GeoJSON<Record<string, unknown>, 'LineString' | 'MultiLineString'>>(
           `${folderPath}/route.geojson.deflate`,
           abortSignal
         ).catch(handleError(`future_route_${routeId}`, true, true)),
       stops: (abortSignal?: AbortSignal) =>
-        fetchData<GeoJSON<unknown, 'Point'>>(
+        fetchData<GeoJSON<Record<string, unknown>, 'Point'>>(
           `${folderPath}/stops.geojson.deflate`,
           abortSignal
         ).catch(handleError(`future_route_stops_${routeId}`, true, true)),
@@ -727,9 +727,9 @@ async function constructScenarioDataPromises() {
         ).catch(handleError(`future_route_bike_service_area_${routeId}`, true, true)),
       paratransit_service_area: (abortSignal?: AbortSignal) =>
         fetchData<GeoJSON<NorthsideDataProcessing, 'Polygon' | 'MultiPolygon'>>(
-          `${folderPath}/paratransit_service_area.geojson.deflate`,
+          `${folderPath}/paratransit.geojson.deflate`,
           abortSignal
-        ).catch(handleError(`paratransit${routeId}`, true, true)),
+        ).catch(handleError(`future_route_paratrasnit_service_area${routeId}`, true, true)),
     };
   });
 

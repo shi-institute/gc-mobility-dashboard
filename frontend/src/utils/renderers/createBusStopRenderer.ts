@@ -1,8 +1,9 @@
+import Color from '@arcgis/core/Color';
 import { SimpleRenderer } from '@arcgis/core/renderers.js';
 import SizeVariable from '@arcgis/core/renderers/visualVariables/SizeVariable';
 import { CIMSymbol } from '@arcgis/core/symbols';
 
-export function createBusStopRenderer() {
+export function createBusStopRenderer(backgroundColor: Color = new Color([51, 51, 51, 255])) {
   return new SimpleRenderer({
     symbol: new CIMSymbol({
       data: {
@@ -207,7 +208,7 @@ export function createBusStopRenderer() {
                       {
                         type: 'CIMSolidFill',
                         enable: true,
-                        color: [51, 51, 51, 255],
+                        color: backgroundColor.toJSON(),
                       },
                     ],
                   },
