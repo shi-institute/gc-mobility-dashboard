@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 import { useMemo } from 'react';
-import { Route, Routes, useSearchParams } from 'react-router';
+import { Route, Routes, useLocation, useSearchParams } from 'react-router';
 import { CoreFrameContext, createCoreFrameContextValue } from './components';
 import {
   COMPONENTS_ROUTE_FRAGMENT,
@@ -22,6 +22,7 @@ import {
 
 export default function App() {
   const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
 
   const comparisonEnabled = useMemo(() => {
     return searchParams.get('compare') === '1';
@@ -64,6 +65,55 @@ export default function App() {
     return comparisonEnabled ? seasons : seasons.slice(0, 1);
   }, [searchParams, comparisonEnabled]);
 
+  const [jobAccessAreasOverride, jobAccessSeasonsOverride] = useMemo(() => {
+    const jobAreas = searchParams.get('jobAreas')?.split(',').filter(notEmpty) || [];
+
+    const regularAreas = Array.from(
+      new Set(
+        jobAreas
+          .filter((jobArea) => !jobArea.toLowerCase().includes('future'))
+          .map((jobArea) => jobArea.split('::')[0])
+          .filter(notEmpty)
+      )
+    );
+
+    const seasons = Array.from(
+      new Set(
+        jobAreas
+          .filter((jobArea) => !jobArea.toLowerCase().includes('future'))
+          .map((jobArea) => jobArea.split('::')[1])
+          .filter(notEmpty)
+      )
+    )
+      .map((str) => {
+        const parts = str
+          .trim()
+          .split(':')
+          .map((v) => v.trim());
+
+        if (parts.length !== 2) {
+          console.warn(`Invalid season format: ${str}. Expected format is 'Q2:2020'`);
+          return undefined;
+        }
+
+        return parts as [string, string];
+      })
+      .filter(notEmpty)
+      .map(([quarter, year]) => [quarter, parseInt(year)] as const)
+      .filter((v): v is ['Q2' | 'Q4', number] => {
+        const quarter = v[0];
+        const year = v[1];
+        return ['Q2', 'Q4'].includes(quarter) && year >= 2019;
+      }) satisfies Parameters<typeof createAppDataContext>['1'];
+
+    const futures = jobAreas
+      .filter((jobArea) => jobArea.toLowerCase().includes('future'))
+      .map((value) => value.split('::')[0])
+      .filter(notEmpty);
+
+    return [regularAreas, seasons, futures] as const;
+  }, [searchParams]);
+
   const travelMethod = useMemo(() => {
     const found = searchParams.get('travelMethod') ?? undefined;
 
@@ -92,9 +142,16 @@ export default function App() {
     return found as AppDataHookParameters['travelMethod'];
   }, [searchParams]);
 
+  const isOnJobAccessPage = pathname === TAB_3_FRAGMENT;
+
+  const resolvedAreas = isOnJobAccessPage ? jobAccessAreasOverride : areas;
+  const resolvedSeasons = isOnJobAccessPage ? jobAccessSeasonsOverride : seasons;
+
   return (
     <AppWrapper>
-      <AppDataContext.Provider value={createAppDataContext(areas, seasons, travelMethod)}>
+      <AppDataContext.Provider
+        value={createAppDataContext(resolvedAreas, resolvedSeasons, travelMethod)}
+      >
         <CoreFrameContext.Provider value={createCoreFrameContextValue()}>
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 

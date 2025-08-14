@@ -28,7 +28,7 @@ export function SelectedOption({
     <SelectedItemWrapper key={selectedOption.value}>
       <div className="select-item-detail">
         <div className="selected-item-label">{selectedOption.label}</div>
-        {showId ? (
+        {showId && selectedOption.id !== '‾‾supressId' ? (
           <div className="selected-item-id">{selectedOption.id || selectedOption.value}</div>
         ) : null}
       </div>
@@ -77,6 +77,7 @@ const SelectedItemWrapper = styled.div`
       flex-wrap: nowrap;
       word-break: break-word;
       position: relative;
+      white-space: pre-wrap;
     }
 
     .selected-item-id {

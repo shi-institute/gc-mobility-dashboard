@@ -125,6 +125,9 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
                 .filter((item) => !!item.NAME)
                 // omit items that do not belong to the current area
                 .filter((item) => item.areas.includes(area));
+              if (areaData.length === 0) {
+                return null;
+              }
 
               // group the data by YEAR
               const groupedData = Object.entries(Object.groupBy(areaData, (d) => d.YEAR))
