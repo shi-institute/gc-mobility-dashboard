@@ -14,6 +14,7 @@ export function JobAccess() {
       sectionsStyle={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(300px, 100%, 600px), 1fr))',
+        gap: '0.5rem 1rem',
         gridAutoRows: 'minmax(200px, 1fr)',
       }}
       header={<AppNavigation />}
