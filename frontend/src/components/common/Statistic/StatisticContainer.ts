@@ -40,6 +40,9 @@ export const StatisticContainer = styled.div`
       .unit {
         font-size: 0.9rem;
       }
+      .unit.large {
+        font-size: 90%;
+      }
     }
 
     .table {

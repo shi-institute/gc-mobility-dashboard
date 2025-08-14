@@ -120,7 +120,21 @@ function Sections() {
           };
         })}
       />
-      <Statistic.Number wrap label="Local funding per capita" data={[]} />
+      <Statistic.Money
+        wrap
+        label="Local funding"
+        perCapita
+        data={data?.map((area) => {
+          const localFunding =
+            area.operating_funds?.find((fund) => fund.Source === 'Local Government')?.Value ?? NaN;
+          const population = area.census_acs_5year__county_total_population || NaN;
+
+          return {
+            label: area.__label,
+            value: localFunding / population,
+          };
+        })}
+      />
       {ridershipDataExists ? (
         <>
           <Statistic.Number
