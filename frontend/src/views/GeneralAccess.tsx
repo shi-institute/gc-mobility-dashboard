@@ -79,6 +79,20 @@ function Sections() {
 
   const ridershipDataExists = data?.some((area) => area.ridership) || false;
 
+  const jobAccessSearch = (() => {
+    const currentSearchParams = new URLSearchParams(search);
+
+    const selectedAreas = currentSearchParams.get('areas')?.split(',').filter(notEmpty) || [];
+    const selectedSeasons = currentSearchParams.get('seasons')?.split(',').filter(notEmpty) || [];
+
+    const selectedSeasonAreas = selectedAreas.flatMap((area) => {
+      return selectedSeasons.map((season) => `${area}::${season}`);
+    });
+
+    currentSearchParams.set('jobAreas', selectedSeasonAreas.join(','));
+    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
+  })();
+
   return [
     <DeveloperDetails data={data} />,
     <Section title="Service Statistics">
@@ -631,7 +645,9 @@ function Sections() {
         l={{ gridColumn: '1 / 5' }}
       >
         <div>
-          <Button href={'#/job-access' + search}>Explore industry/sector of employment</Button>
+          <Button href={'#/job-access' + jobAccessSearch}>
+            Explore industry/sector of employment
+          </Button>
         </div>
       </SectionEntry>
     </Section>,

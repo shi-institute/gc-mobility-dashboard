@@ -89,6 +89,12 @@ function Sections() {
     selectedRouteIds.includes(future.__routeId)
   );
 
+  const jobAccessSearch = (() => {
+    const currentSearchParams = new URLSearchParams(search);
+    currentSearchParams.set('jobAreas', selectedRouteIds.map((id) => `${id}::future`).join(','));
+    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
+  })();
+
   return [
     <Section title="Coverage">
       <Statistic.Number
@@ -178,7 +184,9 @@ function Sections() {
         l={{ gridColumn: '1 / 5' }}
       >
         <div>
-          <Button href={'#/job-access' + search}>Explore industry/sector of employment</Button>
+          <Button href={'#/job-access' + jobAccessSearch}>
+            Explore industry/sector of employment
+          </Button>
         </div>
       </SectionEntry>
       <Statistic.Figure
