@@ -337,6 +337,8 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
         return (
           <Shell>
             <span className="number">
+              {feature.routeIds.length} route{feature.routeIds.length === 1 ? '' : 's'}
+              {' – '}
               {parseFloat(Math.abs(percentageChange).toFixed(1))}
               {isFaster ? '% faster' : '% slower'}
             </span>
