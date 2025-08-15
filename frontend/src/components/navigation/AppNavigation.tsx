@@ -1,6 +1,7 @@
+import styled from '@emotion/styled';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { NavBar, NavBarItem, Tab, Tabs } from '../common';
+import { Button, NavBar, NavBarItem, Tab, Tabs } from '../common';
 import {
   TAB_1_FRAGMENT,
   TAB_2_FRAGMENT,
@@ -16,6 +17,7 @@ export function AppNavigation() {
   const handleClick =
     (to: string) => (evt: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement, MouseEvent>) => {
       evt.preventDefault();
+      setShowMoreViews(false);
       navigate(to);
     };
 
@@ -32,6 +34,8 @@ export function AppNavigation() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [appNavRef.current]);
+
+  const [showMoreViews, setShowMoreViews] = useState(false);
 
   return (
     <div ref={appNavRef} className="app-navigation">
@@ -81,7 +85,8 @@ export function AppNavigation() {
           />
           <NavBarItem
             label="More Views"
-            onClick={() => alert('Not implemented yet')}
+            onClick={() => setShowMoreViews(!showMoreViews)}
+            isActive={showMoreViews}
             icon={
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -91,6 +96,20 @@ export function AppNavigation() {
               </svg>
             }
           />
+          <MoreViewsSheet visible={showMoreViews}>
+            <Button
+              href={'#' + TAB_3_FRAGMENT + search}
+              onClick={handleClick(TAB_3_FRAGMENT + search)}
+            >
+              Job Access
+            </Button>
+            <Button
+              href={'#' + TAB_5_FRAGMENT + search}
+              onClick={handleClick(TAB_5_FRAGMENT + search)}
+            >
+              Roads or Transit?
+            </Button>
+          </MoreViewsSheet>
         </NavBar>
       ) : (
         <Tabs>
@@ -129,3 +148,25 @@ export function AppNavigation() {
     </div>
   );
 }
+
+const MoreViewsSheet = styled.aside<{ visible?: boolean }>`
+  display: ${({ visible }) => (visible ? 'flex' : 'none')};
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  padding: 1rem;
+  gap: 0.5rem;
+
+  position: absolute;
+  right: 0;
+  bottom: 68px;
+  left: 0;
+  z-index: 10;
+
+  box-shadow: 0px -32px 64px hsla(0, 0%, 0%, 18.76%);
+
+  > a {
+    width: 100%;
+  }
+`;
