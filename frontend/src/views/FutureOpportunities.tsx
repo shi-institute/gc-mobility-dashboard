@@ -158,7 +158,7 @@ function Sections() {
         label="Trips that could use public transit"
         data={futures.map(({ stats, __routeId }) => {
           const possibleConversions = stats?.possible_conversions.via_walk || 0;
-          const allTrips = Object.values(stats?.methods.commute || {}).reduce(
+          const allTrips = Object.values(stats?.methods.__all || {}).reduce(
             (sum, value) => sum + (value || 0),
             0
           );

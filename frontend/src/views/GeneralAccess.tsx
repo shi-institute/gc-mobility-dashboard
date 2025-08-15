@@ -615,9 +615,10 @@ function Sections() {
         data={data?.map((area) => {
           const possibleConversions =
             area.statistics?.thursday_trip.possible_conversions.via_walk || 0;
-          const allTrips = Object.values(
-            area.statistics?.thursday_trip.methods.commute || {}
-          ).reduce((sum, value) => sum + (value || 0), 0);
+          const allTrips = Object.values(area.statistics?.thursday_trip.methods.__all || {}).reduce(
+            (sum, value) => sum + (value || 0),
+            0
+          );
 
           return {
             label: area.__label,
