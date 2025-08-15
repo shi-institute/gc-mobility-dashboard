@@ -877,7 +877,7 @@ class ReplicaProcessETL:
 def count_trip_travel_methods(trips_df: pandas.DataFrame) -> dict[str, int]:
     """Count the number of trips for each travel method."""
 
-    tour_types = trips_df['tour_type'].str.lower().unique()
+    tour_types = trips_df['tour_type'].dropna().str.lower().unique()
 
     stats = {}
 
@@ -899,7 +899,7 @@ def count_trip_travel_methods(trips_df: pandas.DataFrame) -> dict[str, int]:
 def count_median_commute_time(trips_df: pandas.DataFrame) -> dict[str, float]:
     """Count the median commute time for each travel method."""
 
-    tour_types = trips_df['tour_type'].str.lower().unique()
+    tour_types = trips_df['tour_type'].dropna().str.lower().unique()
 
     stats = {}
 
