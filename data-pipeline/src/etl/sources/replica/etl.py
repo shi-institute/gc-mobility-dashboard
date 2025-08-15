@@ -46,11 +46,16 @@ class ReplicaETL:
     columns_to_select = 'household_id'
     use_bqstorage_api = os.getenv('USE_BIGQUERY_STORAGE_API', '0') == '1'
 
+    years_filter: Optional[list[int]] = None
+    quarters_filter: Optional[list[Literal['Q2', 'Q4']]] = None
+
     def __init__(self, columns: list[str], years: Optional[list[int]] = None, quarters: Optional[list[Literal['Q2', 'Q4']]] = None) -> None:
         """
         Initializes the replica ETL with a sepecific dataset and columns from that
         dataset.
         """
+        self.years_filter = years
+        self.quarters_filter = quarters
 
         # append the columns to the existing columns_to_select
         if len(columns) > 0:
@@ -130,7 +135,7 @@ class ReplicaETL:
         if mode == 'process':
             # determine the requested seasons
             # (get a dataframe of each unique set of region, year, and quarter)
-            seasons = self.infer_schema().drop(
+            seasons = self.infer_schema(self.years_filter, self.quarters_filter).drop(
                 columns=['table_name', 'dataset']).drop_duplicates().reset_index(drop=True)
 
             # require that the expected parquet files exist
@@ -329,6 +334,10 @@ class ReplicaETL:
             print(f'Running query for {full_table_path}...')
             geoseries = geopandas.GeoSeries(gdf['geometry'], crs="EPSG:4326")
             query_geometry = self._prepare_query_geometry(geoseries)
+
+            # skip when the query geometry is empty
+            if query_geometry is None:
+                continue
 
             # Run query to get netowrk segments tables
             pop_query = f'''
@@ -550,7 +559,7 @@ class ReplicaETL:
         print(
             f"\nSuccessfully obtained data from {results_count} trip tables.")
 
-    def _prepare_query_geometry(self, geometry_series: geopandas.GeoSeries) -> str:
+    def _prepare_query_geometry(self, geometry_series: geopandas.GeoSeries) -> str | None:
         """
         Returns a portion of a SQL query to expose each dissolved polygon of the input
         geometry series. To use in the query, the output of this function should be
@@ -577,6 +586,10 @@ class ReplicaETL:
         wkt_list = dissolved_gdf['geometry'].apply(
             lambda x: shapely.wkt.dumps(x)).tolist()
 
+        # return early if the geoemtry is empty
+        if len(wkt_list) == 0:
+            return None
+
         # prepare the geometry for the query
         prepared_geometry = ''
         for wkt in wkt_list:
@@ -591,13 +604,15 @@ class ReplicaETL:
         '''
 
     def _build_query(self, wkt_list: list[str], full_table_path: str, origin_lng_col: str, origin_lat_col: str,
-                     dest_lng_col: str, dest_lat_col: str) -> str:
+                     dest_lng_col: str, dest_lat_col: str) -> str | None:
         '''
         Builds the query to get data from the replica dataset.        
         '''
         # create an UNNEST clause with the geometry
         geometry_series = geopandas.GeoSeries.from_wkt(wkt_list)
         query_geometry = self._prepare_query_geometry(geometry_series)
+        if query_geometry is None:
+            return None
 
         return f'''
         SELECT {self.columns_to_select}, {origin_lng_col}, {origin_lat_col}, {dest_lng_col}, {dest_lat_col}
@@ -618,6 +633,7 @@ class ReplicaETL:
         queue: list[str] = []
         queue_length = 0
         queries: list[str] = []
+        queue_considered_count = 0
         print(f'Generating chunked queries for table {full_table_path}...')
         for _, row in gdf_upload.iterrows():
             # this is a tuple for each row
@@ -638,6 +654,11 @@ class ReplicaETL:
             # before queueing the current row
             query = self._build_query(queue, full_table_path, origin_lng_col,
                                       origin_lat_col, dest_lng_col, dest_lat_col)
+            queue_considered_count += 1
+            if query is None:
+                print(
+                    f'Skipping query {queue_considered_count} for {full_table_path} because the query geometry is empty.')
+                continue
             queries.append(query)
 
             # create a new queue with the current row
@@ -648,7 +669,12 @@ class ReplicaETL:
         if len(queue) > 0:
             query = self._build_query(queue, full_table_path, origin_lng_col, origin_lat_col,
                                       dest_lng_col, dest_lat_col)
-            queries.append(query)
+            queue_considered_count += 1
+            if query is None:
+                print(
+                    f'Skipping last query ({queue_considered_count}) for {full_table_path} because the query geometry is empty.')
+            else:
+                queries.append(query)
 
         print(
             f'Generated {len(queries)} chunked queries for for table {full_table_path}.')
@@ -807,7 +833,7 @@ class ReplicaETL:
         Returns:
             pandas.DataFrame: A pandas data frame containing columns `table_name`, `region`, `year`, `quarter`, `dataset`
         """
-        inferred_schema_df = self.infer_schema(strict=True)
+        inferred_schema_df = self.infer_schema(years_filter, quarters_filter, strict=True)
 
         new_seasons_schema_df: pandas.DataFrame
         if pandas_gbq.context.credentials:

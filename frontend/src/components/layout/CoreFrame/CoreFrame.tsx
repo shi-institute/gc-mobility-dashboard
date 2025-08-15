@@ -12,9 +12,9 @@ interface CoreFrameProps {
   sectionsStyle?: React.CSSProperties;
   /** The tabs for switching between routes. The tabs move to the bottom of the frame on widths less than 900. */
   header?: React.ReactElement;
-  /** A react element that renders a map. If no map is needed, do not provide this prop. It should be a map element with a string prop `label`. */
+  /** A react element that renders a map. If no map is needed, do not provide this prop. It should be a map element with a string prop `title`. */
   map?: React.ReactElement;
-  /** An array react elements, each representing a section. Rech section element should have a string prop `label`. */
+  /** An array react elements, each representing a section. Rech section element should have a string prop `title`. */
   sections?: React.ReactElement[];
   /** An optional header for the sections area. If provided, it will be rendered above the sections grid. */
   sectionsHeader?: React.ReactElement;
@@ -51,7 +51,7 @@ export function CoreFrame(props: CoreFrameProps) {
                   .filter((x) => !!x)
                   .map((section, index) => {
                     const tabLabel =
-                      (section.props as Record<string, unknown>).label?.toString() ||
+                      (section.props as Record<string, unknown>).title?.toString() ||
                       `Tab ${index + 1}`;
                     return (
                       <Tab
