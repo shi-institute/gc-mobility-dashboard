@@ -858,9 +858,16 @@ class ReplicaProcessETL:
                                 if subkey not in area_statistics[key]:
                                     area_statistics[key][subkey] = subvalue
                                 else:
-                                    area_statistics[key][subkey] += subvalue
+                                    if isinstance(subvalue, dict):
+                                        for dict_key, dict_value in subvalue.items():
+                                            if dict_key not in area_statistics[key][subkey]:
+                                                area_statistics[key][subkey][dict_key] = dict_value
+                                            else:
+                                                area_statistics[key][subkey][dict_key] += dict_value
+                                    else:
+                                        area_statistics[key][subkey] += subvalue
 
-                 # save the statistics to the all_statistics dictionary so we can access them later
+                # save the statistics to the all_statistics dictionary so we can access them later
                 logger.debug(f'Statistics for {area_name} added to all_statistics.')
                 season_str = f'{region}_{year}_{quarter}'
                 if season_str not in all_statistics:
