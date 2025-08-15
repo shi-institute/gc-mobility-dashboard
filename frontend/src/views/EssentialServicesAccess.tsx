@@ -19,7 +19,13 @@ export function EssentialServicesAccess() {
     stops,
     walkServiceAreas,
     groceryStores,
-    healthcareFacilities,
+    dentalCareFacilities,
+    eyeCareFacilities,
+    familyMedicineFacilities,
+    freeClinicsFacilities,
+    hospitalsFacilities,
+    internalMedicineFacilities,
+    urgentCareFacilities,
     childCareCenters,
     commercialZones,
   } = useMapData(data);
@@ -38,7 +44,13 @@ export function EssentialServicesAccess() {
               routes,
               stops,
               groceryStores,
-              healthcareFacilities,
+              dentalCareFacilities,
+              eyeCareFacilities,
+              familyMedicineFacilities,
+              freeClinicsFacilities,
+              hospitalsFacilities,
+              internalMedicineFacilities,
+              urgentCareFacilities,
               childCareCenters,
               commercialZones,
               ...areaPolygons,
@@ -65,10 +77,60 @@ function Sections() {
         })}
       />
       <Statistic.Percent
-        label="Healthcare"
+        label="Dental Care"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.healthcare__access_fraction ?? NaN;
+          const stat = area.essential_services_access_stats?.dental__access_fraction ?? NaN;
+          return { label: area.__label, value: (stat * 100).toFixed(1) };
+        })}
+      />
+      <Statistic.Percent
+        label="Eye Care"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.eye_care__access_fraction ?? NaN;
+          return { label: area.__label, value: (stat * 100).toFixed(1) };
+        })}
+      />
+      <Statistic.Percent
+        label="Family Medicine"
+        wrap
+        data={data?.map((area) => {
+          const stat =
+            area.essential_services_access_stats?.family_medicine__access_fraction ?? NaN;
+          return { label: area.__label, value: (stat * 100).toFixed(1) };
+        })}
+      />
+      <Statistic.Percent
+        label="Free Clinics"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.free_clinics__access_fraction ?? NaN;
+          return { label: area.__label, value: (stat * 100).toFixed(1) };
+        })}
+      />
+      <Statistic.Percent
+        label="Hospitals"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.hospitals__access_fraction ?? NaN;
+          return { label: area.__label, value: (stat * 100).toFixed(1) };
+        })}
+      />
+      <Statistic.Percent
+        label="Internal Medicine"
+        wrap
+        data={data?.map((area) => {
+          const stat =
+            area.essential_services_access_stats?.internal_medicine__access_fraction ?? NaN;
+          return { label: area.__label, value: (stat * 100).toFixed(1) };
+        })}
+      />
+      <Statistic.Percent
+        label="Urgent Care"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.urgent_care__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
       />
@@ -101,10 +163,66 @@ function Sections() {
         unit="minutes"
       />
       <Statistic.Number
-        label="Healthcare"
+        label="Dental Care"
         wrap
         data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.healthcare__mean_travel_time ?? NaN;
+          const stat = area.essential_services_access_stats?.dental__mean_travel_time ?? NaN;
+          return { label: area.__label, value: stat.toFixed(1) };
+        })}
+        unit="minutes"
+      />
+      <Statistic.Number
+        label="Eye Care"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.eye_care__mean_travel_time ?? NaN;
+          return { label: area.__label, value: stat.toFixed(1) };
+        })}
+        unit="minutes"
+      />
+      <Statistic.Number
+        label="Family Medicine"
+        wrap
+        data={data?.map((area) => {
+          const stat =
+            area.essential_services_access_stats?.family_medicine__mean_travel_time ?? NaN;
+          return { label: area.__label, value: stat.toFixed(1) };
+        })}
+        unit="minutes"
+      />
+      <Statistic.Number
+        label="Free Clinics"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.free_clinics__mean_travel_time ?? NaN;
+          return { label: area.__label, value: stat.toFixed(1) };
+        })}
+        unit="minutes"
+      />
+      <Statistic.Number
+        label="Hospitals"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.hospitals__mean_travel_time ?? NaN;
+          return { label: area.__label, value: stat.toFixed(1) };
+        })}
+        unit="minutes"
+      />
+      <Statistic.Number
+        label="Internal Medicine"
+        wrap
+        data={data?.map((area) => {
+          const stat =
+            area.essential_services_access_stats?.internal_medicine__mean_travel_time ?? NaN;
+          return { label: area.__label, value: stat.toFixed(1) };
+        })}
+        unit="minutes"
+      />
+      <Statistic.Number
+        label="Urgent Care"
+        wrap
+        data={data?.map((area) => {
+          const stat = area.essential_services_access_stats?.urgent_care__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"

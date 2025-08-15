@@ -62,14 +62,68 @@ class EssentialServicesETL:
                 childcare_data[season] = path
         self.childcare_data = childcare_data
 
-        # collect healthcare data paths by season
-        healthcare_data: dict[str, Path] = {}
+        # collect dental data paths by season
+        dental_data: dict[str, Path] = {}
         for path in self.geocoder_output_folder.iterdir():
-            if path.name.startswith('geocoded_healthcare__'):
+            if path.name.startswith('geocoded_dental__'):
                 year, quarter = extract_season(path.name.split('__')[-1])
                 season = f'{year}_{quarter}'
-                healthcare_data[season] = path
-        self.healthcare_data = healthcare_data
+                dental_data[season] = path
+        self.dental_data = dental_data
+
+        # collect eye care data paths by season
+        eye_care_data: dict[str, Path] = {}
+        for path in self.geocoder_output_folder.iterdir():
+            if path.name.startswith('geocoded_eye_care__'):
+                year, quarter = extract_season(path.name.split('__')[-1])
+                season = f'{year}_{quarter}'
+                eye_care_data[season] = path
+        self.eye_care_data = eye_care_data
+
+        # collect family medicine data paths by season
+        family_medicine_data: dict[str, Path] = {}
+        for path in self.geocoder_output_folder.iterdir():
+            if path.name.startswith('geocoded_family_medicine__'):
+                year, quarter = extract_season(path.name.split('__')[-1])
+                season = f'{year}_{quarter}'
+                family_medicine_data[season] = path
+        self.family_medicine_data = family_medicine_data
+
+        # collect free clinics data paths by season
+        free_clinics_data: dict[str, Path] = {}
+        for path in self.geocoder_output_folder.iterdir():
+            if path.name.startswith('geocoded_free_clinics__'):
+                year, quarter = extract_season(path.name.split('__')[-1])
+                season = f'{year}_{quarter}'
+                free_clinics_data[season] = path
+        self.free_clinics_data = free_clinics_data
+
+        # collect hospitals data paths by season
+        hospitals_data: dict[str, Path] = {}
+        for path in self.geocoder_output_folder.iterdir():
+            if path.name.startswith('geocoded_hospitals__'):
+                year, quarter = extract_season(path.name.split('__')[-1])
+                season = f'{year}_{quarter}'
+                hospitals_data[season] = path
+        self.hospitals_data = hospitals_data
+
+        # collect internal medicine data paths by season
+        internal_medicine_data: dict[str, Path] = {}
+        for path in self.geocoder_output_folder.iterdir():
+            if path.name.startswith('geocoded_internal_medicine__'):
+                year, quarter = extract_season(path.name.split('__')[-1])
+                season = f'{year}_{quarter}'
+                internal_medicine_data[season] = path
+        self.internal_medicine_data = internal_medicine_data
+
+        # collect urgent care data paths by season
+        urgent_care_data: dict[str, Path] = {}
+        for path in self.geocoder_output_folder.iterdir():
+            if path.name.startswith('geocoded_urgent_care__'):
+                year, quarter = extract_season(path.name.split('__')[-1])
+                season = f'{year}_{quarter}'
+                urgent_care_data[season] = path
+        self.urgent_care_data = urgent_care_data
 
         # collect grocery store data paths by season
         grocery_store_data: dict[str, Path] = {}
@@ -107,6 +161,13 @@ class EssentialServicesETL:
         self.calculate_childcare_access(day='thursday')
         self.calculate_grocery_store_access(day='thursday')
         self.calculate_commercial_zone_access(day='thursday')
+        self.calculate_dental_access(day='thursday')
+        self.calculate_eye_care_access(day='thursday')
+        self.calculate_family_medicine_access(day='thursday')
+        self.calculate_free_clinics_access(day='thursday')
+        self.calculate_hospitals_access(day='thursday')
+        self.calculate_internal_medicine_access(day='thursday')
+        self.calculate_urgent_care_access(day='thursday')
 
         # flatten the stats dictionary to a list of dictionaries for easier processing
         logger.info('Flattening stats dictionary for easier processing...')
@@ -188,14 +249,67 @@ class EssentialServicesETL:
             desert_miles=1,  # the USDA defines a food desert as an area with no grocery store within 1 mile of a household for urban areas
         )
 
-    def calculate_heathcare_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+    def calculate_dental_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
         return self.calculate_access_to_points_of_interest(
             day=day,
-            output_name='healthcare',
-            data_dict=self.healthcare_data,
+            output_name='dental',
+            data_dict=self.dental_data,
             # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
             desert_miles=3,
+        )
 
+    def calculate_eye_care_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+        return self.calculate_access_to_points_of_interest(
+            day=day,
+            output_name='eye_care',
+            data_dict=self.eye_care_data,
+            # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
+            desert_miles=3,
+        )
+
+    def calculate_family_medicine_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+        return self.calculate_access_to_points_of_interest(
+            day=day,
+            output_name='family_medicine',
+            data_dict=self.family_medicine_data,
+            # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
+            desert_miles=3,
+        )
+
+    def calculate_free_clinics_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+        return self.calculate_access_to_points_of_interest(
+            day=day,
+            output_name='free_clinics',
+            data_dict=self.free_clinics_data,
+            # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
+            desert_miles=3,
+        )
+
+    def calculate_hospitals_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+        return self.calculate_access_to_points_of_interest(
+            day=day,
+            output_name='hospitals',
+            data_dict=self.hospitals_data,
+            # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
+            desert_miles=3,
+        )
+
+    def calculate_internal_medicine_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+        return self.calculate_access_to_points_of_interest(
+            day=day,
+            output_name='internal_medicine',
+            data_dict=self.internal_medicine_data,
+            # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
+            desert_miles=3,
+        )
+
+    def calculate_urgent_care_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:
+        return self.calculate_access_to_points_of_interest(
+            day=day,
+            output_name='urgent_care',
+            data_dict=self.urgent_care_data,
+            # Same as childcare, I picked a generous distance. Most definitions are based on 30-minute drive time, which does not translate super well here.
+            desert_miles=3,
         )
 
     def calculate_commercial_zone_access(self, day: Literal['saturday', 'thursday'] = 'thursday') -> None:

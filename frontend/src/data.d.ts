@@ -317,7 +317,13 @@ interface EssentialServicesTripAccessStatistic extends EssentialServicesAccessSt
   replica_table: 'thursday_trip' | 'saturday_trip';
   child_care__mean_travel_time?: number;
   commercial_zone__mean_travel_time?: number;
-  healthcare__mean_travel_time?: number;
+  dental__mean_travel_time?: number;
+  eye_care__mean_travel_time?: number;
+  family_medicine__mean_travel_time?: number;
+  free_clinics__mean_travel_time?: number;
+  hospitals__mean_travel_time?: number;
+  internal_medicine__mean_travel_time?: number;
+  urgent_care__mean_travel_time?: number;
   grocery_store__mean_travel_time?: number;
 }
 
@@ -325,7 +331,13 @@ interface EssentialServicesPopulationAccessStatistic extends EssentialServicesAc
   replica_table: 'population';
   child_care__access_fraction?: number;
   commercial_zone__access_fraction?: number;
-  healthcare__access_fraction?: number;
+  dental__access_fraction?: number;
+  eye_care__access_fraction?: number;
+  family_medicine__access_fraction?: number;
+  free_clinics__access_fraction?: number;
+  hospitals__access_fraction?: number;
+  internal_medicine__access_fraction?: number;
+  urgent_care__access_fraction?: number;
   grocery_store__access_fraction?: number;
 }
 

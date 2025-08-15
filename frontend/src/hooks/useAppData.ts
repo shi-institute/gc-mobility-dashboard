@@ -620,11 +620,41 @@ function getEssentialServicesPromises(
               `${essentialServicesFolder}/grocery_store.geojson.deflate`,
               abortSignal
             ).catch(handleError('grocery_store_locations', true, true)),
-          healthcare_locations: (abortSignal?: AbortSignal) =>
+          dental_locations: (abortSignal?: AbortSignal) =>
             fetchData<GeoJSON>(
-              `${essentialServicesFolder}/healthcare.geojson.deflate`,
+              `${essentialServicesFolder}/dental.geojson.deflate`,
               abortSignal
-            ).catch(handleError('healthcare_locations', true, true)),
+            ).catch(handleError('dental_locations', true, true)),
+          eye_care_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/eye_care.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('eye_care_locations', true, true)),
+          family_medicine_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/family_medicine.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('family_medicine_locations', true, true)),
+          free_clinics_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/free_clinics.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('free_clinics_locations', true, true)),
+          hospitals_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/hospitals.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('hospitals_locations', true, true)),
+          internal_medicine_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/internal_medicine.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('internal_medicine_locations', true, true)),
+          urgent_care_locations: (abortSignal?: AbortSignal) =>
+            fetchData<GeoJSON>(
+              `${essentialServicesFolder}/urgent_care.geojson.deflate`,
+              abortSignal
+            ).catch(handleError('urgent_care_locations', true, true)),
           commercial_zone_locations: (abortSignal?: AbortSignal) =>
             fetchData<GeoJSON<{ ZONING: string }>>(
               `${essentialServicesFolder}/commercial_zone.geojson.deflate`,
