@@ -466,6 +466,15 @@ class ReplicaETL:
                     bar.write(f'  Converting chunk {chunk_index}/{chunk_count} to DataFrame...')
                     table_df: pandas.DataFrame = delayed_partition.compute()
 
+                    if 'origin_lng' in table_df.columns:
+                        # rename the columns to match the expected columns
+                        table_df.rename(columns={
+                            'origin_lng': 'start_lng',
+                            'origin_lat': 'start_lat',
+                            'destination_lng': 'end_lng',
+                            'destination_lat': 'end_lat'
+                        }, inplace=True)
+
                     if not table_df.empty:
                         # add a source_table column with the table name so we can identify the source of the data
                         table_df['source_table'] = table_name
