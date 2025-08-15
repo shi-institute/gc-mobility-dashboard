@@ -154,7 +154,7 @@ class ReplicaProcessETL:
 
                     logger.info('')
                     logger.info(
-                        f'Saturday trip data processed for {count} season-areas in {formatted_time}.')
+                        f'Saturday trip data processed for {count} areas in {season_str} in {formatted_time}.')
                     logger.info('')
 
             if 'thursday' in self.days:
@@ -180,20 +180,75 @@ class ReplicaProcessETL:
 
                     logger.info('')
                     logger.info(
-                        f'Thursday trip data processed for {count} season-areas in {formatted_time}.')
+                        f'Thursday trip data processed for {count} areas in {season_str} in {formatted_time}.')
                     logger.info('')
 
-        if 'saturday' in self.days:
-            [count, saturday_rider_stats] = self.calculate_public_transit_population_statistics(
-                'saturday')
-            statistics['saturday_rider'] = {
-                'saturday_trip': saturday_rider_stats
-            }
+        for _season in self.seasons:
+            season_str = f"{_season['region']}_{_season['year']}_{_season['quarter']}"
+            season_areas_hash = self.create_season_areas_hash(
+                [_season], [area_name for _, area_name in self.areas])
+            season_saturday_rider_stats_cache_path = self.output_folder / \
+                f'saturday_rider_stats_cache__{season_str}__{season_areas_hash}.json.tmp'
+            season_thursday_rider_stats_cache_path = self.output_folder / \
+                f'thursday_rider_stats_cache__{season_str}__{season_areas_hash}.json.tmp'
 
-        if 'thursday' in self.days:
-            [count, thursday_rider_stats] = self.calculate_public_transit_population_statistics(
-                'thursday')
-            statistics['thursday_rider'] = thursday_rider_stats
+            # ensure the saturday and thursday trip keys exist
+            statistics.setdefault('saturday_rider', {})
+            statistics.setdefault('thursday_rider', {})
+
+            if 'saturday' in self.days:
+                if season_saturday_rider_stats_cache_path.exists():
+                    with open(season_saturday_rider_stats_cache_path, 'r') as file:
+                        saturday_rider_stats = json.load(file)
+                        statistics['saturday_rider'][season_str] = saturday_rider_stats[season_str]
+
+                        logger.info(
+                            f'Saturday rider stats retrieved for {season_str} from the cache.')
+                else:
+                    start_time = time.time()
+
+                    [count, saturday_rider_stats] = self.calculate_public_transit_population_statistics(
+                        'saturday')
+                    statistics['saturday_rider'][season_str] = saturday_rider_stats
+
+                    elapsed_time = time.time() - start_time
+                    formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+                    # save to cache
+                    with open(season_saturday_rider_stats_cache_path, 'w') as file:
+                        json.dump({season_str: saturday_rider_stats}, file)
+
+                    logger.info('')
+                    logger.info(
+                        f'Saturday rider data processed for {count} areas in {season_str} in {formatted_time}.')
+                    logger.info('')
+
+            if 'thursday' in self.days:
+                if season_thursday_rider_stats_cache_path.exists():
+                    with open(season_thursday_rider_stats_cache_path, 'r') as file:
+                        thursday_rider_stats = json.load(file)
+                        statistics['thursday_rider'][season_str] = thursday_rider_stats[season_str]
+
+                        logger.info(
+                            f'Thursday rider stats retrieved for {season_str} from the cache.')
+                else:
+                    start_time = time.time()
+
+                    [count, thursday_rider_stats] = self.calculate_public_transit_population_statistics(
+                        'thursday')
+                    statistics['thursday_rider'][season_str] = thursday_rider_stats
+
+                    elapsed_time = time.time() - start_time
+                    formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+                    # save to cache
+                    with open(season_thursday_rider_stats_cache_path, 'w') as file:
+                        json.dump({season_str: thursday_rider_stats}, file)
+
+                    logger.info('')
+                    logger.info(
+                        f'Thursday rider data processed for {count} areas in {season_str} in {formatted_time}.')
+                    logger.info('')
 
         # merge statistics for season + area combinations
         merged_statistics: dict[str, Any] = {}
