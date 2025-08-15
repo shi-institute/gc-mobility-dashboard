@@ -166,6 +166,10 @@ class ReplicaETL:
                     year=int(str(season.year)),
                     quarter=str(season.quarter),
                 ))
+            seasons_dicts = sorted(
+                seasons_dicts,
+                key=lambda s: (s['region'], s['year'], int(s['quarter'].strip("Q")))
+            )
 
             # process the data for each season and area
             ReplicaProcessETL(
