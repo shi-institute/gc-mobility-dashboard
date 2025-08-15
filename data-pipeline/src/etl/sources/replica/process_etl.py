@@ -13,7 +13,7 @@ import tempfile
 import time
 from multiprocessing.managers import DictProxy, ValueProxy
 from pathlib import Path
-from typing import Any, Literal, TypedDict, cast
+from typing import Any, Literal, Optional, TypedDict, cast
 
 import dask.dataframe
 import dask_geopandas
@@ -75,11 +75,7 @@ class ReplicaProcessETL:
         area_names = [os.path.splitext(path.name)[0] for path in area_geojson_paths]
         self.areas = list(zip(area_geojson_paths, area_names))
 
-        area_seasons_string_to_hash = ''.join(sorted(area_names)) + \
-            ''.join([str(season['region']) + str(season['year']) + season['quarter']
-                    for season in seasons])
-        self.areas_seasons_hash = hashlib.md5(
-            area_seasons_string_to_hash.encode('utf8')).hexdigest()
+        self.areas_seasons_hash = self.create_season_areas_hash(seasons, area_names)
 
         full_area_path = './input/replica_interest_area_polygons/full_area.geojson'
         full_area_geometry_to_hash = geopandas.read_file(full_area_path).geometry.union_all().wkb
@@ -90,10 +86,6 @@ class ReplicaProcessETL:
 
         population_stats_cache_path = self.output_folder / \
             f'population_stats_cache__{self.areas_seasons_hash}.json.tmp'
-        saturday_stats_cache_path = self.output_folder / \
-            f'saturday_stats_cache__{self.areas_seasons_hash}.json.tmp'
-        thursday_stats_cache_path = self.output_folder / \
-            f'thursday_stats_cache__{self.areas_seasons_hash}.json.tmp'
 
         if population_stats_cache_path.exists():
             with open(population_stats_cache_path, 'r') as file:
@@ -126,53 +118,70 @@ class ReplicaProcessETL:
                 f'Population data processed for {shared_count.value} season-areas in {formatted_time}.')
             logger.info('')
 
-        if 'saturday' in self.days:
-            if saturday_stats_cache_path.exists():
-                with open(saturday_stats_cache_path, 'r') as file:
-                    statistics['saturday_trip'] = json.load(file)
+        for _season in self.seasons:
+            season_str = f"{_season['region']}_{_season['year']}_{_season['quarter']}"
+            season_areas_hash = self.create_season_areas_hash(
+                [_season], [area_name for _, area_name in self.areas])
+            season_saturday_stats_cache_path = self.output_folder / \
+                f'saturday_stats_cache__{season_str}__{season_areas_hash}.json.tmp'
+            season_thursday_stats_cache_path = self.output_folder / \
+                f'thursday_stats_cache__{season_str}__{season_areas_hash}.json.tmp'
+
+            # ensure the saturday and thursday trip keys exist
+            statistics.setdefault('saturday_trip', {})
+            statistics.setdefault('thursday_trip', {})
+
+            if 'saturday' in self.days:
+                if season_saturday_stats_cache_path.exists():
+                    with open(season_saturday_stats_cache_path, 'r') as file:
+                        saturday_stats = json.load(file)
+                        statistics['saturday_trip'][season_str] = saturday_stats[season_str]
+
+                        logger.info(
+                            f'Saturday trip stats retrieved for {season_str} from the cache.')
+                else:
+                    start_time = time.time()
+
+                    [count, saturday_stats] = self.process_trips('saturday', [_season])
+                    statistics['saturday_trip'][season_str] = saturday_stats[season_str]
+
+                    elapsed_time = time.time() - start_time
+                    formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+
+                    # save to cache
+                    with open(season_saturday_stats_cache_path, 'w') as file:
+                        json.dump(saturday_stats, file)
+
+                    logger.info('')
                     logger.info(
-                        f'Saturday trip stats retrieved from the cache.')
-            else:
-                start_time = time.time()
+                        f'Saturday trip data processed for {count} season-areas in {formatted_time}.')
+                    logger.info('')
 
-                [count, saturday_stats] = self.process_trips('saturday')
-                statistics['saturday_trip'] = saturday_stats
+            if 'thursday' in self.days:
+                if season_thursday_stats_cache_path.exists():
+                    with open(season_thursday_stats_cache_path, 'r') as file:
+                        thursday_stats = json.load(file)
+                        statistics['thursday_trip'][season_str] = thursday_stats[season_str]
 
-                elapsed_time = time.time() - start_time
-                formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+                        logger.info(
+                            f'Thursday trip stats retrieved for {season_str} from the cache.')
+                else:
+                    start_time = time.time()
 
-                # save to cache
-                with open(saturday_stats_cache_path, 'w') as file:
-                    json.dump(statistics['saturday_trip'], file)
+                    [count, thursday_stats] = self.process_trips('thursday', [_season])
+                    statistics['thursday_trip'][season_str] = thursday_stats[season_str]
 
-                logger.info('')
-                logger.info(
-                    f'Saturday trip data processed for {count} season-areas in {formatted_time}.')
-                logger.info('')
+                    elapsed_time = time.time() - start_time
+                    formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
 
-        if 'thursday' in self.days:
-            if thursday_stats_cache_path.exists():
-                with open(thursday_stats_cache_path, 'r') as file:
-                    statistics['thursday_trip'] = json.load(file)
+                    # save to cache
+                    with open(season_thursday_stats_cache_path, 'w') as file:
+                        json.dump(thursday_stats, file)
+
+                    logger.info('')
                     logger.info(
-                        f'Thursday trip stats retrieved from the cache.')
-            else:
-                start_time = time.time()
-
-                [count, thursday_stats] = self.process_trips('thursday')
-                statistics['thursday_trip'] = thursday_stats
-
-                elapsed_time = time.time() - start_time
-                formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-
-                # save to cache
-                with open(thursday_stats_cache_path, 'w') as file:
-                    json.dump(statistics['thursday_trip'], file)
-
-                logger.info('')
-                logger.info(
-                    f'Thursday trip data processed for {count} season-areas in {formatted_time}.')
-                logger.info('')
+                        f'Thursday trip data processed for {count} season-areas in {formatted_time}.')
+                    logger.info('')
 
         if 'saturday' in self.days:
             [count, saturday_rider_stats] = self.calculate_public_transit_population_statistics(
@@ -229,6 +238,22 @@ class ReplicaProcessETL:
         #     logger.info(
         #         f'Discarding trips chunks for {area_name} ({year} {quarter} {day})...')
         #     shutil.rmtree(area_trips_chunks_path, ignore_errors=True)
+
+    def create_season_areas_hash(self, seasons: list[Season], areas: list[str]) -> str:
+        """
+        Create a hash based on the seasons and areas to ensure that the same
+        data is not processed multiple times.
+        """
+        # sort the seasons
+        sorted_seasons = sorted(seasons, key=lambda s: (s['year'], s['quarter']), reverse=True)
+
+        # sort the areas
+        sorted_areas = sorted(areas)
+
+        season_areas_string_to_hash = ''.join(sorted_areas) + \
+            ''.join([str(season['region']) + str(season['year']) + season['quarter']
+                    for season in sorted_seasons])
+        return hashlib.md5(season_areas_string_to_hash.encode('utf8')).hexdigest()
 
     def mp__process_population(self, shared_count: ValueProxy[int], shared_stats: DictProxy[str, Any]) -> None:
         [count, population_stats] = self.process_population()
@@ -468,9 +493,12 @@ class ReplicaProcessETL:
 
         return statistics
 
-    def process_trips(self, day: Literal['saturday', 'thursday']) -> tuple[int, dict[str, Any]]:
+    def process_trips(self, day: Literal['saturday', 'thursday'], seasons: Optional[list[Season]] = None) -> tuple[int, dict[str, Any]]:
+        if seasons is None:
+            seasons = self.seasons
+
         logger.info('Processing population data for the following regions and seasons:')
-        for season in self.seasons:
+        for season in seasons:
             region = season['region']
             year = season['year']
             quarter = season['quarter']
@@ -480,7 +508,7 @@ class ReplicaProcessETL:
         all_statistics: dict[Any, Any] = {}
         processed_count = 0
 
-        for season in self.seasons:
+        for season in seasons:
             region = season['region']
             year = season['year']
             quarter = season['quarter']
