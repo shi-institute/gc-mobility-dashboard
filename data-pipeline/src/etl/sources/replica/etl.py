@@ -188,13 +188,15 @@ class ReplicaETL:
                         self.greenlink_gtfs_folder_path,
                         '{year}/{quarter}/walk_service_area.geojson',
                     ),
-                    'saturday_trip':  (Path(os.path.join(
-                        expected_parquet_files[4]
-                    )).parent / '_chunks' / '{region}_{year}_{quarter}_saturday_trip').as_posix(),
                     'thursday_trip': (Path(os.path.join(
-                        expected_parquet_files[5]
+                        expected_parquet_files[4]
                     )).parent / '_chunks' / '{region}_{year}_{quarter}_thursday_trip').as_posix(),
-                }
+                    'saturday_trip': '',  # saturday trip data is not currently processed
+                    # 'saturday_trip':  (Path(os.path.join(
+                    #     expected_parquet_files[5]
+                    # )).parent / '_chunks' / '{region}_{year}_{quarter}_saturday_trip').as_posix(),
+                },
+                days=['thursday']
             ).process()
 
     def _getExpectedParquetFilePaths(self) -> list[str]:
@@ -208,8 +210,8 @@ class ReplicaETL:
             'full_area/population/{region}_{year}_{quarter}_home.parquet',
             'full_area/population/{region}_{year}_{quarter}_school.parquet',
             'full_area/population/{region}_{year}_{quarter}_work.parquet',
-            'full_area/saturday_trip/{region}_{year}_{quarter}.success',
             'full_area/thursday_trip/{region}_{year}_{quarter}.success',
+            # 'full_area/saturday_trip/{region}_{year}_{quarter}.success',
         ]
         return expected_parquet_files
 
@@ -786,9 +788,9 @@ class ReplicaETL:
         if result is None or result.empty:
             raise ValueError("No tables found in the replica dataset schema.")
 
-        # only keep network_segments, population, thursday_trip, and saturday_trip tables
+        # only keep network_segments, population, and thursday_trip tables
         mask = result['table_name'].str.contains(
-            'network_segments|population|thursday_trip|saturday_trip')
+            'network_segments|population|thursday_trip')
         result = result[mask].reset_index(drop=True)
 
         return result
