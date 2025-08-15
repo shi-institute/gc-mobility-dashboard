@@ -166,6 +166,10 @@ class ReplicaETL:
                     year=int(str(season.year)),
                     quarter=str(season.quarter),
                 ))
+            seasons_dicts = sorted(
+                seasons_dicts,
+                key=lambda s: (s['region'], s['year'], int(s['quarter'].strip("Q")))
+            )
 
             # process the data for each season and area
             ReplicaProcessETL(
@@ -184,13 +188,15 @@ class ReplicaETL:
                         self.greenlink_gtfs_folder_path,
                         '{year}/{quarter}/walk_service_area.geojson',
                     ),
-                    'saturday_trip':  (Path(os.path.join(
-                        expected_parquet_files[4]
-                    )).parent / '_chunks' / '{region}_{year}_{quarter}_saturday_trip').as_posix(),
                     'thursday_trip': (Path(os.path.join(
-                        expected_parquet_files[5]
+                        expected_parquet_files[4]
                     )).parent / '_chunks' / '{region}_{year}_{quarter}_thursday_trip').as_posix(),
-                }
+                    'saturday_trip': '',  # saturday trip data is not currently processed
+                    # 'saturday_trip':  (Path(os.path.join(
+                    #     expected_parquet_files[5]
+                    # )).parent / '_chunks' / '{region}_{year}_{quarter}_saturday_trip').as_posix(),
+                },
+                days=['thursday']
             ).process()
 
     def _getExpectedParquetFilePaths(self) -> list[str]:
@@ -204,8 +210,8 @@ class ReplicaETL:
             'full_area/population/{region}_{year}_{quarter}_home.parquet',
             'full_area/population/{region}_{year}_{quarter}_school.parquet',
             'full_area/population/{region}_{year}_{quarter}_work.parquet',
-            'full_area/saturday_trip/{region}_{year}_{quarter}.success',
             'full_area/thursday_trip/{region}_{year}_{quarter}.success',
+            # 'full_area/saturday_trip/{region}_{year}_{quarter}.success',
         ]
         return expected_parquet_files
 
@@ -461,6 +467,15 @@ class ReplicaETL:
                     # convert the partition to a DataFrame
                     bar.write(f'  Converting chunk {chunk_index}/{chunk_count} to DataFrame...')
                     table_df: pandas.DataFrame = delayed_partition.compute()
+
+                    if 'origin_lng' in table_df.columns:
+                        # rename the columns to match the expected columns
+                        table_df.rename(columns={
+                            'origin_lng': 'start_lng',
+                            'origin_lat': 'start_lat',
+                            'destination_lng': 'end_lng',
+                            'destination_lat': 'end_lat'
+                        }, inplace=True)
 
                     if not table_df.empty:
                         # add a source_table column with the table name so we can identify the source of the data
@@ -773,9 +788,9 @@ class ReplicaETL:
         if result is None or result.empty:
             raise ValueError("No tables found in the replica dataset schema.")
 
-        # only keep network_segments, population, thursday_trip, and saturday_trip tables
+        # only keep network_segments, population, and thursday_trip tables
         mask = result['table_name'].str.contains(
-            'network_segments|population|thursday_trip|saturday_trip')
+            'network_segments|population|thursday_trip')
         result = result[mask].reset_index(drop=True)
 
         return result
