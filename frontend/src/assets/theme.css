@@ -16,6 +16,7 @@
   --surface-radius: 0.375em;
 
   --card-background-default: hsla(0, 0%, 100%, 70%);
+  --control-solid-default: hsl(0, 0%, 100%);
   --control-stroke-default: hsla(0, 0%, 0%, 7%);
   --control-stroke-secondary-overlay: hsla(0, 0%, 0%, 10.44%);
 
@@ -32,4 +33,12 @@
 
 :host {
   font-family: 'Poppins', sans-serif;
+}
+
+:host .esri-expand {
+  --esri-widget-panel-max-height: 80vh;
+}
+
+:host .esri-expand__sheet .esri-expand__content-container {
+  overflow: auto;
 }

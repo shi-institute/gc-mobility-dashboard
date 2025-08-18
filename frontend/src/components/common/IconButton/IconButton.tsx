@@ -14,6 +14,8 @@ interface IconButtonProps {
    * A tooltip for the icon button, which is shown on mouse hover by the browser.
    */
   title?: string;
+  /** For features that have an active-inactive state logic, you can specify when the feature described by the button is active */
+  active?: boolean;
 
   style?: React.CSSProperties;
 }
@@ -30,6 +32,7 @@ export function IconButton(props: IconButtonProps) {
         className={props.disabled ? 'disabled ' + props.className : props.className}
         title={props.title}
         style={props.style}
+        active={props.active}
       >
         {props.children}
       </StyledAnchorButton>
@@ -43,13 +46,14 @@ export function IconButton(props: IconButtonProps) {
       className={props.disabled ? 'disabled ' + props.className : props.className}
       title={props.title}
       style={props.style}
+      active={props.active}
     >
       {props.children}
     </StyledButton>
   );
 }
 
-const StyledButton = styled.button`
+const StyledButton = styled.button<{ active?: boolean }>`
   font-size: 1rem;
   appearance: none;
   padding: 0;
@@ -71,9 +75,17 @@ const StyledButton = styled.button`
   transition: 120ms;
   ${(props) => props.title && `cursor: help;`}
 
-  &.active {
-    box-shadow: inset 0 2px 0 var(--color-primary);
-  }
+  ${({ active }) => {
+    if (!active) {
+      return '';
+    }
+
+    return `
+      background-color: hsla(0, 0%, 0%, 0.06);
+      color: var(--color-primary);
+    `;
+  }}
+
 
   &:hover:not(.disabled) {
     background-color: var(--subtle-fill-secondary);
