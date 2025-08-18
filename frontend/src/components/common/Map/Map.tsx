@@ -3,6 +3,7 @@ import * as reactiveUtils from '@arcgis/core/core/reactiveUtils.js';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer.js';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
 import WebTileLayer from '@arcgis/core/layers/WebTileLayer.js';
+import * as symbolUtils from '@arcgis/core/symbols/support/symbolUtils.js';
 import '@arcgis/map-components/components/arcgis-expand';
 import '@arcgis/map-components/components/arcgis-layer-list';
 import '@arcgis/map-components/components/arcgis-legend';
@@ -10,8 +11,9 @@ import '@arcgis/map-components/components/arcgis-placement';
 import '@arcgis/map-components/components/arcgis-scale-range-slider';
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import { useEffect, useRef, useState } from 'react';
-import { notEmpty } from '../../../utils';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { debounce, notEmpty } from '../../../utils';
+import { Button } from '../Button/Button';
 import { IconButton } from '../IconButton/IconButton';
 import type { GeoJSONLayerInit } from './types';
 
@@ -138,6 +140,53 @@ export function Map(props: MapProps) {
     >
   >();
 
+  // manage the symbols
+  const [symbols, setSymbols] = useState<
+    (NonNullable<typeof layers>[0] & { symbolHTML: HTMLElement | null | undefined })[]
+  >([]);
+  const updateSymbols = useCallback(async (_layers: typeof layers) => {
+    const newSymbols: typeof symbols = [];
+
+    for await (const layer of _layers || []) {
+      if (
+        layer.visible === false ||
+        !('legendEnabled' in layer.layer) ||
+        !layer.layer.legendEnabled
+      ) {
+        continue;
+      }
+
+      if (
+        !('renderer' in layer.layer) ||
+        !layer.layer.renderer ||
+        typeof layer.layer.renderer !== 'object'
+      ) {
+        continue;
+      }
+
+      if (!('symbol' in layer.layer.renderer) || !layer.layer.renderer.symbol) {
+        continue;
+      }
+
+      const symbol = layer.layer.renderer.symbol as __esri.SymbolUnion;
+      const isLine = symbol.type === 'simple-line';
+      const layerSymbolHTML = symbolUtils.renderPreviewHTML(symbol, { size: isLine ? 2 : 16 });
+
+      newSymbols.push({
+        ...layer,
+        symbolHTML: await layerSymbolHTML,
+      });
+      console.log(layer);
+    }
+
+    newSymbols.reverse();
+    setSymbols(newSymbols);
+  }, []);
+  const updateSymbolsDebounced = useMemo(() => debounce(updateSymbols, 250), [updateSymbols]);
+  useEffect(() => {
+    updateSymbolsDebounced(layers);
+  }, layers);
+
   const serviceAreaLayers = {
     walk: layers?.filter((layer) => layer.id.startsWith('walk-service-area__')) || [],
     bike: layers?.filter((layer) => layer.id.startsWith('bike-service-area__')) || [],
@@ -166,6 +215,8 @@ export function Map(props: MapProps) {
       });
     }
   }
+
+  const [showLayerList, setShowLayerList] = useState(true);
 
   return (
     <div style={{ height: '100%' }}>
@@ -237,41 +288,53 @@ export function Map(props: MapProps) {
           ) : null}
         </arcgis-placement>
 
-        <arcgis-expand
-          close-on-esc
-          position="bottom-left"
-          mode="floating"
-          expandIcon="legend"
-          collapseIcon="chevrons-right"
-          expandTooltip="View Legend"
-          collapseTooltip="Hide Legend"
-        >
-          <arcgis-placement>
-            <div style={{ width: '300px' }}>
-              <h2
-                style={{
-                  fontSize: 'var(--calcite-font-size-0)',
-                  fontWeight: 'var(--calcite-font-weight-medium)',
-                  padding: '8px 8px 0px',
-                  margin: 8,
-                }}
-              >
-                Legend
-              </h2>
-              <arcgis-legend position="manual" />
-              <arcgis-expand label="Layers">
-                <arcgis-layer-list
-                  position="manual"
-                  drag-enabled
-                  show-errors
-                  show-filter
-                  show-temporary-layer-indicators
-                  visibility-appearance="checkbox"
-                />
-              </arcgis-expand>
-            </div>
-          </arcgis-placement>
-        </arcgis-expand>
+        <arcgis-placement position="bottom-left">
+          <div>
+            {showLayerList ? (
+              <LayerListContainer>
+                <IconButton
+                  className="collapse-button"
+                  onClick={() => setShowLayerList(false)}
+                  title="Hide Layers List"
+                >
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="m4.21 4.387.083-.094a1 1 0 0 1 1.32-.083l.094.083L12 10.585l6.293-6.292a1 1 0 1 1 1.414 1.414L13.415 12l6.292 6.293a1 1 0 0 1 .083 1.32l-.083.094a1 1 0 0 1-1.32.083l-.094-.083L12 13.415l-6.293 6.292a1 1 0 0 1-1.414-1.414L10.585 12 4.293 5.707a1 1 0 0 1-.083-1.32l.083-.094-.083.094Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </IconButton>
+                {symbols?.map((layer) => {
+                  if (!layer.symbolHTML) {
+                    return null;
+                  }
+
+                  return (
+                    <article key={layer.id}>
+                      <div
+                        className="symbol"
+                        dangerouslySetInnerHTML={{ __html: layer.symbolHTML.outerHTML }}
+                      />
+                      <h1>{layer.title}</h1>
+                    </article>
+                  );
+                })}
+                <arcgis-expand label="Layers">
+                  <arcgis-layer-list
+                    position="manual"
+                    drag-enabled
+                    show-errors
+                    show-filter
+                    show-temporary-layer-indicators
+                    visibility-appearance="checkbox"
+                  />
+                </arcgis-expand>
+              </LayerListContainer>
+            ) : (
+              <Button onClick={() => setShowLayerList(true)}>Legend</Button>
+            )}
+          </div>
+        </arcgis-placement>
       </arcgis-map>
     </div>
   );
@@ -289,5 +352,123 @@ const SegmentedControlContainer = styled.div`
 
   & button:not(:hover):not(:active) {
     box-shadow: none;
+  }
+`;
+
+const LayerListContainer = styled.aside`
+  background-color: white;
+  border-radius: var(--surface-radius);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+
+  box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+    inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay),
+    0 0.25em 0.75em 0.25em var(--control-stroke-default);
+
+  article {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    min-height: 24px;
+
+    .symbol {
+      text-align: center;
+      flex-grow: 0;
+      flex-shrink: 0;
+      display: contents;
+
+      div {
+        display: inline-block;
+      }
+
+      img,
+      svg {
+        max-height: 24px;
+        max-width: 24px;
+        object-fit: contain;
+      }
+    }
+
+    h1 {
+      font-size: 0.875rem;
+      font-weight: 400;
+      margin: 0;
+      line-height: 1.2;
+    }
+  }
+
+  article:first-of-type h1 {
+    width: calc(100% - 64px);
+  }
+
+  .collapse-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    background-color: transparent;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--subtle-fill-secondary);
+    }
+
+    svg {
+      fill: var(--text-secondary);
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+
+  .esri-widget--button {
+    width: 160px;
+    position: relative;
+    .esri-collapse__icon {
+      display: none;
+    }
+    &::after {
+      content: 'Manage map layers';
+      position: absolute;
+      inset: 0;
+
+      appearance: none;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 0.875rem;
+      display: inline-flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      padding: 0 1rem;
+      height: 32px;
+      box-sizing: border-box;
+      border: none;
+      box-shadow: inset 0 0 0 1px var(--control-stroke-default),
+        inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
+      border-radius: var(--button-radius);
+      text-decoration: none;
+      color: inherit;
+      user-select: none;
+      background-color: #fff;
+      flex-wrap: nowrap;
+      transition: 120ms;
+    }
+
+    &:hover:not(.disabled)::after {
+      background-color: var(--subtle-fill-secondary);
+    }
+
+    &:active:not(.disabled)::after {
+      background-color: var(--subtle-fill-tertiary);
+      color: var(--text-secondary);
+      box-shadow: inset 0 0 0 1px var(--control-stroke-default);
+    }
   }
 `;

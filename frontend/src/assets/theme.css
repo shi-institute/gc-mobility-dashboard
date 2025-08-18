@@ -34,3 +34,11 @@
 :host {
   font-family: 'Poppins', sans-serif;
 }
+
+:host .esri-expand {
+  --esri-widget-panel-max-height: 80vh;
+}
+
+:host .esri-expand__sheet .esri-expand__content-container {
+  overflow: auto;
+}
