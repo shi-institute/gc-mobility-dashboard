@@ -1,11 +1,12 @@
 import Color from '@arcgis/core/Color';
+import * as unionOperator from '@arcgis/core/geometry/operators/unionOperator.js';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
 import { CustomContent, FieldsContent } from '@arcgis/core/popup/content';
 import PopupTemplate from '@arcgis/core/PopupTemplate.js';
 import { SimpleRenderer } from '@arcgis/core/renderers';
 import SizeVariable from '@arcgis/core/renderers/visualVariables/SizeVariable';
 import { SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol } from '@arcgis/core/symbols';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useAppData } from '.';
 import { GeoJSONLayerInit } from '../components/common/Map/types';
@@ -17,7 +18,7 @@ type AppFutureRoutesData = NonNullable<
   ReturnType<typeof useAppData>['scenarios']['data']
 >['futureRoutes'];
 
-export function useMapData(data: AppData) {
+export function useMapData(data: AppData, view?: __esri.MapView | null) {
   const networkSegments = useMemo(() => {
     const validSegmentsStylesByAreaAndSeason = (data || [])
       .filter(notEmpty)
@@ -77,6 +78,8 @@ export function useMapData(data: AppData) {
     });
   }, [data]);
 
+  const onMapReadyFunctions: ((map: __esri.Map, view: __esri.MapView) => void)[] = [];
+
   const areaPolygons = useMemo(() => {
     const groupedByArea = Object.groupBy(data || [], (resolved) => resolved.__area);
 
@@ -108,6 +111,37 @@ export function useMapData(data: AppData) {
       })
       .filter(notEmpty);
   }, [data]);
+
+  useEffect(() => {
+    view?.when(async () => {
+      if (areaPolygons.length > 0) {
+        const layers = view.map?.allLayers;
+        const layersToFocusIds = areaPolygons.map((layer) => layer.id);
+
+        const foundLayers = layers
+          ?.filter((layer) => layersToFocusIds.includes(layer.id))
+          .toArray();
+
+        const promises =
+          foundLayers
+            ?.map((layer): Promise<{ count: number; extent: __esri.Extent }> | null => {
+              return layer.when(() => {
+                if (!('queryExtent' in layer) || typeof layer.queryExtent != 'function') {
+                  return null;
+                }
+                return layer.queryExtent() as Promise<{ count: number; extent: __esri.Extent }>;
+              });
+            })
+            .filter(notEmpty) || [];
+
+        const layerExtents = await Promise.all(promises);
+
+        const extentUnion = unionOperator.executeMany(layerExtents.map(({ extent }) => extent));
+
+        view?.goTo(extentUnion, { animate: true, duration: 1000 }); //.catch(console.error);
+      }
+    });
+  }, [view, areaPolygons]);
 
   const selectedAreasAndSeasonsRidership = useMemo(() => {
     const filteredData = (data || [])
@@ -653,6 +687,7 @@ export function useMapData(data: AppData) {
   }, [data]);
 
   return {
+    onMapReadyFunctions,
     networkSegments,
     areaPolygons,
     routes,

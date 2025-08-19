@@ -1,4 +1,5 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
+import { useState } from 'react';
 import { CoreFrame, Map, Section, SidebarContent, Statistic } from '../components';
 import { AppNavigation } from '../components/navigation';
 import {
@@ -12,6 +13,8 @@ import { notEmpty } from '../utils';
 
 export function EssentialServicesAccess() {
   const { data } = useAppData();
+
+  const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
     networkSegments,
     areaPolygons,
@@ -28,7 +31,7 @@ export function EssentialServicesAccess() {
     urgentCareFacilities,
     childCareCenters,
     commercialZones,
-  } = useMapData(data);
+  } = useMapData(data, mapView);
 
   return (
     <CoreFrame
@@ -55,6 +58,9 @@ export function EssentialServicesAccess() {
               commercialZones,
               ...areaPolygons,
             ].filter(notEmpty)}
+            onMapReady={(_, view) => {
+              setMapView(view);
+            }}
           />
         </div>
       }

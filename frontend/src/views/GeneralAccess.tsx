@@ -1,4 +1,5 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
+import { useState } from 'react';
 import { useLocation } from 'react-router';
 import {
   Button,
@@ -22,6 +23,7 @@ import { notEmpty, requireKey, toTidyNominal } from '../utils';
 
 export function GeneralAccess() {
   const { data } = useAppData();
+  const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
     networkSegments,
     areaPolygons,
@@ -30,7 +32,7 @@ export function GeneralAccess() {
     walkServiceAreas,
     cyclingServiceAreas,
     paratransitServiceAreas,
-  } = useMapData(data);
+  } = useMapData(data, mapView);
 
   return (
     <CoreFrame
@@ -49,6 +51,9 @@ export function GeneralAccess() {
               stops,
               ...areaPolygons,
             ].filter(notEmpty)}
+            onMapReady={(_, view) => {
+              setMapView(view);
+            }}
           />
         </div>
       }
