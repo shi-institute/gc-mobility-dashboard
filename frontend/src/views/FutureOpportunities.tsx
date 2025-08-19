@@ -1,4 +1,5 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
+import { useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 import {
   Button,
@@ -29,6 +30,7 @@ export function FutureOpportunities() {
     isComparing ? undefined : 1
   );
 
+  const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
     areaPolygons,
     routes,
@@ -36,7 +38,7 @@ export function FutureOpportunities() {
     walkServiceAreas,
     cyclingServiceAreas,
     paratransitServiceAreas,
-  } = useMapData(data);
+  } = useMapData(data, mapView);
   const {
     futureRoutes,
     futureStops,
@@ -66,6 +68,9 @@ export function FutureOpportunities() {
               stops,
               ...areaPolygons,
             ].filter(notEmpty)}
+            onMapReady={(_, view) => {
+              setMapView(view);
+            }}
           />
         </div>
       }

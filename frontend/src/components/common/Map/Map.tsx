@@ -19,6 +19,7 @@ import type { GeoJSONLayerInit } from './types';
 
 interface MapProps {
   layers: (GeoJSONLayerInit | WebTileLayer | VectorTileLayer)[];
+  onMapReady?: (map: __esri.Map, view: __esri.MapView) => void;
 }
 
 export function Map(props: MapProps) {
@@ -33,6 +34,10 @@ export function Map(props: MapProps) {
 
     mapElem.current.addEventListener('arcgisViewReadyChange', () => {
       setMap(mapElem.current?.map ?? null);
+
+      if (mapElem.current?.map && mapElem.current?.view) {
+        props.onMapReady?.(mapElem.current.map, mapElem.current.view);
+      }
     });
   }, [mapElem.current]);
 
@@ -89,6 +94,19 @@ export function Map(props: MapProps) {
     // set the reactive layer info that we can waycj
     const setLayerInfo = () => {
       const layerInfo = map.allLayers
+        .filter(
+          (
+            layer
+          ): layer is
+            | __esri.GeoJSONLayer
+            | __esri.WebTileLayer
+            | __esri.VectorTileLayer
+            | __esri.FeatureLayer =>
+            layer.type === 'geojson' ||
+            layer.type === 'web-tile' ||
+            layer.type === 'vector-tile' ||
+            layer.type === 'feature'
+        )
         .map((layer) => ({
           title: layer.title,
           id: layer.id,
@@ -135,7 +153,11 @@ export function Map(props: MapProps) {
         title: string | nullish;
         id: string;
         visible: boolean;
-        layer: __esri.Layer;
+        layer:
+          | __esri.GeoJSONLayer
+          | __esri.WebTileLayer
+          | __esri.VectorTileLayer
+          | __esri.FeatureLayer;
       }>
     >
   >();
@@ -176,7 +198,6 @@ export function Map(props: MapProps) {
         ...layer,
         symbolHTML: await layerSymbolHTML,
       });
-      console.log(layer);
     }
 
     newSymbols.reverse();
@@ -197,7 +218,7 @@ export function Map(props: MapProps) {
     // get the current visibility
     const isVisible = serviceAreaLayers[layerToShow]?.every((layer) => layer.visible) ?? false;
 
-    // hide allservice area layers
+    // hide all service area layers
     Object.values(serviceAreaLayers)
       .flatMap((l) => l)
       .forEach((layerInfo) => {
