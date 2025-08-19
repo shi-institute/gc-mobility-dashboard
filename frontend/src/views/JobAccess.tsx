@@ -244,7 +244,7 @@ function Sidebar() {
       <h1>Options</h1>
 
       <h2>Filters</h2>
-      <SelectedJobAccessArea areasList={jobAccessAreasList} />
+      <SelectedJobAccessArea areasList={jobAccessAreasList} forceCompare />
     </SidebarContent>
   );
 }
