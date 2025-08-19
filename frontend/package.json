@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:gispreview": "NODE_ENV=development npm run build && npm run zipdist",
-    "prepare": "node beforeStart.js",
+    "data": "node beforeStart.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/"
