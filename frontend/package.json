@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run beforestart && vite",
-    "build": "npm run beforestart && tsc -b && vite build",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "build:gispreview": "NODE_ENV=development npm run build && npm run zipdist",
-    "beforestart": "node beforeStart.js",
+    "prepare": "node beforeStart.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/"
