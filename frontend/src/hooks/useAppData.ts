@@ -42,7 +42,7 @@ export interface AppDataHookParameters {
 function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const [areasList, setAreasList] = useState<string[]>([]);
   useEffect(() => {
-    fetch('./data/replica/area_index.txt')
+    fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/replica/area_index.txt')
       .then((res) => res.text())
       .then((text) => {
         const areaList = text
@@ -55,7 +55,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
 
   const [seasonsList, setSeasonsList] = useState<string[]>([]);
   useEffect(() => {
-    fetch('./data/replica/season_index.txt')
+    fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/replica/season_index.txt')
       .then((res) => res.text())
       .then((text) => {
         const seasonsList = text
@@ -476,11 +476,22 @@ function handleError(key: string, shouldThrow = true, supressIncorrectHeaderChec
  */
 function getCensusData() {
   const paths = {
-    households: `./data/census_acs_5year/B08201/time_series.json.deflate`,
-    race_ethnicity: `./data/census_acs_5year/DP05/time_series.json.deflate`,
-    population_total: `./data/census_acs_5year/S0101/time_series.json.deflate`,
-    educational_attainment: `./data/census_acs_5year/S1501/time_series.json.deflate`,
-    combined: `./data/census_acs_5year/time_series.json.deflate`,
+    households:
+      __GCMD_DATA_ORIGIN__ +
+      __GCMD_DATA_PATH__ +
+      `/census_acs_5year/B08201/time_series.json.deflate`,
+    race_ethnicity:
+      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/census_acs_5year/DP05/time_series.json.deflate`,
+    population_total:
+      __GCMD_DATA_ORIGIN__ +
+      __GCMD_DATA_PATH__ +
+      `/census_acs_5year/S0101/time_series.json.deflate`,
+    educational_attainment:
+      __GCMD_DATA_ORIGIN__ +
+      __GCMD_DATA_PATH__ +
+      `/census_acs_5year/S1501/time_series.json.deflate`,
+    combined:
+      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/census_acs_5year/time_series.json.deflate`,
   };
 
   const households = fetchData<CensusHouseholdsTimeSeries>(
@@ -522,8 +533,10 @@ function getCensusData() {
  */
 function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
   const allPromises = seasons.map(([__quarter, __year]) => {
-    const gtfsFolder = `./data/greenlink_gtfs/${__year}/${__quarter}`;
-    const ridershipFolder = `./data/greenlink_ridership/${__year}/${__quarter}`;
+    const gtfsFolder =
+      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/greenlink_gtfs/${__year}/${__quarter}`;
+    const ridershipFolder =
+      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/greenlink_ridership/${__year}/${__quarter}`;
 
     return {
       year: __year,
@@ -531,7 +544,9 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
       promises: {
         coverage: (abortSignal?: AbortSignal) =>
           fetchData<ServiceCoverage[]>(
-            `./data/greenlink_gtfs/service_coverage_stats.json.deflate`,
+            __GCMD_DATA_ORIGIN__ +
+              __GCMD_DATA_PATH__ +
+              `/greenlink_gtfs/service_coverage_stats.json.deflate`,
             abortSignal,
             false,
             true
@@ -583,7 +598,8 @@ function getEssentialServicesPromises(
 ) {
   const allPromises = seasons.flatMap(([__quarter, __year]) => {
     return areas.map((__area) => {
-      const essentialServicesFolder = `./data/essential_services/${__year}/${__quarter}`;
+      const essentialServicesFolder =
+        __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/essential_services/${__year}/${__quarter}`;
 
       return {
         area: __area,
@@ -592,7 +608,9 @@ function getEssentialServicesPromises(
         promises: {
           essential_services_access_stats: (abortSignal?: AbortSignal) =>
             fetchData<EssentialServicesAccessStats[]>(
-              `./data/essential_services/essential_services_stats.json.deflate`,
+              __GCMD_DATA_ORIGIN__ +
+                __GCMD_DATA_PATH__ +
+                `/essential_services/essential_services_stats.json.deflate`,
               abortSignal,
               false,
               true
@@ -694,10 +712,20 @@ function constructReplicaPaths(
         __year: year,
         __quarter: quarter,
         __label: `${area}${seasons.length > 1 ? ` (${year} ${quarter})` : ''}`,
-        polygon: `./data/replica/${area}/polygon.geojson.deflate`,
-        statistics: `./data/replica/${area}/statistics/replica__south_atlantic_${year}_${quarter}.json.deflate`,
-        network_segments_style: `./data/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}/VectorTileServer/resources/styles/root.json`,
-        population: `./data/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
+        polygon:
+          __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/replica/${area}/polygon.geojson.deflate`,
+        statistics:
+          __GCMD_DATA_ORIGIN__ +
+          __GCMD_DATA_PATH__ +
+          `/replica/${area}/statistics/replica__south_atlantic_${year}_${quarter}.json.deflate`,
+        network_segments_style:
+          __GCMD_DATA_ORIGIN__ +
+          __GCMD_DATA_PATH__ +
+          `/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}/VectorTileServer/resources/styles/root.json`,
+        population:
+          __GCMD_DATA_ORIGIN__ +
+          __GCMD_DATA_PATH__ +
+          `/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
       };
     });
   });
@@ -743,7 +771,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
                     // resolve the relative URL to a complete path
                     url: new URL(
                       paths.network_segments_style + '/../' + style.sources.esri?.url,
-                      window.location.origin + window.location.pathname
+                      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__
                     ).href,
                   },
                 },
@@ -759,7 +787,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
           ),
         operating_funds: (abortSignal?: AbortSignal) =>
           fetchData<OperatingFundInfo[]>(
-            `./data/operating_funds.json.deflate`,
+            __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/operating_funds.json.deflate`,
             abortSignal,
             undefined,
             true
@@ -770,7 +798,9 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
 }
 
 async function constructScenarioDataPromises() {
-  const futureRoutesList = await fetch('./data/future_routes/future_routes_index.txt')
+  const futureRoutesList = await fetch(
+    __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/future_routes_index.txt'
+  )
     .then((res) => res.text())
     .then((text) => {
       return text
@@ -784,7 +814,7 @@ async function constructScenarioDataPromises() {
     });
 
   const futureRoutesPromises = futureRoutesList.map((routeId) => {
-    const folderPath = './data/future_routes/' + routeId;
+    const folderPath = __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/' + routeId;
 
     return {
       __routeId: () => new Promise<string>((resolve) => resolve(routeId)),
@@ -823,9 +853,10 @@ async function constructScenarioDataPromises() {
 
   return {
     scenarios: (abortSignal?: AbortSignal) =>
-      fetchData<{ scenarios: Scenario[] }>(`./data/tab5_scenarios.json.deflate`, abortSignal).catch(
-        handleError('tab5_scenarios')
-      ),
+      fetchData<{ scenarios: Scenario[] }>(
+        __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/tab5_scenarios.json.deflate`,
+        abortSignal
+      ).catch(handleError('tab5_scenarios')),
     futureRoutes: futureRoutesPromises,
   };
 }
