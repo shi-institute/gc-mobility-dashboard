@@ -598,6 +598,7 @@ interface ScenarioFeature {
 
 interface ScenarioStopFeature extends ScenarioFeature {
   affects: 'stops';
+  stopIds: string[];
 }
 
 interface ScenarioRouteFeature extends ScenarioFeature {
@@ -615,12 +616,10 @@ interface ScenarioOnDemandFeature extends ScenarioFeature {
 
 interface ScenarioStopInfrastructureFeature extends ScenarioStopFeature {
   type: 'infrastructure';
-  count: number;
 }
 
 interface ScenarioStopAccessibilityFeature extends ScenarioStopFeature {
   type: 'accessibility';
-  count: number;
 }
 
 interface ScenarioRouteFrequencyFeature extends ScenarioRouteFeature {

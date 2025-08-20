@@ -771,7 +771,9 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
                     // resolve the relative URL to a complete path
                     url: new URL(
                       paths.network_segments_style + '/../' + style.sources.esri?.url,
-                      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__
+                      (__GCMD_DATA_ORIGIN__ === '.'
+                        ? window.location.origin
+                        : __GCMD_DATA_ORIGIN__) + __GCMD_DATA_PATH__
                     ).href,
                   },
                 },
