@@ -236,7 +236,7 @@ class ReplicaProcessETL:
 
                     [count, thursday_rider_stats] = self.calculate_public_transit_population_statistics(
                         'thursday')
-                    statistics['thursday_rider'][season_str] = thursday_rider_stats
+                    statistics['thursday_rider'][season_str] = thursday_rider_stats[season_str]
 
                     elapsed_time = time.time() - start_time
                     formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
