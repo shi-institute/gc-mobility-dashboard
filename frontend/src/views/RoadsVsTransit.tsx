@@ -309,7 +309,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       if (feature.type === 'infrastructure') {
         return (
           <Shell>
-            <span className="number">{feature.count}</span>
+            <span className="number">{feature.stopIds.length}</span>
             <h2>{feature.name}</h2>
             <p className="description">{feature.description}</p>
           </Shell>
@@ -319,7 +319,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       if (feature.type === 'accessibility') {
         return (
           <Shell>
-            <span className="number">{feature.count} Stops</span>
+            <span className="number">{feature.stopIds.length} Stops</span>
             <h2>{feature.name}</h2>
             <p className="description">{feature.description}</p>
           </Shell>
