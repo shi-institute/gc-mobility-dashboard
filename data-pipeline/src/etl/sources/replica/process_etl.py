@@ -920,14 +920,23 @@ class ReplicaProcessETL:
                         f'    Trip chunk has {trips_df.shape[0]} rows and {trips_df.shape[1]} columns.')
 
                     logger.debug('    Extracting unique public transit person IDs...')
-                    public_transit_user_ids = trips_df['person_id'].unique()
+                    public_transit_user_ids = trips_df['person_id']\
+                        .dropna()\
+                        .unique()\
+                        .tolist()
+
+                    # skip the chunk if there are no public transit users
+                    if len(public_transit_user_ids) == 0:
+                        logger.info(
+                            f'    No public transit users found in this chunk. Skipping...')
+                        continue
 
                     logger.info(f'    Reading population data for public transit users...')
                     public_transit_population_df = pandas.read_parquet(
                         area_population_path,
                         columns=['person_id', 'race', 'ethnicity',
                                  'education', 'commute_mode', 'household_id'],
-                        filters=[('person_id', 'in', list(public_transit_user_ids))]
+                        filters=[('person_id', 'in', public_transit_user_ids)]
                     )
 
                     logger.info(f'    Calculating statistics for public transit users...')
@@ -951,13 +960,15 @@ class ReplicaProcessETL:
                                         area_statistics[key][subkey] += subvalue
 
                 # save the statistics to the all_statistics dictionary so we can access them later
-                logger.debug(f'Statistics for {area_name} added to all_statistics.')
                 season_str = f'{region}_{year}_{quarter}'
                 if season_str not in all_statistics:
                     all_statistics[season_str] = {}
+                if 'synthetic_demographics' not in area_statistics:
+                    area_statistics['synthetic_demographics'] = None
                 all_statistics[season_str][area_name] = {
                     f'{day}_trip__public_transit_synthetic_population_demographics': area_statistics['synthetic_demographics']
                 }
+                logger.debug(f'Statistics for {area_name} added to all_statistics.')
                 processed_count += 1
 
         # return the statistics for all areas in this season so that we can access them later
