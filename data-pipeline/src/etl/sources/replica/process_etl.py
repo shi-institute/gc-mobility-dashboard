@@ -209,14 +209,14 @@ class ReplicaProcessETL:
 
                     [count, saturday_rider_stats] = self.calculate_public_transit_population_statistics(
                         'saturday')
-                    statistics['saturday_rider'][season_str] = saturday_rider_stats
+                    statistics['saturday_rider'][season_str] = saturday_rider_stats[season_str]
 
                     elapsed_time = time.time() - start_time
                     formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
 
                     # save to cache
                     with open(season_saturday_rider_stats_cache_path, 'w') as file:
-                        json.dump({season_str: saturday_rider_stats}, file)
+                        json.dump({season_str: saturday_rider_stats[season_str]}, file)
 
                     logger.info('')
                     logger.info(
@@ -243,7 +243,7 @@ class ReplicaProcessETL:
 
                     # save to cache
                     with open(season_thursday_rider_stats_cache_path, 'w') as file:
-                        json.dump({season_str: thursday_rider_stats}, file)
+                        json.dump({season_str: thursday_rider_stats[season_str]}, file)
 
                     logger.info('')
                     logger.info(
