@@ -10,7 +10,8 @@
     "data": "node beforeStart.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/"
+    "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/",
+    "zipdata": "tar --create --use-compress-program=pigz --file data.tar.gz public"
   },
   "dependencies": {
     "@arcgis/map-components": "^4.33.2",
