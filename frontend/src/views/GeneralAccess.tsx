@@ -146,7 +146,7 @@ function Sections() {
             wrap
             label="Boardings"
             data={data?.map((area) => {
-              const boardings = area.ridership?.map((stop) => stop.boarding) || [];
+              const boardings = area.ridership?.area.map((stop) => stop.boarding) || [];
               const boardingsTotal = boardings.reduce((sum, value) => sum + (value || 0), 0);
 
               return {
@@ -159,7 +159,7 @@ function Sections() {
             wrap
             label="Alightings"
             data={data?.map((area) => {
-              const alightings = area.ridership?.map((stop) => stop.alighting) || [];
+              const alightings = area.ridership?.area.map((stop) => stop.alighting) || [];
               const alightingsTotal = alightings.reduce((sum, value) => sum + (value || 0), 0);
 
               return {

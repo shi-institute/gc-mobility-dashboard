@@ -143,22 +143,23 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
     });
   }, [view, areaPolygons]);
 
-  const selectedAreasAndSeasonsRidership = useMemo(() => {
+  function calculateRidership(allAreas = false) {
     const filteredData = (data || [])
       .map(({ ridership, __year, __quarter }) => ({ ridership, __year, __quarter }))
       .reduce((acc, curr) => {
         const currentYear = curr.__year;
         const currentQuarter = curr.__quarter;
-        const ridershipData = (curr.ridership || []).map((r) => {
-          return {
-            ...r,
-            __year: currentYear,
-            __quarter: currentQuarter,
-          };
-        });
+        const ridershipData =
+          curr.ridership?.[allAreas ? 'all' : 'area'].map((r) => {
+            return {
+              ...r,
+              __year: currentYear,
+              __quarter: currentQuarter,
+            };
+          }) || [];
 
         return [...acc, ...ridershipData];
-      }, [] as (NonNullable<NonNullable<AppData>[0]['ridership']>[0] & { __year: number; __quarter: 'Q2' | 'Q4' })[])
+      }, [] as (NonNullable<NonNullable<AppData>[0]['ridership']>['area'][0] & { __year: number; __quarter: 'Q2' | 'Q4' })[])
       .map((ridershipData) => {
         const season = `${ridershipData.__quarter}:${ridershipData.__year}`;
         return { season, ...ridershipData };
@@ -174,7 +175,11 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
     );
 
     return groupedByStopAndSeason;
-  }, [data]);
+  }
+
+  // @ts-expect-error - this is currently unused but will be used in the future
+  const selectedAreasAndSeasonsRidership = useMemo(() => calculateRidership(), [data]);
+  const allAreasAndSeasonsRidership = useMemo(() => calculateRidership(true), [data]);
 
   const routes = useMemo(() => {
     return (
@@ -221,7 +226,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
                   outFields: ['*'],
                   creator: (event) => {
                     const stopRidership = Object.entries(
-                      selectedAreasAndSeasonsRidership[event?.graphic.attributes.ID] || {}
+                      allAreasAndSeasonsRidership[event?.graphic.attributes.ID] || {}
                     ).map(([season, ridership]) => {
                       return [
                         season,
@@ -255,7 +260,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
           } satisfies GeoJSONLayerInit;
         })[0]
     );
-  }, [data]);
+  }, [data, allAreasAndSeasonsRidership]);
 
   const walkServiceAreas = useMemo(() => {
     return (
