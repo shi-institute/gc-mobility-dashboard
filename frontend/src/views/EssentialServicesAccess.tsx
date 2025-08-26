@@ -86,7 +86,7 @@ function Sections() {
   const { data } = useAppData();
 
   return [
-    <Section title="Essential Services Access via Public Transit">
+    <Section title="Essential Services Access via Public Transit" key={0}>
       <Statistic.Percent
         label="Grocery Stores"
         wrap
@@ -171,7 +171,7 @@ function Sections() {
         })}
       />
     </Section>,
-    <Section title="Recorded Average Travel Time to Essential Services via Public Transit">
+    <Section title="Recorded Average Travel Time to Essential Services via Public Transit" key={1}>
       <Statistic.Number
         label="Grocery Stores"
         wrap

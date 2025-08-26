@@ -112,7 +112,7 @@ function Sections() {
   })();
 
   return [
-    <Section title="Service Statistics">
+    <Section title="Service Statistics" key={0}>
       <Statistic.Number
         wrap
         label="Miles of service"
@@ -212,7 +212,7 @@ function Sections() {
       />
     </Section>,
 
-    <Section title="Work and School">
+    <Section title="Work and School" key={1}>
       <SectionEntry
         s={{ gridColumn: '1 / 3' }}
         m={{ gridColumn: '1 / 4' }}
@@ -302,7 +302,7 @@ function Sections() {
       </SectionEntry>
     </Section>,
 
-    <Section title="Area Demographics">
+    <Section title="Area Demographics" key={2}>
       {(() => {
         if (data?.length === 1) {
           const censusData = data[0]!.census_acs_5year;
@@ -514,7 +514,7 @@ function Sections() {
       />
     </Section>,
 
-    <Section title="Rider Demographics">
+    <Section title="Rider Demographics" key={3}>
       <Statistic.Figure
         wrap={{ f: { gridColumn: '1 / -1' } }}
         label="Population by race"
@@ -692,7 +692,7 @@ function Sections() {
       />
     </Section>,
 
-    <DeveloperDetails data={data} />,
+    <DeveloperDetails data={data} key={4} />,
   ].filter(notEmpty);
 }
 
