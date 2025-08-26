@@ -91,14 +91,14 @@ const StyledTab = styled.a`
     inline-size: 1rem;
   }
 
-  &:has(> svg:first-child) {
+  &:has(> svg:first-of-type) {
     padding-left: 0.75rem;
   }
   svg + .label {
     margin-left: 0.25rem;
   }
 
-  &:has(> svg:last-child) {
+  &:has(> svg:last-of-type) {
     padding-right: 0.75rem;
   }
   .label + svg {
@@ -151,14 +151,14 @@ const OtherStyledTab = styled.a`
     inline-size: 1rem;
   }
 
-  &:has(> svg:first-child) {
+  &:has(> svg:first-of-type) {
     padding-left: 0.75rem;
   }
   svg + .label {
     margin-left: 0.25rem;
   }
 
-  &:has(> svg:last-child) {
+  &:has(> svg:last-of-type) {
     padding-right: 0.75rem;
   }
   .label + svg {
