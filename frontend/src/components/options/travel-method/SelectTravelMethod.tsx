@@ -3,9 +3,10 @@ import { SelectOne } from '../../common';
 
 interface SelectedAreaProps {
   travelMethodList: string[];
+  label?: string;
 }
 
-export function SelectTravelMethod({ travelMethodList }: SelectedAreaProps) {
+export function SelectTravelMethod({ travelMethodList, label }: SelectedAreaProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedTravelMethod =
@@ -24,7 +25,7 @@ export function SelectTravelMethod({ travelMethodList }: SelectedAreaProps) {
 
   return (
     <label>
-      Travel Method
+      {label || 'Travel Method'}
       <SelectOne options={displayOptions} value={selectedTravelMethod} onChange={handleChange} />
     </label>
   );
