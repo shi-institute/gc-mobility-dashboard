@@ -1,3 +1,4 @@
+export { createPopupRoot } from './createPopupRoot';
 export { debounce } from './debounce';
 export { generateHash } from './generateHash';
 export { hasKey } from './hasKey';

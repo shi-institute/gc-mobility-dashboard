@@ -7,10 +7,10 @@ import { SimpleRenderer } from '@arcgis/core/renderers';
 import SizeVariable from '@arcgis/core/renderers/visualVariables/SizeVariable';
 import { SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol } from '@arcgis/core/symbols';
 import { useEffect, useMemo } from 'react';
-import { createRoot } from 'react-dom/client';
 import { useAppData } from '.';
+import { Section, Statistic } from '../components';
 import { GeoJSONLayerInit } from '../components/common/Map/types';
-import { notEmpty, requireKey } from '../utils';
+import { createPopupRoot, notEmpty, requireKey } from '../utils';
 import { createBusStopRenderer, createInterestAreaRenderer } from '../utils/renderers';
 
 type AppData = ReturnType<typeof useAppData>['data'];
@@ -179,7 +179,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
 
   // @ts-expect-error - this is currently unused but will be used in the future
   const selectedAreasAndSeasonsRidership = useMemo(() => calculateRidership(), [data]);
-  const allAreasAndSeasonsRidership = useMemo(() => calculateRidership(true), [data]);
+  const allAreasAndSelectedSeasonsRidership = useMemo(() => calculateRidership(true), [data]);
 
   const routes = useMemo(() => {
     return (
@@ -226,10 +226,26 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
                   outFields: ['*'],
                   creator: (event) => {
                     const stopRidership = Object.entries(
-                      allAreasAndSeasonsRidership[event?.graphic.attributes.ID] || {}
+                      allAreasAndSelectedSeasonsRidership[event?.graphic.attributes.ID] || {}
                     ).map(([season, ridership]) => {
+                      const earliestPeriod = ridership?.sort((a, b) =>
+                        new Date(a.period) > new Date(b.period) ? 1 : -1
+                      )[0]?.period;
+                      const latestPeriod = ridership?.sort((a, b) =>
+                        new Date(a.period) < new Date(b.period) ? 1 : -1
+                      )[0]?.period;
+
+                      const earliestDate = earliestPeriod
+                        ? new Intl.DateTimeFormat('en-US').format(new Date(earliestPeriod))
+                        : 'N/A';
+                      const latestDate = latestPeriod
+                        ? new Intl.DateTimeFormat('en-US').format(new Date(latestPeriod))
+                        : 'N/A';
+
                       return [
                         season,
+                        earliestDate,
+                        latestDate,
                         {
                           alightings:
                             ridership?.reduce((acc, r) => acc + (r.alighting || 0), 0) || 0,
@@ -238,21 +254,44 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
                       ] as const;
                     });
 
-                    const rootElem = document.createElement('div');
-                    createRoot(rootElem).render(
+                    return createPopupRoot(document.createElement('div')).render(
                       <div>
-                        {stopRidership.map(([season, stats]) => {
-                          return (
-                            <div key={season}>
-                              <h3>{season}</h3>
-                              <p>Boardings: {stats.boardings}</p>
-                              <p>Alightings: {stats.alightings}</p>
-                            </div>
-                          );
-                        })}
+                        {stopRidership.length === 0 ? (
+                          <div>No ridership data available</div>
+                        ) : (
+                          stopRidership.map(([season, start, end, stats]) => {
+                            return (
+                              <Section
+                                title={`Weekday Ridership (${start} - ${end})`}
+                                containerNameOverride="popup-section"
+                                key={season}
+                              >
+                                <Statistic.Number
+                                  wrap
+                                  label="Boardings"
+                                  data={[
+                                    {
+                                      label: season,
+                                      value: stats.boardings,
+                                    },
+                                  ]}
+                                />
+                                <Statistic.Number
+                                  wrap
+                                  label="Alightings"
+                                  data={[
+                                    {
+                                      label: season,
+                                      value: stats.alightings,
+                                    },
+                                  ]}
+                                />
+                              </Section>
+                            );
+                          })
+                        )}
                       </div>
                     );
-                    return rootElem;
                   },
                 }),
               ],
@@ -260,7 +299,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
           } satisfies GeoJSONLayerInit;
         })[0]
     );
-  }, [data, allAreasAndSeasonsRidership]);
+  }, [data, allAreasAndSelectedSeasonsRidership]);
 
   const walkServiceAreas = useMemo(() => {
     return (
