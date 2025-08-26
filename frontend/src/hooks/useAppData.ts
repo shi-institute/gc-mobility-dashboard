@@ -199,7 +199,10 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
               if (!data) {
                 return null;
               }
-              return data.filter((stop) => stop.areas?.includes(area));
+              return {
+                area: data.filter((stop) => stop.areas?.includes(area)),
+                all: data,
+              };
             }),
           operating_funds: (abortSignal?: AbortSignal) =>
             promises.operating_funds(abortSignal).then((data) => {

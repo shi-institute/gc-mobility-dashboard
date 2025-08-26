@@ -19,22 +19,31 @@ interface SectionProps {
   noGrid?: boolean;
   /** If true, use flex instead of block for the wrapper that contains the title and the children. */
   flexParent?: boolean;
+  containerNameOverride?: string;
 }
 
 export function Section(props: SectionProps) {
   const TitleTag = `h${props.level || 2}` as keyof JSX.IntrinsicElements;
 
   return (
-    <SectionComponent noGrid={props.noGrid} flexParent={props.flexParent}>
+    <SectionComponent
+      noGrid={props.noGrid}
+      flexParent={props.flexParent}
+      containerName={props.containerNameOverride || 'section'}
+    >
       <TitleTag className="section-title">{props.title}</TitleTag>
       <div className="section-content">{props.children}</div>
     </SectionComponent>
   );
 }
 
-const SectionComponent = styled.section<{ noGrid?: boolean; flexParent?: boolean }>`
+const SectionComponent = styled.section<{
+  noGrid?: boolean;
+  flexParent?: boolean;
+  containerName: string;
+}>`
   container-type: inline-size;
-  container-name: section;
+  container-name: ${(props) => props.containerName};
   inline-size: 100%; /* required because container-type: inline-size collapses inline-size to 0 with auto values */
 
   display: ${(props) => (props.flexParent ? 'flex' : 'block')};
@@ -49,12 +58,15 @@ const SectionComponent = styled.section<{ noGrid?: boolean; flexParent?: boolean
 
     flex-grow: 1;
 
-    @container section (max-width: 899px) {
+    @container ${(props) => props.containerName} (max-width: 899px) {
       grid-template-columns: [left] repeat(3, 1fr) [right];
     }
 
-    @container section (max-width: 599px) {
+    @container ${(props) => props.containerName} (max-width: 599px) {
       grid-template-columns: [left] repeat(2, 1fr) [right];
+    }
+    @container ${(props) => props.containerName} (max-width: 299px) {
+      grid-template-columns: [left] repeat(1, 1fr) [right];
     }
   }
 
