@@ -206,7 +206,7 @@ export function Map(props: MapProps) {
   const updateSymbolsDebounced = useMemo(() => debounce(updateSymbols, 250), [updateSymbols]);
   useEffect(() => {
     updateSymbolsDebounced(layers);
-  }, layers);
+  }, [layers]);
 
   const serviceAreaLayers = {
     walk: layers?.filter((layer) => layer.id.startsWith('walk-service-area__')) || [],
