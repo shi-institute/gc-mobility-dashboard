@@ -6,6 +6,7 @@ import {
   CoreFrame,
   DeveloperDetails,
   Map,
+  PageHeader,
   Section,
   SectionEntry,
   SidebarContent,
@@ -19,7 +20,7 @@ import {
   SelectTravelMethod,
 } from '../components/options';
 import { useAppData, useMapData } from '../hooks';
-import { notEmpty, requireKey, toTidyNominal } from '../utils';
+import { listOxford, notEmpty, requireKey, toTidyNominal } from '../utils';
 
 export function GeneralAccess() {
   const { data } = useAppData();
@@ -38,6 +39,7 @@ export function GeneralAccess() {
     <CoreFrame
       outerStyle={{ height: '100%' }}
       header={<AppNavigation />}
+      sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
@@ -59,6 +61,17 @@ export function GeneralAccess() {
       }
       sections={Sections()}
     />
+  );
+}
+
+function SectionsHeader() {
+  const { data } = useAppData();
+  const uniqueAreaNames = Array.from(new Set((data || []).map((area) => area.__area))).sort();
+
+  return (
+    <PageHeader>
+      <h2>{listOxford(uniqueAreaNames)}</h2>
+    </PageHeader>
   );
 }
 
@@ -99,7 +112,6 @@ function Sections() {
   })();
 
   return [
-    <DeveloperDetails data={data} />,
     <Section title="Service Statistics">
       <Statistic.Number
         wrap
@@ -679,6 +691,8 @@ function Sections() {
           })}
       />
     </Section>,
+
+    <DeveloperDetails data={data} />,
   ].filter(notEmpty);
 }
 

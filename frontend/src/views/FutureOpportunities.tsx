@@ -5,6 +5,7 @@ import {
   Button,
   CoreFrame,
   Map,
+  PageHeader,
   Section,
   SectionEntry,
   SidebarContent,
@@ -51,6 +52,7 @@ export function FutureOpportunities() {
     <CoreFrame
       outerStyle={{ height: '100%' }}
       header={<AppNavigation />}
+      sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
@@ -76,6 +78,15 @@ export function FutureOpportunities() {
       }
       sections={Sections()}
     />
+  );
+}
+
+function SectionsHeader() {
+  return (
+    <PageHeader>
+      <h2>Future Transit Routes & Stops</h2>
+      <p>Visualize selected future transit routes from Greenlink's transit development plan.</p>
+    </PageHeader>
   );
 }
 

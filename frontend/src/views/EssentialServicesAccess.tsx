@@ -1,6 +1,6 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import { useState } from 'react';
-import { CoreFrame, Map, Section, SidebarContent, Statistic } from '../components';
+import { CoreFrame, Map, PageHeader, Section, SidebarContent, Statistic } from '../components';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -37,6 +37,7 @@ export function EssentialServicesAccess() {
     <CoreFrame
       outerStyle={{ height: '100%' }}
       header={<AppNavigation />}
+      sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
         <div style={{ height: '100%' }}>
@@ -66,6 +67,18 @@ export function EssentialServicesAccess() {
       }
       sections={Sections()}
     />
+  );
+}
+
+function SectionsHeader() {
+  return (
+    <PageHeader>
+      <h2>Which essential services can you access via public transit?</h2>
+      <p>
+        Learn what percentage of the population can reach essential services via public transit and
+        how long it takes.
+      </p>
+    </PageHeader>
   );
 }
 

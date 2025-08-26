@@ -3,14 +3,15 @@
 @import 'https://js.arcgis.com/4.33/map-components/main.css';
 
 :host {
-  --color-blue: #222e5d;
-  --color-green1: #62a34b;
   --color-gray: #2e393c;
-  --color-lightgreen: #c4d8b5;
-  --color-green2: #7fbe40;
+  --color-green1: #67a24e;
+  --color-green2: #83bd45;
+  --color-green3: #3d9356;
+  --color-blue: #222e5d;
+  --color-purple: #5e1c6f;
 
-  --color-primary: var(--color-green1);
-  --color-secondary: var(--color-blue);
+  --color-primary: var(--color-green3);
+  --color-secondary: var(--color-purple);
 
   --button-radius: 0.188em;
   --surface-radius: 0.375em;
