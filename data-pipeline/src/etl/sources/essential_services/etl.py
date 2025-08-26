@@ -206,7 +206,11 @@ class EssentialServicesETL:
         """
         Generator that yields paths to trip data files for a given area and day for each season in the south atlantic region.
         """
-        season_folders = [path for path in (area / f'{day}_trip').iterdir() if path.is_dir()]
+        trip_folder = area / f'{day}_trip'
+        if not trip_folder.exists():
+            return
+
+        season_folders = [path for path in trip_folder.iterdir() if path.is_dir()]
         seasons = [path.name[-7:len(path.name)] for path in season_folders]
 
         if season is not None:
