@@ -1,7 +1,7 @@
 import styled from '@emotion/styled';
 import * as d3 from 'd3';
 import { useSearchParams } from 'react-router';
-import { CoreFrame, Section, SidebarContent, TreeMap } from '../components';
+import { CoreFrame, PageHeader, Section, SidebarContent, TreeMap } from '../components';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
 import { useAppData } from '../hooks';
@@ -168,10 +168,10 @@ function Header(props: HeaderProps) {
 
   return (
     <HeaderComponent {...props}>
-      <h2>Job Access Summaries</h2>
+      <h2>What Jobs Are Here?</h2>
       <p>
-        The tree maps below visualize the daily average number of people who use any transport modes
-        to reach their jobs, grouped by job sector.
+        These tree maps visualize the daily average number of people who use any transport mode to
+        reach their job in the selected area(s), grouped by job sector.
       </p>
       <div className="swatches">
         {domain.map((name, index) => {
@@ -191,32 +191,14 @@ function Header(props: HeaderProps) {
   );
 }
 
-const HeaderComponent = styled.div<HeaderProps>`
-  text-align: center;
-  padding: 0.5rem 0 1.5rem 0;
-  border-bottom: 1px solid lightgray;
-
-  /* span the entire grid width */
-  grid-column: 1 / -1;
-
-  h2 {
-    margin: 0;
-    color: var(--color-green1);
-  }
-
-  p {
-    margin: 0.5rem 0;
-    font-size: 14px;
-    color: var(--text-primary);
-  }
-
+const HeaderComponent = styled(PageHeader)<HeaderProps>`
   .swatches {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
     gap: 0rem 0.5rem;
-    margin-top: 0.5rem;
+    margin: 0.5rem 0.5rem 1rem;
   }
 
   .swatch {
