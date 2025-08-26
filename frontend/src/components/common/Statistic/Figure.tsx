@@ -25,14 +25,7 @@ export function Figure(props: FigureProps) {
         {Array.isArray(props.plot) ? (
           props.plot.map((plot, index) => {
             return (
-              <>
-                <PlotContainer
-                  options={plot}
-                  key={index}
-                  className="plot-container"
-                  titleTag="h4"
-                />
-              </>
+              <PlotContainer options={plot} key={index} className="plot-container" titleTag="h4" />
             );
           })
         ) : (

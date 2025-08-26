@@ -14,7 +14,7 @@ interface OptionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
 export function OptionButton(props: OptionButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const rect = useRect(ref);
-  const scale = rect.width / 100;
+  const scale = Math.max(0.0000001, rect.width / 100);
 
   const size = props.size ?? 100;
   const visible = props.visible ?? true;

@@ -29,9 +29,9 @@ function Sections() {
   const { jobDataByArea, domain, colorScheme } = useJobData();
 
   return [
-    ...jobDataByArea.map((areaData) => {
+    ...jobDataByArea.map((areaData, index) => {
       return (
-        <Section title={areaData.name} noGrid flexParent>
+        <Section title={areaData.name} noGrid flexParent key={index}>
           <TreeMap
             data={areaData}
             style={{ flexGrow: 1, flexShrink: 1 }}
@@ -178,7 +178,7 @@ function Header(props: HeaderProps) {
           const color = colorScheme[index % colorScheme.length];
 
           return (
-            <div className="swatch">
+            <div className="swatch" key={name}>
               <svg width={16} height={16}>
                 <rect width={16} height={16} rx={3} ry={3} fill={color} />
               </svg>

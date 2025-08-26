@@ -112,7 +112,7 @@ function Sections() {
   })();
 
   return [
-    <Section title="Coverage">
+    <Section title="Coverage" key={0}>
       <Statistic.Number
         wrap
         label="Route length"
@@ -152,7 +152,7 @@ function Sections() {
         unit="square miles"
       />
     </Section>,
-    <Section title="Work and School">
+    <Section title="Work and School" key={1}>
       <Statistic.Percent
         wrap
         label="Trips currently using public transit"

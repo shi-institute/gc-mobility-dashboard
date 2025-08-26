@@ -48,7 +48,7 @@ export function RoadsVsTransit() {
           />
         </div>
       }
-      sections={[<Comparison />]}
+      sections={[<Comparison key={0} />]}
       disableSectionColumns
     />
   );
