@@ -1,12 +1,22 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { useState } from 'react';
-import { CoreFrame, Map, PageHeader, Section, SidebarContent, Statistic } from '../components';
+import { useContext, useState } from 'react';
+import {
+  Button,
+  CoreFrame,
+  CoreFrameContext,
+  Map,
+  PageHeader,
+  Section,
+  SidebarContent,
+  Statistic,
+} from '../components';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
   SelectedArea,
   SelectedSeason,
   SelectTravelMethod,
+  useComparisonModeState,
 } from '../components/options';
 import { useAppData, useMapData } from '../hooks';
 import { notEmpty } from '../utils';
@@ -71,13 +81,31 @@ export function EssentialServicesAccess() {
 }
 
 function SectionsHeader() {
+  const [isComparing] = useComparisonModeState();
+  const { areasList, seasonsList } = useAppData();
+
+  const { optionsOpen, setOptionsOpen, isFullDesktop, isMobile } = useContext(CoreFrameContext);
+
   return (
-    <PageHeader>
+    <PageHeader isComparing={isComparing}>
       <h2>Which essential services can you access via public transit?</h2>
       <p>
         Learn what percentage of the population can reach essential services via public transit and
         how long it takes.
       </p>
+      {isFullDesktop || isMobile ? null : (
+        <div className="button-row">
+          {isComparing ? (
+            <p className="message">Open options to show different areas and seasons.</p>
+          ) : (
+            <>
+              <SelectedArea areasList={areasList} />
+              <SelectedSeason seasonsList={seasonsList} />
+            </>
+          )}
+          <Button onClick={() => setOptionsOpen(!optionsOpen)}>More options</Button>
+        </div>
+      )}
     </PageHeader>
   );
 }

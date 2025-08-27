@@ -1,4 +1,5 @@
-import { createContext, useCallback, useState } from 'react';
+import { createContext, RefObject, useCallback, useState } from 'react';
+import { useRect } from '../../../hooks';
 
 export interface CoreFrameContextValue {
   optionsOpen: boolean;
@@ -8,9 +9,21 @@ export interface CoreFrameContextValue {
   fixedSidebarOpen: boolean;
   setOptionsOpen: (open: boolean) => void;
   setForceClosed: (forceClosed: boolean) => void;
+  setContainerRef: (ref: RefObject<HTMLDivElement | null>) => void;
+  isMobile: boolean;
+  isFullDesktop: boolean;
+  width: number;
 }
 
 export function createCoreFrameContextValue(): CoreFrameContextValue {
+  const [containerRef, setContainerRef] = useState<RefObject<HTMLDivElement | null>>({
+    current: null,
+  });
+  const { width } = useRect(containerRef);
+
+  const isMobile = width < 900;
+  const isFullDesktop = width >= 1280;
+
   // sidebar-related state
   const [optionsOpen, _setOptionsOpen] = useState(false);
   const setOptionsOpen = useCallback((bool: boolean) => {
@@ -64,6 +77,10 @@ export function createCoreFrameContextValue(): CoreFrameContextValue {
     setOptionsOpen,
     setForceClosed,
     fixedSidebarOpen,
+    setContainerRef,
+    isMobile,
+    isFullDesktop,
+    width,
   };
 }
 

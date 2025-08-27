@@ -1,9 +1,10 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 import {
   Button,
   CoreFrame,
+  CoreFrameContext,
   Map,
   PageHeader,
   Section,
@@ -82,10 +83,26 @@ export function FutureOpportunities() {
 }
 
 function SectionsHeader() {
+  const [isComparing] = useComparisonModeState();
+  const { scenarios } = useAppData();
+  const futureRouteIds = (scenarios.data?.futureRoutes || []).map((route) => route.__routeId);
+
+  const { optionsOpen, setOptionsOpen, isFullDesktop, isMobile } = useContext(CoreFrameContext);
+
   return (
-    <PageHeader>
+    <PageHeader isComparing={isComparing}>
       <h2>Future Transit Routes & Stops</h2>
       <p>Visualize selected future transit routes from Greenlink's transit development plan.</p>
+      {isFullDesktop || isMobile ? null : (
+        <div className="button-row">
+          {isComparing ? (
+            <p className="message">Open options to show different routes.</p>
+          ) : (
+            <SelectedFutureRoutes routeIds={futureRouteIds} />
+          )}
+          <Button onClick={() => setOptionsOpen(!optionsOpen)}>More options</Button>
+        </div>
+      )}
     </PageHeader>
   );
 }
