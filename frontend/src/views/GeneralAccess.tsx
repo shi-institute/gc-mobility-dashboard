@@ -5,6 +5,7 @@ import {
   Button,
   CoreFrame,
   DeveloperDetails,
+  ErrorBoundary,
   Map,
   PageHeader,
   Section,
@@ -42,22 +43,24 @@ export function GeneralAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%' }}>
-          <Map
-            layers={[
-              ...networkSegments,
-              paratransitServiceAreas,
-              cyclingServiceAreas,
-              walkServiceAreas,
-              routes,
-              stops,
-              ...areaPolygons,
-            ].filter(notEmpty)}
-            onMapReady={(_, view) => {
-              setMapView(view);
-            }}
-          />
-        </div>
+        <ErrorBoundary fallback={<div>Map failed to load</div>}>
+          <div style={{ height: '100%' }}>
+            <Map
+              layers={[
+                ...networkSegments,
+                paratransitServiceAreas,
+                cyclingServiceAreas,
+                walkServiceAreas,
+                routes,
+                stops,
+                ...areaPolygons,
+              ].filter(notEmpty)}
+              onMapReady={(_, view) => {
+                setMapView(view);
+              }}
+            />
+          </div>
+        </ErrorBoundary>
       }
       sections={Sections()}
     />

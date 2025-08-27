@@ -1,5 +1,6 @@
 import type { Style as MapboxStyle, VectorSource as MapboxVectorSource } from 'mapbox-gl';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { generateHash, inflateResponse, notEmpty } from '../utils';
 
 export function createAppDataContext(
@@ -40,6 +41,8 @@ export interface AppDataHookParameters {
 }
 
 function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [areasList, setAreasList] = useState<string[]>([]);
   useEffect(() => {
     fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/replica/area_index.txt')
@@ -66,6 +69,22 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
       });
   }, [setSeasonsList]);
 
+  const [scenariosList, setScenariosList] = useState<string[]>([]);
+  useEffect(() => {
+    fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/future_routes_index.txt')
+      .then((res) => res.text())
+      .then((text) => {
+        const scenariosList = text
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+        setScenariosList(scenariosList);
+      })
+      .catch((error) => {
+        console.error('Error fetching future routes index:', error);
+      });
+  }, [setScenariosList]);
+
   const travelMethodList = [
     'biking',
     'carpool',
@@ -76,6 +95,33 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     'public_transit',
     'walking',
   ];
+
+  // ensure an area is selected
+  useEffect(() => {
+    if (areas.length === 0 && areasList[0]) {
+      searchParams.set('areas', areasList[0]);
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [areas, setSearchParams]);
+
+  // ensure a season is selected
+  useEffect(() => {
+    if (seasons.length === 0 && seasonsList.length > 0) {
+      const lastSeason = seasonsList[seasonsList.length - 1];
+      if (lastSeason) {
+        searchParams.set('seasons', lastSeason);
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [seasons, setSearchParams]);
+
+  // ensure a future scenario is selected
+  useEffect(() => {
+    if (searchParams.get('futures') === null && scenariosList[0]) {
+      searchParams.set('futures', scenariosList[0]);
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [scenariosList, setSearchParams]);
 
   // fetch the census data, which is a static time series file for each category that
   // applies to all areas and seasons
@@ -263,23 +309,12 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   }, [dataPromises]);
 
   // all track the state for the scenaio data promises
-  const [scenarioDataPromises, setScenarioDataPromises] = useState<Awaited<
-    ReturnType<typeof constructScenarioDataPromises>
-  > | null>(null);
-  useEffect(() => {
-    constructScenarioDataPromises()
-      .then((promises) => {
-        setScenarioDataPromises(promises);
-      })
-      .catch((error) => {
-        console.error('An error occurred while constructing scenario data promises.', error);
-        setScenarioDataPromises(null);
-      });
-  }, [setScenarioDataPromises]);
   const [scenarioData, setScenarioData] = useState<
-    | (ResolvedData<Omit<NonNullable<typeof scenarioDataPromises>, 'futureRoutes'>> & {
+    | (ResolvedData<
+        Omit<NonNullable<ReturnType<typeof constructScenarioDataPromises>>, 'futureRoutes'>
+      > & {
         futureRoutes: ResolvedData<
-          NonNullable<typeof scenarioDataPromises>['futureRoutes'][number]
+          NonNullable<ReturnType<typeof constructScenarioDataPromises>>['futureRoutes'][number]
         >[];
       })
     | null
@@ -290,7 +325,8 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const abortController = new AbortController();
     const { signal } = abortController;
 
-    if (scenarioLoading === false && scenarioDataPromises && scenarioData === null) {
+    const scenarioDataPromises = constructScenarioDataPromises(scenariosList);
+    if (scenarioLoading === false && scenarioDataPromises) {
       setScenarioLoading(true);
       setScenarioErrors(null);
 
@@ -323,7 +359,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     return () => {
       abortController.abort('fetch effect in useAppData for scenario data is being cleaned up');
     };
-  }, [scenarioDataPromises, scenarioData]);
+  }, [scenariosList]);
 
   return {
     data,
@@ -802,22 +838,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
   });
 }
 
-async function constructScenarioDataPromises() {
-  const futureRoutesList = await fetch(
-    __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/future_routes_index.txt'
-  )
-    .then((res) => res.text())
-    .then((text) => {
-      return text
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-    })
-    .catch((error) => {
-      console.error('Error fetching future routes index:', error);
-      return [];
-    });
-
+function constructScenarioDataPromises(futureRoutesList: string[]) {
   const futureRoutesPromises = futureRoutesList.map((routeId) => {
     const folderPath = __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/' + routeId;
 

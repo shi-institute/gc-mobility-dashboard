@@ -1,5 +1,6 @@
 import styled from '@emotion/styled';
 import * as d3 from 'd3';
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { CoreFrame, PageHeader, Section, SidebarContent, TreeMap } from '../components';
 import { AppNavigation } from '../components/navigation';
@@ -8,6 +9,30 @@ import { useAppData } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function JobAccess() {
+  // if no areas or seasons are selected, use the ones from tab 1
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (!searchParams.get('jobAreas')) {
+      const areas = searchParams.get('areas');
+      const seasons = searchParams.get('seasons');
+      if (areas && seasons) {
+        const jobAreas = areas
+          .split(',')
+          .filter(notEmpty)
+          .flatMap((area) =>
+            seasons
+              .split(',')
+              .filter(notEmpty)
+              .map((season) => `${area}::${season}`)
+          );
+        if (jobAreas.length > 0) {
+          searchParams.set('jobAreas', jobAreas.join(','));
+          setSearchParams(searchParams, { replace: true });
+        }
+      }
+    }
+  }, [searchParams, setSearchParams]);
+
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
