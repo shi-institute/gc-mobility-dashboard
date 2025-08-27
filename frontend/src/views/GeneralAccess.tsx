@@ -1,9 +1,10 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useLocation } from 'react-router';
 import {
   Button,
   CoreFrame,
+  CoreFrameContext,
   DeveloperDetails,
   ErrorBoundary,
   Map,
@@ -19,6 +20,7 @@ import {
   SelectedArea,
   SelectedSeason,
   SelectTravelMethod,
+  useComparisonModeState,
 } from '../components/options';
 import { useAppData, useMapData } from '../hooks';
 import { listOxford, notEmpty, requireKey, toTidyNominal } from '../utils';
@@ -68,12 +70,29 @@ export function GeneralAccess() {
 }
 
 function SectionsHeader() {
-  const { data } = useAppData();
+  const [isComparing] = useComparisonModeState();
+  const { data, areasList, seasonsList } = useAppData();
+
+  const { optionsOpen, setOptionsOpen, isFullDesktop, isMobile } = useContext(CoreFrameContext);
+
   const uniqueAreaNames = Array.from(new Set((data || []).map((area) => area.__area))).sort();
 
   return (
-    <PageHeader>
+    <PageHeader isComparing={isComparing}>
       <h2>{listOxford(uniqueAreaNames)}</h2>
+      {isFullDesktop || isMobile ? null : (
+        <div className="button-row">
+          {isComparing ? (
+            <p className="message">Open options to show different areas and seasons.</p>
+          ) : (
+            <>
+              <SelectedArea areasList={areasList} />
+              <SelectedSeason seasonsList={seasonsList} />
+            </>
+          )}
+          <Button onClick={() => setOptionsOpen(!optionsOpen)}>More options</Button>
+        </div>
+      )}
     </PageHeader>
   );
 }

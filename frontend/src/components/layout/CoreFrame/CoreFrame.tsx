@@ -1,6 +1,5 @@
 import styled from '@emotion/styled';
-import { useContext, useRef, useState } from 'react';
-import { useRect } from '../../../hooks';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { Tab } from '../../common';
 import { CoreFrameContext } from './CoreFrameContext';
 import { SidebarWrapper } from './SidebarWrapper';
@@ -27,14 +26,14 @@ interface CoreFrameProps {
 
 export function CoreFrame(props: CoreFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { width } = useRect(containerRef);
-
-  const isMobile = width < 900;
-  const isFullDesktop = width >= 1280;
 
   const [activeMobileSection, setActiveMobileSection] = useState(0);
 
-  const { fixedSidebarOpen } = useContext(CoreFrameContext);
+  const { fixedSidebarOpen, setContainerRef, isMobile, isFullDesktop, width } =
+    useContext(CoreFrameContext);
+  useEffect(() => {
+    setContainerRef(containerRef);
+  }, [containerRef]);
 
   return (
     <Container ref={containerRef}>
