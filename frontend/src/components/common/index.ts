@@ -1,5 +1,6 @@
 export { Button } from './Button/Button';
 export { DeveloperDetails } from './DeveloperDetails/DeveloperDetails';
+export { ErrorBoundary } from './ErrorBoundary/ErrorBoundary';
 export { IconButton } from './IconButton/IconButton';
 export { Map } from './Map/Map';
 export { NavBar } from './NavBarItem/NavBar';
