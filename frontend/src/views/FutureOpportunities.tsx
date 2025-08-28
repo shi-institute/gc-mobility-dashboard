@@ -49,7 +49,9 @@ export function FutureOpportunities() {
     futureWalkServiceAreas,
     futureCyclingServiceAreas,
     futureParatransitServiceAreas,
-  } = useFutureMapData(scenariosData.data?.futureRoutes || [], selectedRouteIds);
+  } = useFutureMapData(scenariosData.data?.futureRoutes || [], selectedRouteIds, mapView, {
+    zoomTo: 'paratransit',
+  });
 
   return (
     <CoreFrame

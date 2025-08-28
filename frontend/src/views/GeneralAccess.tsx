@@ -38,7 +38,7 @@ export function GeneralAccess() {
     walkServiceAreas,
     cyclingServiceAreas,
     paratransitServiceAreas,
-  } = useMapData(data, mapView);
+  } = useMapData(data, mapView, { zoomTo: 'areas' });
 
   return (
     <CoreFrame

@@ -10,6 +10,8 @@ import { notEmpty } from '../utils';
 
 export function RoadsVsTransit() {
   const { data, loading, scenarios: scenariosData } = useAppData();
+
+  const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
     areaPolygons,
     routes,
@@ -24,7 +26,9 @@ export function RoadsVsTransit() {
     futureWalkServiceAreas,
     futureCyclingServiceAreas,
     futureParatransitServiceAreas,
-  } = useFutureMapData(scenariosData.data?.futureRoutes || []);
+  } = useFutureMapData(scenariosData.data?.futureRoutes || [], undefined, mapView, {
+    zoomTo: 'routes',
+  });
 
   return (
     <CoreFrame
@@ -48,6 +52,9 @@ export function RoadsVsTransit() {
               stops,
               ...areaPolygons,
             ].filter(notEmpty)}
+            onMapReady={(_, view) => {
+              setMapView(view);
+            }}
           />
         </div>
       }
