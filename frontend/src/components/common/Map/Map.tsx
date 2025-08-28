@@ -12,6 +12,7 @@ import '@arcgis/map-components/components/arcgis-scale-range-slider';
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRect } from '../../../hooks';
 import { debounce, notEmpty } from '../../../utils';
 import { Button } from '../Button/Button';
 import { IconButton } from '../IconButton/IconButton';
@@ -26,6 +27,7 @@ interface MapProps {
 
 export function Map(props: MapProps) {
   const mapElem = useRef<HTMLArcgisMapElement>(null);
+  const { height: mapHeight } = useRect(mapElem);
 
   // track when the map is ready or is replaced
   const [map, setMap] = useState<__esri.Map | null>(null);
@@ -456,7 +458,7 @@ export function Map(props: MapProps) {
         <arcgis-placement position="bottom-left">
           <div>
             {showLayerList ? (
-              <LayerListContainer>
+              <LayerListContainer mapHeight={mapHeight}>
                 <IconButton
                   className="collapse-button"
                   onClick={() => setShowLayerList(false)}
@@ -469,31 +471,35 @@ export function Map(props: MapProps) {
                     />
                   </svg>
                 </IconButton>
-                {consolidateSymbols(symbols).map((layer) => {
-                  if (!layer.symbolHTML) {
-                    return null;
-                  }
+                <section>
+                  {consolidateSymbols(symbols).map((layer) => {
+                    if (!layer.symbolHTML) {
+                      return null;
+                    }
 
-                  return (
-                    <article key={layer.id}>
-                      <div
-                        className="symbol"
-                        dangerouslySetInnerHTML={{ __html: layer.symbolHTML.outerHTML }}
-                      />
-                      <h1>{layer.title}</h1>
-                    </article>
-                  );
-                })}
-                <arcgis-expand label="Layers">
-                  <arcgis-layer-list
-                    position="manual"
-                    drag-enabled
-                    show-errors
-                    show-filter
-                    show-temporary-layer-indicators
-                    visibility-appearance="checkbox"
-                  />
-                </arcgis-expand>
+                    return (
+                      <article key={layer.id}>
+                        <div
+                          className="symbol"
+                          dangerouslySetInnerHTML={{ __html: layer.symbolHTML.outerHTML }}
+                        />
+                        <h1>{layer.title}</h1>
+                      </article>
+                    );
+                  })}
+                </section>
+                <div className="footer">
+                  <arcgis-expand label="Layers">
+                    <arcgis-layer-list
+                      position="manual"
+                      drag-enabled
+                      show-errors
+                      show-filter
+                      show-temporary-layer-indicators
+                      visibility-appearance="checkbox"
+                    />
+                  </arcgis-expand>
+                </div>
               </LayerListContainer>
             ) : (
               <Button onClick={() => setShowLayerList(true)}>Legend</Button>
@@ -520,18 +526,27 @@ const SegmentedControlContainer = styled.div`
   }
 `;
 
-const LayerListContainer = styled.aside`
+const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
   background-color: white;
   border-radius: var(--surface-radius);
-  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   position: relative;
+  max-height: ${({ mapHeight }) => (mapHeight ? `${mapHeight - 80}px` : '300px')};
 
   box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
     inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay),
     0 0.25em 0.75em 0.25em var(--control-stroke-default);
+
+  section {
+    max-height: ${({ mapHeight }) => (mapHeight ? `${mapHeight - 80}px` : '300px')};
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    padding-right: 3rem;
+  }
 
   article {
     display: flex;
@@ -579,7 +594,7 @@ const LayerListContainer = styled.aside`
     background-color: transparent;
     border: none;
     padding: 0.25rem;
-    cursor: pointer;
+    cursor: default;
 
     &:hover {
       background-color: var(--subtle-fill-secondary);
@@ -592,9 +607,15 @@ const LayerListContainer = styled.aside`
     }
   }
 
+  .footer {
+    padding: 1rem;
+    border-top: 1px solid lightgray;
+  }
+
   .esri-widget--button {
     width: 160px;
     position: relative;
+    cursor: default;
     .esri-collapse__icon {
       display: none;
     }
@@ -619,7 +640,7 @@ const LayerListContainer = styled.aside`
         inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
       border-radius: var(--button-radius);
       text-decoration: none;
-      color: inherit;
+      color: var(--text-primary);
       user-select: none;
       background-color: #fff;
       flex-wrap: nowrap;
