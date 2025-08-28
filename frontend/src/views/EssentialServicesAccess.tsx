@@ -43,7 +43,7 @@ export function EssentialServicesAccess() {
     urgentCareFacilities,
     childCareCenters,
     commercialZones,
-  } = useMapData(data, mapView);
+  } = useMapData(data, mapView, { zoomTo: 'areas' });
 
   return (
     <CoreFrame

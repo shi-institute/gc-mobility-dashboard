@@ -1,5 +1,4 @@
 import Color from '@arcgis/core/Color';
-import * as unionOperator from '@arcgis/core/geometry/operators/unionOperator.js';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
 import { CustomContent, FieldsContent } from '@arcgis/core/popup/content';
 import PopupTemplate from '@arcgis/core/PopupTemplate.js';
@@ -10,7 +9,7 @@ import { useEffect, useMemo } from 'react';
 import { useAppData } from '.';
 import { Section, Statistic } from '../components';
 import { GeoJSONLayerInit } from '../components/common/Map/types';
-import { createPopupRoot, notEmpty, requireKey } from '../utils';
+import { createPopupRoot, notEmpty, requireKey, zoomToLayers } from '../utils';
 import { createBusStopRenderer, createInterestAreaRenderer } from '../utils/renderers';
 
 type AppData = ReturnType<typeof useAppData>['data'];
@@ -18,7 +17,11 @@ type AppFutureRoutesData = NonNullable<
   ReturnType<typeof useAppData>['scenarios']['data']
 >['futureRoutes'];
 
-export function useMapData(data: AppData, view?: __esri.MapView | null) {
+interface MapDataOptions {
+  zoomTo: 'areas';
+}
+
+export function useMapData(data: AppData, view?: __esri.MapView | null, options?: MapDataOptions) {
   const networkSegments = useMemo(() => {
     const validSegmentsStylesByAreaAndSeason = (data || [])
       .filter(notEmpty)
@@ -113,35 +116,17 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
   }, [data]);
 
   useEffect(() => {
-    view?.when(async () => {
+    if (!view || options?.zoomTo !== 'areas') {
+      return;
+    }
+
+    view.when(async () => {
       if (areaPolygons.length > 0) {
-        const layers = view.map?.allLayers;
         const layersToFocusIds = areaPolygons.map((layer) => layer.id);
-
-        const foundLayers = layers
-          ?.filter((layer) => layersToFocusIds.includes(layer.id))
-          .toArray();
-
-        const promises =
-          foundLayers
-            ?.map((layer): Promise<{ count: number; extent: __esri.Extent }> | null => {
-              return layer.when(() => {
-                if (!('queryExtent' in layer) || typeof layer.queryExtent != 'function') {
-                  return null;
-                }
-                return layer.queryExtent() as Promise<{ count: number; extent: __esri.Extent }>;
-              });
-            })
-            .filter(notEmpty) || [];
-
-        const layerExtents = await Promise.all(promises);
-
-        const extentUnion = unionOperator.executeMany(layerExtents.map(({ extent }) => extent));
-
-        view?.goTo(extentUnion, { animate: true, duration: 1000 }); //.catch(console.error);
+        zoomToLayers(view, layersToFocusIds);
       }
     });
-  }, [view, areaPolygons]);
+  }, [view, options, areaPolygons]);
 
   function calculateRidership(allAreas = false) {
     const filteredData = (data || [])
@@ -753,6 +738,10 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
   };
 }
 
+interface FutureMapDataOptions {
+  zoomTo: 'paratransit' | 'routes';
+}
+
 /**
  * Returns layers for an ArcGIS map that represent future routes, stops, and service areas.
  *
@@ -761,7 +750,12 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
  *                        If not provided, all future routes will be included.
  * @returns
  */
-export function useFutureMapData(data: AppFutureRoutesData, allowedRouteIds?: string[]) {
+export function useFutureMapData(
+  data: AppFutureRoutesData,
+  allowedRouteIds?: string[],
+  view?: __esri.MapView | null,
+  options?: FutureMapDataOptions
+) {
   const filteredData = allowedRouteIds
     ? data.filter((d) => allowedRouteIds.includes(d.__routeId))
     : data;
@@ -785,6 +779,19 @@ export function useFutureMapData(data: AppFutureRoutesData, allowedRouteIds?: st
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
+
+  useEffect(() => {
+    if (!view || options?.zoomTo !== 'routes') {
+      return;
+    }
+
+    view.when(async () => {
+      if (futureRoutes.length > 0) {
+        const layersToFocusIds = futureRoutes.map((layer) => layer.id);
+        zoomToLayers(view, layersToFocusIds);
+      }
+    });
+  }, [view, options, futureRoutes]);
 
   const futureStops = useMemo(() => {
     return filteredData
@@ -846,6 +853,19 @@ export function useFutureMapData(data: AppFutureRoutesData, allowedRouteIds?: st
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
+
+  useEffect(() => {
+    if (!view || options?.zoomTo !== 'paratransit') {
+      return;
+    }
+
+    view.when(async () => {
+      if (futureParatransitServiceAreas.length > 0) {
+        const layersToFocusIds = futureParatransitServiceAreas.map((layer) => layer.id);
+        zoomToLayers(view, layersToFocusIds);
+      }
+    });
+  }, [view, options, futureParatransitServiceAreas]);
 
   return {
     futureRoutes,

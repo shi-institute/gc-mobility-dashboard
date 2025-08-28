@@ -10,3 +10,4 @@ export { replaceLast } from './replaceLast';
 export { requireKey } from './requireKey';
 export { toTidyNominal } from './toTidyNominal';
 export { withOpacity } from './withOpacity';
+export { zoomToLayers } from './zoomToLayers';
