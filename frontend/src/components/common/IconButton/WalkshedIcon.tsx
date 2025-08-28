@@ -8,14 +8,14 @@ export function WalkshedIcon() {
     >
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="10"
         stroke-miterlimit="10"
         d="M5.43,405.23c-18.75.1,583.5,1.14,568.01.93"
       />
       <ellipse
-        fill="#000"
-        stroke="#000"
+        fill="currentColor"
+        stroke="currentColor"
         stroke-width="10"
         stroke-miterlimit="10"
         cx="275.81"
@@ -25,42 +25,42 @@ export function WalkshedIcon() {
       />
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="60"
         stroke-miterlimit="10"
         d="M275.81,131.81c0-6.8,0,105.99,0,103.34"
       />
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="25"
         stroke-miterlimit="10"
         d="M294.05,123.57c-3.21-3.57,84.39,91.88,83.67,90.87"
       />
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="25"
         stroke-miterlimit="10"
         d="M257.61,123.48c1.41-1.06-67.95,51.34-64.3,48.57"
       />
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="25"
         stroke-miterlimit="10"
         d="M193.18,175.38c-.84-1.69,29.94,58.88,26.64,52.49"
       />
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="35"
         stroke-miterlimit="10"
         d="M288.98,247.41c-4.44-5.9,89.91,119.89,82.63,110.09"
       />
       <path
         fill="none"
-        stroke="#000"
+        stroke="currentColor"
         stroke-width="36"
         stroke-miterlimit="10"
         d="M262.23,244.32c3.99-7.34-68.34,125.67-64.29,118.23"
