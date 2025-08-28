@@ -23,11 +23,12 @@ import type { GeoJSONLayerInit } from './types';
 interface MapProps {
   layers: (GeoJSONLayerInit | WebTileLayer | VectorTileLayer)[];
   onMapReady?: (map: __esri.Map, view: __esri.MapView) => void;
+  neverShowExpandedLayersListOnLoad?: boolean;
 }
 
 export function Map(props: MapProps) {
   const mapElem = useRef<HTMLArcgisMapElement>(null);
-  const { height: mapHeight } = useRect(mapElem);
+  const { height: mapHeight, width: mapWidth } = useRect(mapElem);
 
   // track when the map is ready or is replaced
   const [map, setMap] = useState<__esri.Map | null>(null);
@@ -385,7 +386,14 @@ export function Map(props: MapProps) {
       });
   }
 
-  const [showLayerList, setShowLayerList] = useState(true);
+  const [showLayerList, setShowLayerList] = useState<boolean | null>(
+    props.neverShowExpandedLayersListOnLoad ? false : null
+  );
+  useEffect(() => {
+    if (showLayerList === null && mapHeight > 0 && mapWidth > 0 && symbols && symbols.length) {
+      setShowLayerList(mapHeight !== null && mapHeight > 600 && mapWidth > 420);
+    }
+  }, [showLayerList, mapHeight, mapWidth, symbols, setShowLayerList]);
 
   return (
     <div style={{ height: '100%' }}>
