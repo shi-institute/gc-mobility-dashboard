@@ -61,11 +61,24 @@ export function Number(props: NumberProps) {
         {Array.isArray(data) ? (
           <div className="table" role="table">
             {data.map(({ label, value }, index) => {
+              const parenthesisContent = label.includes('(')
+                ? label.split('(')[1]?.replace(')', '')
+                : undefined;
+              const cleanLabel = label.includes('(') ? label.split('(')[0]?.trim() || label : label;
+
               return (
-                <React.Fragment key={label + index}>
-                  <span role="cell">{label}</span>
-                  <span role="cell">{value.toLocaleString()}</span>
-                </React.Fragment>
+                <tr role="row" key={label + index}>
+                  <td role="cell">
+                    {cleanLabel}
+                    {parenthesisContent ? (
+                      <>
+                        <br />
+                        <span className="caption">{parenthesisContent}</span>
+                      </>
+                    ) : null}
+                  </td>
+                  <td role="cell">{value.toLocaleString()}</td>
+                </tr>
               );
             })}
           </div>

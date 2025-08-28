@@ -61,15 +61,28 @@ export function Money(props: MoneyProps) {
         {Array.isArray(data) ? (
           <div className="table" role="table">
             {data.map(({ label, value }, index) => {
-              return (
-                <React.Fragment key={label + index}>
-                  <span role="cell">{label}</span>
+              const parenthesisContent = label.includes('(')
+                ? label.split('(')[1]?.replace(')', '')
+                : undefined;
+              const cleanLabel = label.includes('(') ? label.split('(')[0]?.trim() || label : label;
 
-                  <span role="cell">
+              return (
+                <tr role="row" key={label + index}>
+                  <td role="cell">
+                    {cleanLabel}
+                    {parenthesisContent ? (
+                      <>
+                        <br />
+                        <span className="caption">{parenthesisContent}</span>
+                      </>
+                    ) : null}
+                  </td>
+
+                  <td role="cell">
                     {'$'}
                     {parseFloat((typeof value === 'string' ? parseFloat(value) : value).toFixed(2))}
-                  </span>
-                </React.Fragment>
+                  </td>
+                </tr>
               );
             })}
           </div>
