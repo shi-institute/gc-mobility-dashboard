@@ -37,6 +37,15 @@ export const StatisticContainer = styled.div`
       font-size: 0.8rem;
     }
 
+    .label .caption {
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+      letter-spacing: -0.34px;
+      font-weight: 400;
+      line-height: 1.1;
+      margin-top: 0.1rem;
+    }
+
     .single-value {
       font-size: 1.5rem;
 

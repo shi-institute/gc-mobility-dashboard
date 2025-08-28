@@ -6,6 +6,8 @@ import { StatisticContainer as _StatisticContainer } from './StatisticContainer'
 export interface FigureProps {
   /** The label of the figure */
   label: string;
+  /** A short description for the statistic to provide additional clairity. */
+  description?: string;
   /** The optional SVG icon to show in front of the label */
   icon?: React.ReactElement<SVGSVGElement>;
   /** The figure to show. */
@@ -21,7 +23,11 @@ export function Figure(props: FigureProps) {
     <StatisticContainer legendBeforeTitle={props.legendBeforeTitle}>
       {props.icon}
       <div className="content">
-        <div className="label">{props.label}</div>
+        <div className="label">
+          {props.label}
+          {props.description ? <div className="caption">{props.description}</div> : null}
+        </div>
+
         {Array.isArray(props.plot) ? (
           props.plot.map((plot, index) => {
             return (

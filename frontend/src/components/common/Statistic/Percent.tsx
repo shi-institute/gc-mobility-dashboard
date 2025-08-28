@@ -6,6 +6,8 @@ import { StatisticContainer } from './StatisticContainer';
 interface PercentProps {
   /** The label of the percentage statisitc(s) */
   label: string;
+  /** A short description for the statistic to provide additional clairity. */
+  description?: string;
   /** The optional SVG icon to show with the statisitc(s) */
   icon?: React.ReactElement<SVGSVGElement>;
   /** The data to show. If multiple data objects are provided, a table will be displayed instead of a single value. */
@@ -46,7 +48,10 @@ export function Percent(props: PercentProps) {
     <StatisticContainer>
       {props.icon}
       <div className="content">
-        <div className="label">{props.label}</div>
+        <div className="label">
+          {props.label}
+          {props.description ? <div className="caption">{props.description}</div> : null}
+        </div>
         {Array.isArray(data) ? (
           <div className="table" role="table">
             {data.map(({ label, value }, index) => {
