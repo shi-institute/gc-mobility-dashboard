@@ -241,6 +241,7 @@ function Sections() {
       <Statistic.Percent
         wrap
         label="Trips that could use public transit"
+        description="Excludes existing public transit trips"
         data={futures.map(({ stats, __routeId }) => {
           const possibleConversions = stats?.possible_conversions.via_walk || 0;
           const allTrips = Object.values(stats?.methods.__all || {}).reduce(

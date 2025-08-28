@@ -205,6 +205,7 @@ function Sections() {
           <Statistic.Number
             wrap
             label="Boardings"
+            description="Sum of passengers getting on a bus"
             data={data?.map((area) => {
               const boardings = area.ridership?.area.map((stop) => stop.boarding) || [];
               const boardingsTotal = boardings.reduce((sum, value) => sum + (value || 0), 0);
@@ -218,6 +219,7 @@ function Sections() {
           <Statistic.Number
             wrap
             label="Alightings"
+            description="Sum of passengers getting off a bus"
             data={data?.map((area) => {
               const alightings = area.ridership?.area.map((stop) => stop.alighting) || [];
               const alightingsTotal = alightings.reduce((sum, value) => sum + (value || 0), 0);
@@ -295,6 +297,7 @@ function Sections() {
       <Statistic.Percent
         wrap
         label="Any trip that could use public transit"
+        description="Excludes existing public transit trips"
         data={data?.map((area) => {
           const possibleConversions =
             area.statistics?.thursday_trip.possible_conversions.via_walk || 0;

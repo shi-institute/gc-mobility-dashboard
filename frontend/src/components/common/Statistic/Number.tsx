@@ -5,6 +5,8 @@ import { StatisticContainer } from './StatisticContainer';
 interface NumberProps {
   /** The label of the numerical statisitc(s) */
   label: string;
+  /** A short description for the statistic to provide additional clairity. */
+  description?: string;
   /** The optional SVG icon to show with the statisitc(s) */
   icon?: React.ReactElement<SVGSVGElement>;
   /** The data to show. If multiple data objects are provided, a table will be displayed instead of a single value. */
@@ -57,6 +59,7 @@ export function Number(props: NumberProps) {
         <div className="label">
           {props.label}
           {props.unit && Array.isArray(data) ? <span className="unit"> ({props.unit})</span> : null}
+          {props.description ? <div className="caption">{props.description}</div> : null}
         </div>
         {Array.isArray(data) ? (
           <div className="table" role="table">

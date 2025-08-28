@@ -5,6 +5,8 @@ import { StatisticContainer } from './StatisticContainer';
 interface MoneyProps {
   /** The label of the dollar amount statistic(s) */
   label: string;
+  /** A short description for the statistic to provide additional clairity. */
+  description?: string;
   /** The optional SVG icon to show with the statistic(s) */
   icon?: React.ReactElement<SVGSVGElement>;
   /** The data to show. If multiple data objects are provided, a table will be displayed instead of a single value. */
@@ -57,6 +59,7 @@ export function Money(props: MoneyProps) {
         <div className="label">
           {props.label}
           {props.perCapita && Array.isArray(data) ? <span> per person</span> : null}
+          {props.description ? <div className="caption">{props.description}</div> : null}
         </div>
         {Array.isArray(data) ? (
           <div className="table" role="table">
