@@ -280,28 +280,26 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const abortController = new AbortController();
     const { signal } = abortController;
 
-    if (loading === false) {
-      setLoading(true);
-      setErrors(null);
-      resolveArrayOfPromiseRecords(dataPromises, signal)
-        .then((fetchedData) => {
-          if (fetchedData) {
-            setData(fetchedData);
-          }
-        })
-        .catch((error) => {
-          if (!signal.aborted) {
-            setErrors((prevErrors) => (prevErrors ? [...prevErrors, error] : [error]));
-            console.error('An error occurred while fetching data. Please try again later.', error);
-          }
-          return null;
-        })
-        .finally(() => {
-          if (!signal.aborted) {
-            setLoading(false);
-          }
-        });
-    }
+    setLoading(true);
+    setErrors(null);
+    resolveArrayOfPromiseRecords(dataPromises, signal)
+      .then((fetchedData) => {
+        if (fetchedData) {
+          setData(fetchedData);
+        }
+      })
+      .catch((error) => {
+        if (!signal.aborted) {
+          setErrors((prevErrors) => (prevErrors ? [...prevErrors, error] : [error]));
+          console.error('An error occurred while fetching data. Please try again later.', error);
+        }
+        return null;
+      })
+      .finally(() => {
+        if (!signal.aborted) {
+          setLoading(false);
+        }
+      });
 
     return () => {
       abortController.abort('fetch effect in useAppData is being cleaned up');
@@ -326,35 +324,33 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     const { signal } = abortController;
 
     const scenarioDataPromises = constructScenarioDataPromises(scenariosList);
-    if (scenarioLoading === false && scenarioDataPromises) {
-      setScenarioLoading(true);
-      setScenarioErrors(null);
+    setScenarioLoading(true);
+    setScenarioErrors(null);
 
-      const { futureRoutes, ...rest } = scenarioDataPromises;
+    const { futureRoutes, ...rest } = scenarioDataPromises;
 
-      const resolvedScenarios = resolveObjectOfPromises(rest, signal);
-      const resolvedFutureRoutes = resolveArrayOfPromiseRecords(futureRoutes, signal);
+    const resolvedScenarios = resolveObjectOfPromises(rest, signal);
+    const resolvedFutureRoutes = resolveArrayOfPromiseRecords(futureRoutes, signal);
 
-      Promise.all([resolvedScenarios, resolvedFutureRoutes])
-        .then((fetchedData) => {
-          const [scenariosData, futureRoutesData] = fetchedData;
-          if (scenariosData && futureRoutesData) {
-            setScenarioData({ ...scenariosData, futureRoutes: futureRoutesData });
-          }
-        })
-        .catch((error) => {
-          if (!signal.aborted) {
-            setScenarioErrors((prevErrors) => (prevErrors ? [...prevErrors, error] : [error]));
-            console.error('An error occurred while fetching scenario data.', error);
-          }
-          return null;
-        })
-        .finally(() => {
-          if (!signal.aborted) {
-            setScenarioLoading(false);
-          }
-        });
-    }
+    Promise.all([resolvedScenarios, resolvedFutureRoutes])
+      .then((fetchedData) => {
+        const [scenariosData, futureRoutesData] = fetchedData;
+        if (scenariosData && futureRoutesData) {
+          setScenarioData({ ...scenariosData, futureRoutes: futureRoutesData });
+        }
+      })
+      .catch((error) => {
+        if (!signal.aborted) {
+          setScenarioErrors((prevErrors) => (prevErrors ? [...prevErrors, error] : [error]));
+          console.error('An error occurred while fetching scenario data.', error);
+        }
+        return null;
+      })
+      .finally(() => {
+        if (!signal.aborted) {
+          setScenarioLoading(false);
+        }
+      });
 
     return () => {
       abortController.abort('fetch effect in useAppData for scenario data is being cleaned up');
@@ -368,6 +364,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     areasList,
     seasonsList,
     travelMethodList,
+    scenariosList,
     scenarios: {
       data: scenarioData,
       loading: scenarioLoading,

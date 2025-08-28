@@ -8,7 +8,7 @@ import { useFutureMapData, useMapData } from '../hooks/useMapData';
 import { notEmpty } from '../utils';
 
 export function RoadsVsTransit() {
-  const { data, scenarios: scenariosData } = useAppData();
+  const { data, loading, scenarios: scenariosData } = useAppData();
   const {
     areaPolygons,
     routes,
@@ -28,6 +28,7 @@ export function RoadsVsTransit() {
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
+      loading={loading || scenariosData.loading}
       header={<AppNavigation />}
       map={
         <div style={{ height: '100%' }}>

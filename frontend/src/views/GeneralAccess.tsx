@@ -26,7 +26,7 @@ import { useAppData, useMapData } from '../hooks';
 import { listOxford, notEmpty, requireKey, toTidyNominal } from '../utils';
 
 export function GeneralAccess() {
-  const { data } = useAppData();
+  const { data, loading } = useAppData();
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
     networkSegments,
@@ -41,6 +41,7 @@ export function GeneralAccess() {
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
+      loading={loading}
       header={<AppNavigation />}
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
@@ -101,7 +102,7 @@ function Sections() {
   const { data, loading, errors, travelMethodList } = useAppData();
   const { search } = useLocation();
 
-  if (loading) {
+  if (loading && !data) {
     return [
       <div key="placeholder-loading">
         <p>Loading...</p>

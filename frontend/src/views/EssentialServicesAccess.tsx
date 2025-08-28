@@ -22,7 +22,7 @@ import { useAppData, useMapData } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function EssentialServicesAccess() {
-  const { data } = useAppData();
+  const { data, loading } = useAppData();
 
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
@@ -46,6 +46,7 @@ export function EssentialServicesAccess() {
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
+      loading={loading}
       header={<AppNavigation />}
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
@@ -111,7 +112,23 @@ function SectionsHeader() {
 }
 
 function Sections() {
-  const { data } = useAppData();
+  const { data, loading, errors } = useAppData();
+
+  if (loading && !data) {
+    return [
+      <div key="placeholder-loading">
+        <p>Loading...</p>
+      </div>,
+    ];
+  }
+
+  if (errors) {
+    return [
+      <div key="placeholder-error">
+        <p>Error: {errors.join(', ')}</p>
+      </div>,
+    ];
+  }
 
   return [
     <Section title="Essential Services Access via Public Transit" key={0}>

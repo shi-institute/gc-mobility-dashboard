@@ -5,6 +5,7 @@ export { IconButton } from './IconButton/IconButton';
 export { Map } from './Map/Map';
 export { NavBar } from './NavBarItem/NavBar';
 export { NavBarItem } from './NavBarItem/NavBarItem';
+export { ProgressRing } from './ProgressRing/ProgressRing';
 export { Section } from './Section/Section';
 export { SectionEntry } from './Section/SectionEntry';
 export { SelectMany } from './Select/SelectMany';

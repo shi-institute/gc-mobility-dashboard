@@ -9,6 +9,8 @@ import { useAppData } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function JobAccess() {
+  const { loading, scenarios } = useAppData();
+
   // if no areas or seasons are selected, use the ones from tab 1
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
@@ -36,6 +38,7 @@ export function JobAccess() {
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
+      loading={loading || scenarios.loading}
       sectionsStyle={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(300px, 100%, 600px), 1fr))',
@@ -51,7 +54,23 @@ export function JobAccess() {
 }
 
 function Sections() {
-  const { jobDataByArea, domain, colorScheme } = useJobData();
+  const { jobDataByArea, domain, colorScheme, loading, errors } = useJobData();
+
+  if (loading && !jobDataByArea) {
+    return [
+      <div key="placeholder-loading">
+        <p>Loading...</p>
+      </div>,
+    ];
+  }
+
+  if (errors) {
+    return [
+      <div key="placeholder-error">
+        <p>Error: {errors.join(', ')}</p>
+      </div>,
+    ];
+  }
 
   return [
     ...jobDataByArea.map((areaData, index) => {
@@ -70,7 +89,7 @@ function Sections() {
 }
 
 function useJobData() {
-  const { data, scenarios } = useAppData();
+  const { data, loading, errors, scenarios } = useAppData();
 
   const [searchParams] = useSearchParams();
   const selectedRouteIds = (searchParams.get('jobAreas')?.split(',').filter(notEmpty) || [])
@@ -183,7 +202,13 @@ function useJobData() {
     ...d3.schemeObservable10.slice(6),
   ];
 
-  return { jobDataByArea: combinedJobData, domain, colorScheme };
+  return {
+    jobDataByArea: combinedJobData,
+    domain,
+    colorScheme,
+    loading: loading || scenarios.loading,
+    errors: errors || scenarios.errors,
+  };
 }
 
 interface HeaderProps {}

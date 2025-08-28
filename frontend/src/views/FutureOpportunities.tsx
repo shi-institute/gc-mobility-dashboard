@@ -23,7 +23,7 @@ import { useFutureMapData } from '../hooks/useMapData';
 import { notEmpty, toTidyNominal } from '../utils';
 
 export function FutureOpportunities() {
-  const { data, scenarios: scenariosData } = useAppData();
+  const { data, scenarios: scenariosData, loading } = useAppData();
 
   const [isComparing] = useComparisonModeState();
   const [searchParams] = useSearchParams();
@@ -52,6 +52,7 @@ export function FutureOpportunities() {
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
+      loading={loading || scenariosData.loading}
       header={<AppNavigation />}
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
@@ -108,8 +109,8 @@ function SectionsHeader() {
 }
 
 function Sections() {
-  const { scenarios } = useAppData();
-  const { data: scenariosData } = scenarios;
+  const { loading, errors, scenarios } = useAppData();
+  const { data: scenariosData, loading: scenariosLoading, errors: scenariosErrors } = scenarios;
   const { search } = useLocation();
 
   const [isComparing] = useComparisonModeState();
@@ -127,6 +128,30 @@ function Sections() {
     currentSearchParams.set('jobAreas', selectedRouteIds.map((id) => `${id}::future`).join(','));
     return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
   })();
+
+  if ((scenariosLoading || loading) && !scenariosData) {
+    return [
+      <div key="placeholder-loading">
+        <p>Loading...</p>
+      </div>,
+    ];
+  }
+
+  if (errors) {
+    return [
+      <div key="placeholder-error">
+        <p>Error: {errors.join(', ')}</p>
+      </div>,
+    ];
+  }
+
+  if (scenariosErrors) {
+    return [
+      <div key="placeholder-error-2">
+        <p>Error: {scenariosErrors.join(', ')}</p>
+      </div>,
+    ];
+  }
 
   return [
     <Section title="Coverage" key={0}>
