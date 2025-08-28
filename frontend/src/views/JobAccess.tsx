@@ -2,10 +2,11 @@ import styled from '@emotion/styled';
 import * as d3 from 'd3';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { CoreFrame, PageHeader, Section, SidebarContent, TreeMap } from '../components';
+import { CoreFrame, IconButton, PageHeader, Section, SidebarContent, TreeMap } from '../components';
+import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
-import { useAppData } from '../hooks';
+import { useAppData, useLocalStorage } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function JobAccess() {
@@ -216,6 +217,8 @@ interface HeaderProps {}
 function Header(props: HeaderProps) {
   const { domain, colorScheme } = useJobData();
 
+  const [showAside, setShowAside] = useLocalStorage('aside--tab-3', true);
+
   return (
     <HeaderComponent {...props}>
       <h2>What Jobs Are Here?</h2>
@@ -237,6 +240,27 @@ function Header(props: HeaderProps) {
           );
         })}
       </div>
+      {showAside ? (
+        <aside>
+          <h1>About this tab</h1>
+          <IconButton
+            onClick={() => setShowAside(false)}
+            title="Permanently dismiss this message on this device"
+          >
+            <DismissIcon size={16} />
+          </IconButton>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+          </p>
+          <p>
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
+            officia deserunt mollit anim id est laborum.
+          </p>
+        </aside>
+      ) : null}
     </HeaderComponent>
   );
 }

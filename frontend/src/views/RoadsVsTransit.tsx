@@ -1,9 +1,10 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import React, { ComponentProps, useRef, useState } from 'react';
-import { CoreFrame, IconButton, Map, OptionTrack, SelectOne } from '../components';
+import { CoreFrame, IconButton, Map, OptionTrack, PageHeader, SelectOne } from '../components';
+import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
-import { useAppData, useRect } from '../hooks';
+import { useAppData, useLocalStorage, useRect } from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
 import { notEmpty } from '../utils';
 
@@ -30,6 +31,7 @@ export function RoadsVsTransit() {
       outerStyle={{ height: '100%' }}
       loading={loading || scenariosData.loading}
       header={<AppNavigation />}
+      sectionsHeader={<SectionsHeader />}
       map={
         <div style={{ height: '100%' }}>
           <Map
@@ -53,6 +55,38 @@ export function RoadsVsTransit() {
       disableSectionColumns
     />
   );
+}
+
+function SectionsHeader() {
+  const [showAside, setShowAside] = useLocalStorage('aside--tab-5', true);
+
+  if (showAside) {
+    return (
+      <PageHeader>
+        <aside>
+          <h1>About this tab</h1>
+          <IconButton
+            onClick={() => setShowAside(false)}
+            title="Permanently dismiss this message on this device"
+          >
+            <DismissIcon size={16} />
+          </IconButton>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+          </p>
+          <p>
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
+            officia deserunt mollit anim id est laborum.
+          </p>
+        </aside>
+      </PageHeader>
+    );
+  }
+
+  return null;
 }
 
 function Comparison() {
