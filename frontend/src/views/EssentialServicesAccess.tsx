@@ -53,7 +53,7 @@ export function EssentialServicesAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%' }}>
+        <div style={{ height: '100%' }} title="Map">
           <Map
             layers={[
               ...networkSegments,
@@ -75,6 +75,7 @@ export function EssentialServicesAccess() {
             onMapReady={(_, view) => {
               setMapView(view);
             }}
+            neverShowExpandedLayersListOnLoad
           />
         </div>
       }
@@ -156,7 +157,11 @@ function Sections() {
   }
 
   return [
-    <Section title="Essential Services Access via Public Transit" key={0}>
+    <Section
+      title="Essential Services Access via Public Transit"
+      shortTitle="Via Public Transit"
+      key={0}
+    >
       <Statistic.Percent
         label="Grocery Stores"
         wrap
@@ -241,7 +246,11 @@ function Sections() {
         })}
       />
     </Section>,
-    <Section title="Recorded Average Travel Time to Essential Services via Public Transit" key={1}>
+    <Section
+      title="Recorded Average Travel Time to Essential Services via Public Transit"
+      shortTitle="Travel Time"
+      key={1}
+    >
       <Statistic.Number
         label="Grocery Stores"
         wrap

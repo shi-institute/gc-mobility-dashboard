@@ -4,6 +4,8 @@ import type { JSX } from 'react';
 interface SectionProps {
   /** The label for the section, which appears above the children's grid area */
   title: string;
+  /** The label for the section when it is being rendered as a tab in mobile mode. If missing, title will be used instead. */
+  shortTitle?: string;
   /** The heading level to use for the title. Defaults to 2 (h2). */
   level?: number;
   /**

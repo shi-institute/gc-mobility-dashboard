@@ -48,7 +48,7 @@ export function GeneralAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <ErrorBoundary fallback={<div>Map failed to load</div>}>
+        <ErrorBoundary fallback={<div>Map failed to load</div>} title="Map">
           <div style={{ height: '100%' }}>
             <Map
               layers={[

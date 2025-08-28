@@ -37,7 +37,7 @@ export function RoadsVsTransit() {
       header={<AppNavigation />}
       sectionsHeader={<SectionsHeader />}
       map={
-        <div style={{ height: '100%' }}>
+        <div style={{ height: '100%' }} title="Map">
           <Map
             layers={[
               walkServiceAreas,
@@ -58,7 +58,7 @@ export function RoadsVsTransit() {
           />
         </div>
       }
-      sections={[<Comparison key={0} />]}
+      sections={[<Comparison key={0} title="Scenarios" />]}
       disableSectionColumns
     />
   );
@@ -96,7 +96,7 @@ function SectionsHeader() {
   return null;
 }
 
-function Comparison() {
+function Comparison(_props: { title: string }) {
   const { scenarios: scenariosData } = useAppData();
   const scenarios = scenariosData.data?.scenarios?.scenarios || [];
   const mileOptions = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map(

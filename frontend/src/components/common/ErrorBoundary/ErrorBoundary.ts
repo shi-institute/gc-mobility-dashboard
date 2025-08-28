@@ -3,6 +3,8 @@ import { captureOwnerStack, Component, ErrorInfo, ReactNode } from 'react';
 interface Props {
   children: ReactNode;
   fallback: ReactNode;
+  /** The title that appears in mobile-mode tabs when the error boundary is the top-level component. */
+  title?: string;
 }
 
 interface State {
