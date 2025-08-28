@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Tab } from '../../common';
+import { ProgressRing, Tab } from '../../common';
 import { CoreFrameContext } from './CoreFrameContext';
 import { SidebarWrapper } from './SidebarWrapper';
 
@@ -22,6 +22,9 @@ interface CoreFrameProps {
 
   /** disables columns for the sections area */
   disableSectionColumns?: boolean;
+
+  /** Shows a loading indicator and a scrim that covers the content underneath. */
+  loading?: boolean;
 }
 
 export function CoreFrame(props: CoreFrameProps) {
@@ -34,6 +37,18 @@ export function CoreFrame(props: CoreFrameProps) {
   useEffect(() => {
     setContainerRef(containerRef);
   }, [containerRef]);
+
+  const [loadingDelayed, setLoadingDelayed] = useState(false);
+  useEffect(() => {
+    if (props.loading) {
+      const timeout = setTimeout(() => {
+        setLoadingDelayed(true);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+
+    setLoadingDelayed(false);
+  }, [props.loading]);
 
   return (
     <Container ref={containerRef}>
@@ -65,7 +80,7 @@ export function CoreFrame(props: CoreFrameProps) {
                     );
                   })}
               </div>
-              <MainAreaWrapper style={{ padding: '1rem' }}>
+              <MainAreaWrapper>
                 {props.sectionsHeader}
                 <MainArea
                   disableSectionColumns={props.disableSectionColumns}
@@ -92,6 +107,28 @@ export function CoreFrame(props: CoreFrameProps) {
           {props.sidebar ? (
             <SidebarWrapper frameWidth={width}>{props.sidebar}</SidebarWrapper>
           ) : null}
+          <div
+            key="loading"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1rem',
+              zIndex: loadingDelayed ? 10 : -1,
+              opacity: loadingDelayed ? 1 : 0,
+              backgroundColor: '#ffffff77',
+              backdropFilter: 'blur(14px)',
+              transition: 'opacity 300ms cubic-bezier(0.16, 1, 0.3, 1)',
+              fontSize: '1rem',
+              fontWeight: 500,
+            }}
+          >
+            <ProgressRing size={32} />
+            Downloading data
+          </div>
         </InnerFrame>
       </OuterFrame>
     </Container>
@@ -138,6 +175,8 @@ const InnerFrame = styled.div<{ fixedSidebarOpen: boolean; hasMapElement?: boole
   // gap: 1rem;
 
   transition: 120ms;
+
+  position: relative;
 
   @container core (min-width: 1280px) {
     padding-right: ${({ fixedSidebarOpen }) => (fixedSidebarOpen ? '1rem' : '0')};
