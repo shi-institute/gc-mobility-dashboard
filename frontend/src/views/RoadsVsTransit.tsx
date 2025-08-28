@@ -40,12 +40,12 @@ export function RoadsVsTransit() {
         <div style={{ height: '100%' }}>
           <Map
             layers={[
-              ...futureWalkServiceAreas,
               walkServiceAreas,
-              ...futureCyclingServiceAreas,
+              ...futureWalkServiceAreas,
               cyclingServiceAreas,
-              ...futureParatransitServiceAreas,
+              ...futureCyclingServiceAreas,
               paratransitServiceAreas,
+              ...futureParatransitServiceAreas,
               ...futureRoutes,
               routes,
               ...futureStops,
