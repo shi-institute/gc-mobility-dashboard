@@ -64,6 +64,7 @@ export function CoreFrame(props: CoreFrameProps) {
               <div style={{ gridArea: 'section-tabs' }}>
                 {[props.map, ...(props.sections || [])].filter(notEmpty).map((section, index) => {
                   const tabLabel =
+                    (section.props as Record<string, unknown>).shortTitle?.toString() ||
                     (section.props as Record<string, unknown>).title?.toString() ||
                     `Tab ${index + 1}`;
                   return (
