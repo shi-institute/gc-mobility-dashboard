@@ -50,14 +50,27 @@ export function Percent(props: PercentProps) {
         {Array.isArray(data) ? (
           <div className="table" role="table">
             {data.map(({ label, value }, index) => {
+              const parenthesisContent = label.includes('(')
+                ? label.split('(')[1]?.replace(')', '')
+                : undefined;
+              const cleanLabel = label.includes('(') ? label.split('(')[0]?.trim() || label : label;
+
               return (
-                <React.Fragment key={label + index}>
-                  <span role="cell">{label}</span>
-                  <span role="cell">
+                <tr role="row" key={label + index}>
+                  <td role="cell">
+                    {cleanLabel}
+                    {parenthesisContent ? (
+                      <>
+                        <br />
+                        <span className="caption">{parenthesisContent}</span>
+                      </>
+                    ) : null}
+                  </td>
+                  <td role="cell">
                     {value}
                     <span className="percent">%</span>
-                  </span>
-                </React.Fragment>
+                  </td>
+                </tr>
               );
             })}
           </div>

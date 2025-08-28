@@ -20,6 +20,7 @@ export const StatisticContainer = styled.div`
 
   & > .content {
     display: block;
+    width: 100%;
 
     .percent {
       font-size: 90%;
@@ -28,6 +29,8 @@ export const StatisticContainer = styled.div`
 
     .label {
       font-weight: 500;
+      line-height: 1.1;
+      margin: 0.2rem 0 0.18rem 0;
     }
 
     .label .unit {
@@ -46,13 +49,42 @@ export const StatisticContainer = styled.div`
     }
 
     .table {
-      display: grid;
+      display: table;
+      border-collapse: collapse;
       grid-template-columns: auto 1fr;
-      gap: 0 0.5rem;
-      width: 100%;
+      width: calc(100% + 2rem);
+      margin-top: 0.98rem;
+      margin-left: -1rem;
+      margin-bottom: -1rem;
+      overflow-y: hidden;
 
-      span[role='cell'] {
+      tr {
+        border-top: 1px solid lightgray;
+        border-bottom: 1px solid lightgray;
+      }
+
+      [role='cell'] {
         max-width: 120px;
+        line-height: 1.1;
+        padding: 0.5rem 0 0.5rem 1em;
+        letter-spacing: -0.34px;
+        text-indent: -1rem;
+      }
+
+      [role='cell']:first-of-type {
+        padding-right: 0.5rem;
+        padding-left: 2rem;
+      }
+
+      [role='cell']:last-of-type {
+        padding-right: 1rem;
+      }
+
+      .caption {
+        font-size: 0.825rem;
+        color: var(--text-secondary);
+        opacity: 0.8;
+        margin-left: -1rem;
       }
     }
   }
