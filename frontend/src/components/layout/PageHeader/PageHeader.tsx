@@ -1,7 +1,9 @@
 import styled from '@emotion/styled';
+import { _StyledIconButton } from '../../common/IconButton/IconButton';
 
 export const PageHeader = styled.div<{ isComparing?: boolean }>`
   text-align: center;
+  flex-shrink: 0;
   padding: 0.5rem 0 1rem 0;
   border-bottom: 1px solid lightgray;
   @container core (max-width: 899px) {
@@ -70,6 +72,46 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
       color: var(--text-secondary);
       align-self: center;
       width: 100%;
+    }
+  }
+
+  aside {
+    position: relative;
+    font-size: 0.75rem;
+    border: 1px solid lightgray;
+    padding: 0.5rem;
+    border-radius: var(--surface-radius);
+
+    ${_StyledIconButton} {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+
+      &:not(:hover):not(:active) {
+        box-shadow: none;
+        background: none;
+      }
+
+      svg {
+        block-size: 1rem;
+        inline-size: 1rem;
+      }
+    }
+
+    h1 {
+      margin: 0.25rem 0;
+      font-weight: 500;
+
+      @container core (max-width: 899px) {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  * + aside {
+    margin-top: 1rem;
+    @container core (max-width: 899px) {
+      margin-top: 0.5rem;
     }
   }
 `;

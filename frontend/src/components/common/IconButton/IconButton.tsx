@@ -111,3 +111,5 @@ const StyledButton = styled.button<{ active?: boolean }>`
 `;
 
 const StyledAnchorButton = StyledButton.withComponent('a');
+
+export { StyledButton as _StyledIconButton };
