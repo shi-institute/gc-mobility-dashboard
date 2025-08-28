@@ -53,7 +53,7 @@ export function EssentialServicesAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%' }}>
+        <div style={{ height: '100%' }} title="Map">
           <Map
             layers={[
               ...networkSegments,
