@@ -5,6 +5,7 @@ import PopupTemplate from '@arcgis/core/PopupTemplate.js';
 import { SimpleRenderer } from '@arcgis/core/renderers';
 import SizeVariable from '@arcgis/core/renderers/visualVariables/SizeVariable';
 import { SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol } from '@arcgis/core/symbols';
+import styled from '@emotion/styled';
 import { useEffect, useMemo } from 'react';
 import { useAppData } from '.';
 import { Section, Statistic } from '../components';
@@ -185,6 +186,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                 style: 'solid',
               }),
             }),
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `{Name} (${__year} ${__quarter})`,
+              content: [
+                new CustomContent({
+                  outFields: [''],
+                  creator: (_event) => {
+                    return createPopupRoot(document.createElement('div')).render(
+                      <Credits>
+                        <p>
+                          Route geometry provided by Greenlink and{' '}
+                          <a
+                            href="https://www.transit.land/terms"
+                            target="_blank"
+                            referrerPolicy="no-referrer"
+                          >
+                            Transitland
+                          </a>
+                          .
+                        </p>
+                      </Credits>
+                    );
+                  },
+                }),
+              ],
+            }),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -247,32 +274,49 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                         ) : (
                           stopRidership.map(([season, start, end, stats]) => {
                             return (
-                              <Section
-                                title={`Weekday Ridership (${start} - ${end})`}
-                                containerNameOverride="popup-section"
-                                key={season}
-                              >
-                                <Statistic.Number
-                                  wrap
-                                  label="Boardings"
-                                  data={[
-                                    {
-                                      label: season,
-                                      value: stats.boardings,
-                                    },
-                                  ]}
-                                />
-                                <Statistic.Number
-                                  wrap
-                                  label="Alightings"
-                                  data={[
-                                    {
-                                      label: season,
-                                      value: stats.alightings,
-                                    },
-                                  ]}
-                                />
-                              </Section>
+                              <>
+                                <Section
+                                  title={`Weekday Ridership (${start} - ${end})`}
+                                  containerNameOverride="popup-section"
+                                  key={season}
+                                >
+                                  <Statistic.Number
+                                    wrap
+                                    label="Boardings"
+                                    data={[
+                                      {
+                                        label: season,
+                                        value: stats.boardings,
+                                      },
+                                    ]}
+                                  />
+                                  <Statistic.Number
+                                    wrap
+                                    label="Alightings"
+                                    data={[
+                                      {
+                                        label: season,
+                                        value: stats.alightings,
+                                      },
+                                    ]}
+                                  />
+                                </Section>
+                                <Credits>
+                                  <hr />
+                                  <p>Ridership data provided by Greenlink.</p>
+                                  <p>
+                                    Route geometry from Greenlink and{' '}
+                                    <a
+                                      href="https://www.transit.land/terms"
+                                      target="_blank"
+                                      referrerPolicy="no-referrer"
+                                    >
+                                      Transitland
+                                    </a>
+                                    .
+                                  </p>
+                                </Credits>
+                              </>
                             );
                           })
                         )}
@@ -302,6 +346,39 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             data: walk_service_area,
             renderer: serviceAreaRenderer,
             visible: false,
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `Walk Service Area (${__year} ${__quarter})`,
+              content: [
+                new CustomContent({
+                  outFields: ['*'],
+                  creator: (_event) => {
+                    return createPopupRoot(document.createElement('div')).render(
+                      <>
+                        <p>
+                          Walk service areas show the areas that can access a bus stop with less
+                          than 0.5 miles of walking. Service areas take into account roads,
+                          sidewalks, and barriers.
+                        </p>
+                        <Credits>
+                          <p>
+                            Calculated from route geometry provided by Greenlink and{' '}
+                            <a
+                              href="https://www.transit.land/terms"
+                              target="_blank"
+                              referrerPolicy="no-referrer"
+                            >
+                              Transitland
+                            </a>{' '}
+                            and routing services provided by ESRI.
+                          </p>
+                        </Credits>
+                      </>
+                    );
+                  },
+                }),
+              ],
+            }),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -322,6 +399,39 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             data: bike_service_area,
             renderer: serviceAreaRenderer,
             visible: false,
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `Cycling Service Area (${__year} ${__quarter})`,
+              content: [
+                new CustomContent({
+                  outFields: ['*'],
+                  creator: (_event) => {
+                    return createPopupRoot(document.createElement('div')).render(
+                      <>
+                        <p>
+                          Cycling service areas show the areas that can access a bus stop with less
+                          than 15 minutes of cycling at an average speed of 15 miles per hour.
+                          Service areas take into account roads, sidewalks, and barriers.
+                        </p>
+                        <Credits>
+                          <p>
+                            Calculated from route geometry provided by Greenlink and{' '}
+                            <a
+                              href="https://www.transit.land/terms"
+                              target="_blank"
+                              referrerPolicy="no-referrer"
+                            >
+                              Transitland
+                            </a>{' '}
+                            and routing services provided by ESRI. .
+                          </p>
+                        </Credits>
+                      </>
+                    );
+                  },
+                }),
+              ],
+            }),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -342,6 +452,41 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             data: paratransit_service_area,
             renderer: serviceAreaRenderer,
             visible: false,
+            popupEnabled: true,
+            popupTemplate: new PopupTemplate({
+              title: `Paratransit Service Area (${__year} ${__quarter})`,
+              content: [
+                new CustomContent({
+                  outFields: ['*'],
+                  creator: (_event) => {
+                    return createPopupRoot(document.createElement('div')).render(
+                      <>
+                        <p>
+                          Paratransit service areas show the areas that are served by{' '}
+                          <a href="https://www.greenvillesc.gov/599/Paratransit-Information">
+                            Greenlink's paratransit service
+                          </a>
+                          .
+                        </p>
+                        <Credits>
+                          <p>
+                            Calculated from route geometry provided by Greenlink and{' '}
+                            <a
+                              href="https://www.transit.land/terms"
+                              target="_blank"
+                              referrerPolicy="no-referrer"
+                            >
+                              Transitland
+                            </a>
+                            .
+                          </p>
+                        </Credits>
+                      </>
+                    );
+                  },
+                }),
+              ],
+            }),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -776,6 +921,22 @@ export function useFutureMapData(
               style: 'solid',
             }),
           }),
+          popupEnabled: true,
+          popupTemplate: new PopupTemplate({
+            title: `${__routeId} (Future Route)`,
+            content: [
+              new CustomContent({
+                outFields: ['*'],
+                creator: (_event) => {
+                  return createPopupRoot(document.createElement('div')).render(
+                    <Credits>
+                      <p>Geometry provided by Greenlink.</p>
+                    </Credits>
+                  );
+                },
+              }),
+            ],
+          }),
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
@@ -805,6 +966,21 @@ export function useFutureMapData(
           renderer: createBusStopRenderer(new Color('rgba(35, 148, 0, 1)')),
           minScale: 240000, // do not show bus stops at scales larger than 1:240,000
           popupEnabled: true,
+          popupTemplate: new PopupTemplate({
+            title: `{stop_name} (Future Stop)`,
+            content: [
+              new CustomContent({
+                outFields: ['*'],
+                creator: (_event) => {
+                  return createPopupRoot(document.createElement('div')).render(
+                    <Credits>
+                      <p>Points provided by Greenlink.</p>
+                    </Credits>
+                  );
+                },
+              }),
+            ],
+          }),
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
@@ -820,6 +996,32 @@ export function useFutureMapData(
           data: walk_service_area,
           renderer: futureServiceAreaRenderer,
           visible: false,
+          popupEnabled: true,
+          popupTemplate: new PopupTemplate({
+            title: `Walk Service Area (${__routeId}) (Future Route)`,
+            content: [
+              new CustomContent({
+                outFields: ['*'],
+                creator: (_event) => {
+                  return createPopupRoot(document.createElement('div')).render(
+                    <>
+                      <p>
+                        Walk service areas show the areas that can access a bus stop with less than
+                        0.5 miles of walking. Service areas take into account roads, sidewalks, and
+                        barriers.
+                      </p>
+                      <Credits>
+                        <p>
+                          Calculated from route geometry provided by Greenlink and routing services
+                          provided by ESRI.
+                        </p>
+                      </Credits>
+                    </>
+                  );
+                },
+              }),
+            ],
+          }),
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
@@ -835,6 +1037,32 @@ export function useFutureMapData(
           data: bike_service_area,
           renderer: futureServiceAreaRenderer,
           visible: false,
+          popupEnabled: true,
+          popupTemplate: new PopupTemplate({
+            title: `Cycling Service Area (${__routeId}) (Future Route)`,
+            content: [
+              new CustomContent({
+                outFields: ['*'],
+                creator: (_event) => {
+                  return createPopupRoot(document.createElement('div')).render(
+                    <>
+                      <p>
+                        Cycling service areas show the areas that can access a bus stop with less
+                        than 15 minutes of cycling at an average speed of 15 miles per hour. Service
+                        areas take into account roads, sidewalks, and barriers.
+                      </p>
+                      <Credits>
+                        <p>
+                          Calculated from route geometry provided by Greenlink and routing services
+                          provided by ESRI.
+                        </p>
+                      </Credits>
+                    </>
+                  );
+                },
+              }),
+            ],
+          }),
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
@@ -850,6 +1078,34 @@ export function useFutureMapData(
           data: paratransit_service_area,
           renderer: futureServiceAreaRenderer,
           visible: false,
+          popupEnabled: true,
+          popupTemplate: new PopupTemplate({
+            title: `Paratransit Service Area (${__routeId}) (Future Route)`,
+            content: [
+              new CustomContent({
+                outFields: ['*'],
+                creator: (_event) => {
+                  return createPopupRoot(document.createElement('div')).render(
+                    <>
+                      <p>
+                        Paratransit service areas show the areas that are served by{' '}
+                        <a href="https://www.greenvillesc.gov/599/Paratransit-Information">
+                          Greenlink's paratransit service
+                        </a>
+                        .
+                      </p>
+                      <Credits>
+                        <p>
+                          Calculated from route geometry provided by Greenlink and routing services
+                          provided by ESRI.
+                        </p>
+                      </Credits>
+                    </>
+                  );
+                },
+              }),
+            ],
+          }),
         } satisfies GeoJSONLayerInit;
       });
   }, [filteredData]);
@@ -904,3 +1160,25 @@ function popupFieldsFromObject(obj: Record<string, any>) {
     };
   });
 }
+
+const Credits = styled.aside`
+  font-size: 0.825rem;
+  font-style: italic;
+  padding: 0.25rem 0;
+
+  p {
+    margin: 0.25rem 0;
+  }
+
+  hr {
+    margin: 0.5rem 0;
+    border-color: lightgray;
+    border-width: 0px;
+    border-top-width: 1px;
+    border-style: solid;
+  }
+
+  hr + p {
+    margin-top: 0;
+  }
+`;
