@@ -816,7 +816,7 @@ export function useFutureMapData(
       .map(({ walk_service_area, __routeId }) => {
         return {
           title: `0.5-Mile Walking Radius from Stops (${__routeId})`,
-          id: `walk-service-area__${__routeId}`,
+          id: `walk-service-area__future__${__routeId}`,
           data: walk_service_area,
           renderer: futureServiceAreaRenderer,
           visible: false,
@@ -831,7 +831,7 @@ export function useFutureMapData(
       .map(({ bike_service_area, __routeId }) => {
         return {
           title: `15-Minute Cycling Radius from Stops (at 15 mph) (${__routeId})`,
-          id: `bike-service-area__${__routeId}`,
+          id: `bike-service-area__future__${__routeId}`,
           data: bike_service_area,
           renderer: futureServiceAreaRenderer,
           visible: false,
@@ -846,7 +846,7 @@ export function useFutureMapData(
       .map(({ paratransit_service_area, __routeId }) => {
         return {
           title: `Paratransit Service Area (${__routeId})`,
-          id: `paratransit-service-area__${__routeId}`,
+          id: `paratransit-service-area__future__${__routeId}`,
           data: paratransit_service_area,
           renderer: futureServiceAreaRenderer,
           visible: false,

@@ -257,6 +257,132 @@ export function Map(props: MapProps) {
     }
   }
 
+  function consolidateSymbols(_symbols: typeof symbols) {
+    let futureStopsAlreadyAdded = false;
+    let futureRoutesAlreadyAdded = false;
+    let futureWalkServiceAreaAlreadyAdded = false;
+    let futureBikeServiceAreaAlreadyAdded = false;
+    let futureParatransitServiceAreaAlreadyAdded = false;
+
+    let areaBoundaryLayerAdded = false;
+    let foundMultipleAreaBoundaryLayers = false;
+
+    if (!_symbols || !_symbols.length) {
+      return [];
+    }
+
+    return _symbols
+      .filter((symbol) => {
+        if (!symbol.title) {
+          return true;
+        }
+
+        if (symbol.id.startsWith('stops__future__')) {
+          if (futureStopsAlreadyAdded) {
+            return false;
+          } else {
+            futureStopsAlreadyAdded = true;
+            return true;
+          }
+        }
+
+        if (symbol.id.startsWith('future_route__')) {
+          if (futureRoutesAlreadyAdded) {
+            return false;
+          } else {
+            futureRoutesAlreadyAdded = true;
+            return true;
+          }
+        }
+
+        if (symbol.id.startsWith('area-polygon__')) {
+          if (areaBoundaryLayerAdded) {
+            foundMultipleAreaBoundaryLayers = true;
+            return false;
+          } else {
+            areaBoundaryLayerAdded = true;
+            return true;
+          }
+        }
+
+        if (symbol.id.startsWith('walk-service-area__future__')) {
+          if (futureWalkServiceAreaAlreadyAdded) {
+            return false;
+          } else {
+            futureWalkServiceAreaAlreadyAdded = true;
+            return true;
+          }
+        }
+
+        if (symbol.id.startsWith('bike-service-area__future__')) {
+          if (futureBikeServiceAreaAlreadyAdded) {
+            return false;
+          } else {
+            futureBikeServiceAreaAlreadyAdded = true;
+            return true;
+          }
+        }
+
+        if (symbol.id.startsWith('paratransit-service-area__future__')) {
+          if (futureParatransitServiceAreaAlreadyAdded) {
+            return false;
+          } else {
+            futureParatransitServiceAreaAlreadyAdded = true;
+            return true;
+          }
+        }
+
+        return true;
+      })
+      .map((symbol) => {
+        if (symbol.id.startsWith('stops__future__')) {
+          return {
+            ...symbol,
+            title: 'Future Stops',
+          };
+        }
+
+        if (symbol.id.startsWith('future_route__')) {
+          return {
+            ...symbol,
+            title: 'Future Routes',
+          };
+        }
+
+        if (symbol.id.startsWith('area-polygon__')) {
+          return {
+            ...symbol,
+            title: foundMultipleAreaBoundaryLayers
+              ? 'Selected Areas Boundaries'
+              : 'Selected Area Boundary',
+          };
+        }
+
+        if (symbol.id.startsWith('walk-service-area__future__')) {
+          return {
+            ...symbol,
+            title: 'Future Route Walk Service Area',
+          };
+        }
+
+        if (symbol.id.startsWith('bike-service-area__future__')) {
+          return {
+            ...symbol,
+            title: 'Future Route Bike Service Area',
+          };
+        }
+
+        if (symbol.id.startsWith('paratransit-service-area__future__')) {
+          return {
+            ...symbol,
+            title: 'Future Route Paratransit Service Area',
+          };
+        }
+
+        return symbol;
+      });
+  }
+
   const [showLayerList, setShowLayerList] = useState(true);
 
   return (
@@ -343,7 +469,7 @@ export function Map(props: MapProps) {
                     />
                   </svg>
                 </IconButton>
-                {symbols?.map((layer) => {
+                {consolidateSymbols(symbols).map((layer) => {
                   if (!layer.symbolHTML) {
                     return null;
                   }
