@@ -75,6 +75,7 @@ export function EssentialServicesAccess() {
             onMapReady={(_, view) => {
               setMapView(view);
             }}
+            neverShowExpandedLayersListOnLoad
           />
         </div>
       }
