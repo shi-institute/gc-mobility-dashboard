@@ -8,8 +8,7 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
   border-bottom: 1px solid lightgray;
   @container core (max-width: 899px) {
     padding: 0rem 0.5rem;
-    margin-top: -0.5rem;
-    margin-bottom: -0.5rem;
+    margin-bottom: -1rem;
     border-bottom: none;
   }
 
