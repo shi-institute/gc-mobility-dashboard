@@ -215,6 +215,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null) {
         .map(({ __quarter, __year, stops }) => {
           return {
             title: `Stops (${__year} ${__quarter})`,
+            id: `stops__${__year}_${__quarter}`,
             data: stops,
             renderer: createBusStopRenderer(),
             minScale: 240000, // do not show bus stops at scales larger than 1:240,000
@@ -792,6 +793,7 @@ export function useFutureMapData(data: AppFutureRoutesData, allowedRouteIds?: st
       .map(({ stops, __routeId }) => {
         return {
           title: `Stops (${__routeId})`,
+          id: `stops__future__${__routeId}`,
           data: stops,
           renderer: createBusStopRenderer(new Color('rgba(35, 148, 0, 1)')),
           minScale: 240000, // do not show bus stops at scales larger than 1:240,000
