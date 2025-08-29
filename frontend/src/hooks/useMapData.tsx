@@ -230,6 +230,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             id: `stops__${__year}_${__quarter}`,
             data: stops,
             renderer: createBusStopRenderer(),
+            objectIdField: 'ID',
             minScale: 240000, // do not show bus stops at scales larger than 1:240,000
             popupEnabled: true,
             popupTemplate: new PopupTemplate({

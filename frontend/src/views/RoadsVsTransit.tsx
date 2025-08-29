@@ -1,12 +1,19 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import React, { ComponentProps, useRef, useState } from 'react';
-import { CoreFrame, IconButton, Map, OptionTrack, PageHeader, SelectOne } from '../components';
+import React, { ComponentProps, useEffect, useRef, useState } from 'react';
+import {
+  CoreFrame,
+  IconButton,
+  OptionTrack,
+  PageHeader,
+  SelectOne,
+  Map as WebMap,
+} from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
 import { useAppData, useLocalStorage, useRect } from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
-import { notEmpty } from '../utils';
+import { notEmpty, requireKey } from '../utils';
 
 export function RoadsVsTransit() {
   const { data, loading, scenarios: scenariosData } = useAppData();
@@ -38,7 +45,7 @@ export function RoadsVsTransit() {
       sectionsHeader={<SectionsHeader />}
       map={
         <div style={{ height: '100%' }} title="Map">
-          <Map
+          <WebMap
             layers={[
               walkServiceAreas,
               ...futureWalkServiceAreas,
@@ -58,7 +65,7 @@ export function RoadsVsTransit() {
           />
         </div>
       }
-      sections={[<Comparison key={0} title="Scenarios" />]}
+      sections={[<Comparison key={0} title="Scenarios" mapView={mapView} />]}
       disableSectionColumns
     />
   );
@@ -96,7 +103,7 @@ function SectionsHeader() {
   return null;
 }
 
-function Comparison(_props: { title: string }) {
+function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
   const { scenarios: scenariosData } = useAppData();
   const scenarios = scenariosData.data?.scenarios?.scenarios || [];
   const mileOptions = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map(
@@ -180,6 +187,7 @@ function Comparison(_props: { title: string }) {
               optionLabel={optionLabel}
               scenarios={buttonScenarios}
               transitioning={transitioning}
+              mapView={props.mapView}
             />
           </ButtonInterior>
         </>
@@ -270,6 +278,7 @@ interface TrackButtonExpandedContentProps {
   optionLabel: string;
   scenarios: Scenario[];
   transitioning: boolean;
+  mapView: __esri.MapView | null;
 }
 
 function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
@@ -283,6 +292,97 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   const scenario =
     selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
   const feature = scenario?.features?.[selectedFeatureIndex];
+
+  // get the routes and stops layers from the map view
+  // so that we can hihglight relevant route and stop features as needed
+  const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
+  const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
+  useEffect(() => {
+    props.mapView?.when(() => {
+      const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
+        (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
+      );
+
+      const routeLayers = geoJsonLayers.filter((layer) => {
+        return layer.id.startsWith('future_route__');
+      });
+
+      const stopsLayer = geoJsonLayers.find(
+        (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
+      );
+
+      setRouteLayers(routeLayers || null);
+      setStopsLayer(stopsLayer || null);
+    });
+  }, [props.mapView, setRouteLayers]);
+
+  // get the layer views, which allow us to highlight and apply effects
+  const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
+  const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
+  useEffect(() => {
+    if (!props.mapView || !stopsLayer) {
+      return;
+    }
+
+    stopsLayer.on('layerview-create', (evt) => {
+      const layerView = evt.layerView as __esri.GeoJSONLayerView;
+      setStopsLayerView(layerView);
+    });
+  }, [props.mapView, stopsLayer]);
+  useEffect(() => {
+    if (!props.mapView || !routeLayers) {
+      return;
+    }
+
+    routeLayers.forEach((routeLayer) => {
+      routeLayer.on('layerview-create', (evt) => {
+        const layerView = evt.layerView as __esri.GeoJSONLayerView;
+        setStopsLayerView(layerView);
+      });
+    });
+  }, [props.mapView, routeLayers]);
+
+  // build a mapping of line_id to layer id for the route layers
+  // so that we can easily find the right layer to highlight for a given line_id
+  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const promises = Array.from(routeLayers || []).map(async (layer) => {
+      return await layer
+        .queryFeatures(undefined, { signal: abortController.signal })
+        .then((featureSet) => {
+          const lineIds = featureSet.features.map(
+            (feature) => feature.attributes.line_id as string
+          );
+          const uniqueLineIds = Array.from(new Set(lineIds));
+
+          if (uniqueLineIds.length > 1) {
+            console.warn(`Layer ${layer.id} has multiple line_ids:`, uniqueLineIds);
+          }
+
+          return {
+            layerId: layer.id,
+            lineId: uniqueLineIds[0],
+          };
+        });
+    });
+
+    Promise.all(promises).then((results) => {
+      const validResults = results.filter(requireKey('lineId'));
+
+      const lineIdToLayerIdMap = new Map<string, string>();
+      validResults.forEach((result) => {
+        lineIdToLayerIdMap.set(result.lineId, result.layerId);
+      });
+
+      setLineIdToLayerIdMap(lineIdToLayerIdMap);
+    });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [routeLayers, setLineIdToLayerIdMap]);
 
   if (scenario && !props.transitioning) {
     if (!feature) {
@@ -391,6 +491,10 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       }
 
       if (feature.type === 'addition') {
+        const routeLayersIds = feature.routeIds.map((lineId) => {
+          return lineIdToLayerIdMap.get(lineId);
+        });
+
         return (
           <Shell>
             <span className="number">{feature.routeIds.length}</span>
