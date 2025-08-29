@@ -2,7 +2,15 @@ import styled from '@emotion/styled';
 import * as d3 from 'd3';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { CoreFrame, IconButton, PageHeader, Section, SidebarContent, TreeMap } from '../components';
+import {
+  CoreFrame,
+  IconButton,
+  PageHeader,
+  renderSections,
+  Section,
+  SidebarContent,
+  TreeMap,
+} from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
@@ -55,25 +63,9 @@ export function JobAccess() {
 }
 
 function Sections() {
-  const { jobDataByArea, domain, colorScheme, loading, errors } = useJobData();
+  const { jobDataByArea, domain, colorScheme } = useJobData();
 
-  if (loading && !jobDataByArea) {
-    return [
-      <div key="placeholder-loading">
-        <p>Loading...</p>
-      </div>,
-    ];
-  }
-
-  if (errors) {
-    return [
-      <div key="placeholder-error">
-        <p>Error: {errors.join(', ')}</p>
-      </div>,
-    ];
-  }
-
-  return [
+  return renderSections([
     ...jobDataByArea.map((areaData, index) => {
       return (
         <Section title={areaData.name} noGrid flexParent key={index}>
@@ -86,7 +78,7 @@ function Sections() {
         </Section>
       );
     }),
-  ];
+  ]);
 }
 
 function useJobData() {
