@@ -1,8 +1,5 @@
+import { useAppData } from '../../../hooks';
 import { Button } from '../Button/Button';
-
-interface DeveloperDetailsProps {
-  data: any[] | null;
-}
 
 /**
  * When in development mode, this component renders a details section
@@ -15,7 +12,9 @@ interface DeveloperDetailsProps {
  * without overwhelming detail, making it easier to understand the data at a glance
  * without using too much memory (rendered JSON only).
  */
-export function DeveloperDetails(props: DeveloperDetailsProps) {
+export function DeveloperDetails() {
+  const { data } = useAppData();
+
   if (!import.meta.env.DEV) {
     return null;
   }
@@ -26,10 +25,10 @@ export function DeveloperDetails(props: DeveloperDetailsProps) {
       <p>
         <strong>Data</strong>
       </p>
-      <Button onClick={() => console.log(props.data)}>Log to console</Button>
+      <Button onClick={() => console.log(data)}>Log to console</Button>
       <pre style={{ maxHeight: '400px', overflowY: 'auto' }}>
         {JSON.stringify(
-          (props.data || []).map((o) =>
+          (data || []).map((o) =>
             Object.fromEntries(
               Object.entries(o).map(([key, value]) => {
                 if (Array.isArray(value)) {
