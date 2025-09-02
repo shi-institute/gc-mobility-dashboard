@@ -294,7 +294,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   const feature = scenario?.features?.[selectedFeatureIndex];
 
   // get the routes and stops layers from the map view
-  // so that we can highlight relevant route and stop features as needed
+  // so that we can hihglight relevant route and stop features as needed
   const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
   const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
   useEffect(() => {
@@ -314,76 +314,32 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       setRouteLayers(routeLayers || null);
       setStopsLayer(stopsLayer || null);
     });
-  }, [props.mapView]);
+  }, [props.mapView, setRouteLayers]);
 
   // get the layer views, which allow us to highlight and apply effects
-
+  const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
   const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
-
   useEffect(() => {
-    if (!props.mapView || !stopsLayer) return;
-
-    const handle = stopsLayer.on('layerview-create', (evt) => {
-      setStopsLayerView(evt.layerView as __esri.GeoJSONLayerView);
-    });
-
-    return () => {
-      handle.remove();
-    };
-  }, [props.mapView, stopsLayer]);
-
-  const [stopHighlightHandle, setStopHighlightHandle] = useState<__esri.Handle | null>(null);
-
-  // Highlight stops whenever feature or stopsLayerView changes
-  useEffect(() => {
-    const highlightStops = async (stopIds: string[]) => {
-      if (!stopsLayerView) return;
-
-      // Clear any previous highlight
-      stopHighlightHandle?.remove();
-
-      // Build a WHERE clause like: stopID IN ('1287','1313','1182',...)
-      const where = `stopID IN ('${stopIds.join("','")}')`;
-
-      const results = await stopsLayerView.queryFeatures({ where });
-
-      if (results.features.length > 0) {
-        const handle = stopsLayerView.highlight(results.features);
-        setStopHighlightHandle(handle);
-      }
-    };
-
-    if (feature?.affects === 'stops' && feature.stopIds) {
-      highlightStops(feature.stopIds);
-    } else {
-      // Clear highlight if feature changes to something else
-      stopHighlightHandle?.remove();
-      setStopHighlightHandle(null);
+    if (!props.mapView || !stopsLayer) {
+      return;
     }
-  }, [feature, stopsLayerView]);
 
-  const [routeLayerViews, setRouteLayerViews] = useState<Map<string, __esri.GeoJSONLayerView>>(
-    new Map()
-  );
-
+    stopsLayer.on('layerview-create', (evt) => {
+      const layerView = evt.layerView as __esri.GeoJSONLayerView;
+      setStopsLayerView(layerView);
+    });
+  }, [props.mapView, stopsLayer]);
   useEffect(() => {
-    if (!props.mapView || !routeLayers) return;
+    if (!props.mapView || !routeLayers) {
+      return;
+    }
 
-    const handles = routeLayers.map((routeLayer) =>
+    routeLayers.forEach((routeLayer) => {
       routeLayer.on('layerview-create', (evt) => {
         const layerView = evt.layerView as __esri.GeoJSONLayerView;
-
-        setRouteLayerViews((prev) => {
-          const updated = new Map(prev);
-          updated.set(routeLayer.id, layerView);
-          return updated;
-        });
-      })
-    );
-
-    return () => {
-      handles.forEach((h) => h.remove());
-    };
+        setStopsLayerView(layerView);
+      });
+    });
   }, [props.mapView, routeLayers]);
 
   // build a mapping of line_id to layer id for the route layers
@@ -427,30 +383,6 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       abortController.abort();
     };
   }, [routeLayers, setLineIdToLayerIdMap]);
-
-  useEffect(() => {
-    const highlightStops = async (stopIds: string[]) => {
-      if (!stopsLayerView) return;
-
-      // Clear any previous highlight
-      console.log('I fucking give up');
-      stopHighlightHandle?.remove();
-      const where = `stop_id IN ('${stopIds.join("','")}')`;
-      const results = await stopsLayerView.queryFeatures({ where });
-
-      if (results.features.length > 0) {
-        const handle = stopsLayerView.highlight(results.features);
-        setStopHighlightHandle(handle);
-      }
-    };
-
-    if (feature?.affects === 'stops' && feature.stopIds) {
-      highlightStops(feature.stopIds);
-    } else {
-      stopHighlightHandle?.remove();
-      setStopHighlightHandle(null);
-    }
-  }, [feature, stopsLayerView]);
 
   if (scenario && !props.transitioning) {
     if (!feature) {
