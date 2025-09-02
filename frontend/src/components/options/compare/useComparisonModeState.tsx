@@ -11,7 +11,7 @@ export function useComparisonModeState() {
     } else {
       searchParams.delete('compare');
     }
-    setSearchParams(searchParams);
+    setSearchParams(searchParams, { replace: true });
   };
 
   return [isEnabled, setIsEnabled] as const;

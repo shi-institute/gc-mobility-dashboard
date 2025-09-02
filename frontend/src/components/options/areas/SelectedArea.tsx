@@ -27,7 +27,7 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
         searchParams.set('areas', value);
       }
     }
-    setSearchParams(searchParams);
+    setSearchParams(searchParams, { replace: true });
   }
 
   return (
