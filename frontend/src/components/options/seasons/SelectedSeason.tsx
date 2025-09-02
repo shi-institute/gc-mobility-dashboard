@@ -47,7 +47,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
         searchParams.set('seasons', value);
       }
     }
-    setSearchParams(searchParams);
+    setSearchParams(searchParams, { replace: true });
   }
 
   return (

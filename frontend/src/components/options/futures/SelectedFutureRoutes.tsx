@@ -27,7 +27,7 @@ export function SelectedFutureRoutes({ routeIds }: SelectedFutureRoutesProps) {
         searchParams.set('futures', value);
       }
     }
-    setSearchParams(searchParams);
+    setSearchParams(searchParams, { replace: true });
   }
 
   return (
