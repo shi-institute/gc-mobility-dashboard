@@ -1,5 +1,6 @@
 export { createPopupRoot } from './createPopupRoot';
 export { debounce } from './debounce';
+export { flattenObject } from './flattenObject';
 export { generateHash } from './generateHash';
 export { hasKey } from './hasKey';
 export { inflateResponse } from './inflateResponse';

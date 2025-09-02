@@ -1,3 +1,4 @@
+import { flattenObject } from '../../utils';
 import { AreaDemographics } from './AreaDemographics';
 import { Coverage } from './Coverage';
 import { EssentialServicesAccessViaPublicTransit } from './EssentialServicesAccessViaPublicTransit';
@@ -21,3 +22,30 @@ export const SectionBundle = {
     TravelTimeViaPublicTransit: EssentialServicesTravelTimeViaPublicTransit,
   },
 };
+
+export const sectionBundleId = {
+  ServiceStatistics: 'servstat',
+  WorkAndSchoolCommute: 'workedu',
+  AreaDemographics: 'areadem',
+  RiderDemographics: 'ridedem',
+  Future: {
+    Coverage: 'coverage',
+    WorkAndSchoolCommute: 'futurews',
+  },
+  EssentialServices: {
+    AccessViaPublicTransit: 'espubacc',
+    TravelTimeViaPublicTransit: 'espubtt',
+  },
+};
+
+export const manualSectionIds = {
+  jobsTreeMap: 'jobstree',
+  roadsVsTransitScenarios: 'bubbles',
+};
+
+export const flatSectionBundleIds = flattenObject(sectionBundleId);
+
+export const allSectionIds = [
+  ...Object.values(flatSectionBundleIds),
+  ...Object.values(manualSectionIds),
+];

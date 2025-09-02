@@ -8,10 +8,10 @@ import {
   Map,
   PageHeader,
   renderSections,
-  SectionBundle,
   SidebarContent,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
+import { renderSection } from '../components/layout/SectionRenderer/renderSections';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -20,11 +20,12 @@ import {
   SelectTravelMethod,
   useComparisonModeState,
 } from '../components/options';
-import { useAppData, useLocalStorage, useMapData } from '../hooks';
+import { useAppData, useLocalStorage, useMapData, useSectionsVisibility } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function EssentialServicesAccess() {
   const { data, loading } = useAppData();
+  const [visibleSections] = useSectionsVisibility();
 
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
@@ -44,6 +45,8 @@ export function EssentialServicesAccess() {
     childCareCenters,
     commercialZones,
   } = useMapData(data, mapView, { zoomTo: 'areas' });
+
+  const render = renderSection.bind(null, visibleSections);
 
   return (
     <CoreFrame
@@ -80,8 +83,8 @@ export function EssentialServicesAccess() {
         </div>
       }
       sections={renderSections([
-        <SectionBundle.EssentialServices.AccessViaPublicTransit key="Via Public Transit" />,
-        <SectionBundle.EssentialServices.TravelTimeViaPublicTransit key="Travel Time" />,
+        render('EssentialServices.AccessViaPublicTransit', 'Via Public Transit'),
+        render('EssentialServices.TravelTimeViaPublicTransit', 'Travel Time'),
       ])}
     />
   );

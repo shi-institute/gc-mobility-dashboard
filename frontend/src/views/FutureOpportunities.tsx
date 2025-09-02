@@ -9,22 +9,23 @@ import {
   Map,
   PageHeader,
   renderSections,
-  SectionBundle,
   SidebarContent,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
+import { renderSection } from '../components/layout/SectionRenderer/renderSections';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
   SelectedFutureRoutes,
   useComparisonModeState,
 } from '../components/options';
-import { useAppData, useLocalStorage, useMapData } from '../hooks';
+import { useAppData, useLocalStorage, useMapData, useSectionsVisibility } from '../hooks';
 import { useFutureMapData } from '../hooks/useMapData';
 import { notEmpty } from '../utils';
 
 export function FutureOpportunities() {
   const { data, scenarios: scenariosData, loading } = useAppData();
+  const [visibleSections] = useSectionsVisibility();
 
   const [isComparing] = useComparisonModeState();
   const [searchParams] = useSearchParams();
@@ -51,6 +52,8 @@ export function FutureOpportunities() {
   } = useFutureMapData(scenariosData.data?.futureRoutes || [], selectedRouteIds, mapView, {
     zoomTo: 'paratransit',
   });
+
+  const render = renderSection.bind(null, visibleSections);
 
   return (
     <CoreFrame
@@ -83,8 +86,8 @@ export function FutureOpportunities() {
       }
       sections={renderSections(
         [
-          <SectionBundle.Future.Coverage key="Coverage" />,
-          <SectionBundle.Future.WorkAndSchoolCommute key="Work & School" />,
+          render('Future.Coverage', 'Coverage'),
+          render('Future.WorkAndSchoolCommute', 'Work & School'),
         ],
         true
       )}

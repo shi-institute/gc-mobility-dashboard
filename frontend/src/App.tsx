@@ -1,14 +1,17 @@
 import styled from '@emotion/styled';
 import { useMemo } from 'react';
-import { Route, Routes, useLocation, useSearchParams } from 'react-router';
-import { CoreFrameContext, createCoreFrameContextValue } from './components';
+import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { Button, CoreFrameContext, createCoreFrameContextValue } from './components';
 import {
   COMPONENTS_ROUTE_FRAGMENT,
+  LANDING_PAGE_FRAGMENT,
+  TAB_1_FRAGMENT,
   TAB_2_FRAGMENT,
   TAB_3_FRAGMENT,
   TAB_4_FRAGMENT,
   TAB_5_FRAGMENT,
 } from './components/navigation';
+import { useSectionsVisibility } from './hooks';
 import { AppDataContext, AppDataHookParameters, createAppDataContext } from './hooks/useAppData';
 import { notEmpty } from './utils';
 import {
@@ -23,6 +26,7 @@ import {
 export default function App() {
   const [searchParams] = useSearchParams();
   const { pathname } = useLocation();
+  const [, , visibleTabs] = useSectionsVisibility();
 
   const comparisonEnabled = useMemo(() => {
     return searchParams.get('compare') === '1';
@@ -156,19 +160,64 @@ export default function App() {
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 
           <Routes>
-            <Route index Component={GeneralAccess} />
-            <Route path={TAB_2_FRAGMENT} Component={FutureOpportunities} />
-            <Route path={TAB_3_FRAGMENT} Component={JobAccess} />
-            <Route path={TAB_4_FRAGMENT} Component={EssentialServicesAccess} />
-            <Route path={TAB_5_FRAGMENT} Component={RoadsVsTransit} />
+            {!visibleTabs || visibleTabs.includes(TAB_1_FRAGMENT) ? (
+              <Route index Component={GeneralAccess} />
+            ) : null}
+            {!visibleTabs || visibleTabs.includes(TAB_2_FRAGMENT) ? (
+              <Route path={TAB_2_FRAGMENT} Component={FutureOpportunities} />
+            ) : null}
+            {!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT) ? (
+              <Route path={TAB_3_FRAGMENT} Component={JobAccess} />
+            ) : null}
+            {!visibleTabs || visibleTabs.includes(TAB_4_FRAGMENT) ? (
+              <Route path={TAB_4_FRAGMENT} Component={EssentialServicesAccess} />
+            ) : null}
+            {!visibleTabs || visibleTabs.includes(TAB_5_FRAGMENT) ? (
+              <Route path={TAB_5_FRAGMENT} Component={RoadsVsTransit} />
+            ) : null}
 
             {import.meta.env.DEV ? (
               <Route path={COMPONENTS_ROUTE_FRAGMENT} element={<DevModeComponentsAll />} />
             ) : null}
+
+            {/* 404 route */}
+            <Route path="*" Component={Error404} />
           </Routes>
         </CoreFrameContext.Provider>
       </AppDataContext.Provider>
     </AppWrapper>
+  );
+}
+
+function Error404() {
+  const { pathname, search } = useLocation();
+  const navigate = useNavigate();
+
+  const [, , visibleTabs] = useSectionsVisibility();
+
+  // If the current path fragment is in the list of valid routes but the 404
+  // page is showing, that means that the tab is hidden due to section visibility.
+  // In that case, if there are any visible tabs, redirect to the first visible tab.
+  // Otherwise, just show the 404 page.
+  const validPaths = [
+    LANDING_PAGE_FRAGMENT,
+    TAB_1_FRAGMENT,
+    TAB_2_FRAGMENT,
+    TAB_3_FRAGMENT,
+    TAB_4_FRAGMENT,
+    TAB_5_FRAGMENT,
+  ];
+  if (validPaths.includes(pathname) && visibleTabs && visibleTabs.length > 0) {
+    navigate(visibleTabs[0] + search, { replace: true });
+  }
+
+  return (
+    <div style={{ margin: '1rem' }}>
+      <h1 style={{ margin: 0 }}>404</h1>
+      <p style={{ margin: 0 }}>Not found</p>
+      <br />
+      <Button href={'#' + LANDING_PAGE_FRAGMENT + search}>Go to main page</Button>
+    </div>
   );
 }
 

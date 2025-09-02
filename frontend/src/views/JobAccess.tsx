@@ -6,6 +6,7 @@ import {
   CoreFrame,
   IconButton,
   PageHeader,
+  renderManualSection,
   renderSections,
   Section,
   SidebarContent,
@@ -14,7 +15,7 @@ import {
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
-import { useAppData, useLocalStorage } from '../hooks';
+import { useAppData, useLocalStorage, useSectionsVisibility } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function JobAccess() {
@@ -63,11 +64,14 @@ export function JobAccess() {
 }
 
 function Sections() {
+  const [visibleSections] = useSectionsVisibility();
   const { jobDataByArea, domain, colorScheme } = useJobData();
+
+  const render = renderManualSection.bind(null, visibleSections, 'jobsTreeMap');
 
   return renderSections([
     ...jobDataByArea.map((areaData, index) => {
-      return (
+      return render(
         <Section title={areaData.name} noGrid flexParent key={index}>
           <TreeMap
             data={areaData}

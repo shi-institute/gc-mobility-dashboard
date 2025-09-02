@@ -10,10 +10,10 @@ import {
   Map,
   PageHeader,
   renderSections,
-  SectionBundle,
   SidebarContent,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
+import { renderSection } from '../components/layout/SectionRenderer/renderSections';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -22,11 +22,13 @@ import {
   SelectTravelMethod,
   useComparisonModeState,
 } from '../components/options';
-import { useAppData, useLocalStorage, useMapData } from '../hooks';
+import { useAppData, useLocalStorage, useMapData, useSectionsVisibility } from '../hooks';
 import { listOxford, notEmpty } from '../utils';
 
 export function GeneralAccess() {
   const { data, loading } = useAppData();
+  const [visibleSections] = useSectionsVisibility();
+
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
     networkSegments,
@@ -37,6 +39,8 @@ export function GeneralAccess() {
     cyclingServiceAreas,
     paratransitServiceAreas,
   } = useMapData(data, mapView, { zoomTo: 'areas' });
+
+  const render = renderSection.bind(null, visibleSections);
 
   return (
     <CoreFrame
@@ -66,10 +70,10 @@ export function GeneralAccess() {
         </ErrorBoundary>
       }
       sections={renderSections([
-        <SectionBundle.ServiceStatistics key="Service Statistics" />,
-        <SectionBundle.WorkAndSchoolCommute key="Work & School" />,
-        <SectionBundle.AreaDemographics key="Area Demographics" />,
-        <SectionBundle.RiderDemographics key="Work Demographics" />,
+        render('ServiceStatistics', 'Service Statistics'),
+        render('WorkAndSchoolCommute', 'Work & School'),
+        render('AreaDemographics', 'Area Demographics'),
+        render('RiderDemographics', 'Work Demographics'),
         <DeveloperDetails key="Developer Tools" />,
       ])}
     />

@@ -1,3 +1,4 @@
+export const LANDING_PAGE_FRAGMENT = '/';
 export const TAB_1_FRAGMENT = '/';
 export const TAB_2_FRAGMENT = '/future';
 export const TAB_3_FRAGMENT = '/job-access';
