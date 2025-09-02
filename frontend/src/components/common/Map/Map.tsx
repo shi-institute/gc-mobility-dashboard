@@ -448,6 +448,7 @@ export function Map(props: MapProps) {
               title="Toggle bus stop visibility"
               onClick={() => quickToggleLayer('stops')}
               active={quickToggleLayers.stops.every((layer) => layer.visible)}
+              solidSurfaceColor="#fff"
             >
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -510,7 +511,9 @@ export function Map(props: MapProps) {
                 </div>
               </LayerListContainer>
             ) : (
-              <Button onClick={() => setShowLayerList(true)}>Legend</Button>
+              <Button onClick={() => setShowLayerList(true)} solidSurfaceColor="#fff">
+                Legend
+              </Button>
             )}
           </div>
         </arcgis-placement>

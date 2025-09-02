@@ -67,6 +67,7 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
             </svg>
           ) : null
         }
+        solidSurfaceColor="#fff"
       >
         Show options
       </Button>

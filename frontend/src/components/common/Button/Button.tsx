@@ -17,6 +17,8 @@ interface MyButtonProps {
   disabled?: boolean;
 
   style?: React.CSSProperties;
+  /** draws a solid surface of the specified color under the button */
+  solidSurfaceColor?: string;
 }
 
 /**
@@ -32,6 +34,7 @@ export function Button(props: MyButtonProps) {
         onClick={props.onClick}
         title={props.href}
         style={props.style}
+        solidSurfaceColor={props.solidSurfaceColor}
       >
         {props.iconLeft}
         <span className="label">{props.children}</span>
@@ -48,6 +51,7 @@ export function Button(props: MyButtonProps) {
       disabled={props.disabled}
       className={props.disabled ? 'disabled' : ''}
       style={props.style}
+      solidSurfaceColor={props.solidSurfaceColor}
     >
       {props.iconLeft}
       <span className="label">{props.children}</span>
@@ -56,7 +60,7 @@ export function Button(props: MyButtonProps) {
   );
 }
 
-const StyledButton = styled.button`
+const StyledButton = styled.button<{ solidSurfaceColor?: string }>`
   appearance: none;
   font-family: inherit;
   font-weight: 500;
@@ -75,9 +79,10 @@ const StyledButton = styled.button`
   text-decoration: none;
   color: inherit;
   user-select: none;
-  background-color: #fff;
+  background-color: transparent;
   flex-wrap: nowrap;
   transition: 120ms;
+  position: relative;
 
   .label {
     white-space: nowrap;
@@ -122,6 +127,21 @@ const StyledButton = styled.button`
   .label + svg {
     margin-left: 0.25rem;
   }
+
+  ${({ solidSurfaceColor }) => {
+    if (solidSurfaceColor) {
+      return `
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: ${solidSurfaceColor};
+            border-radius: inherit;
+            z-index: -1;
+          }
+      `;
+    }
+  }}
 `;
 
 const AnchorButton = StyledButton.withComponent('a');
