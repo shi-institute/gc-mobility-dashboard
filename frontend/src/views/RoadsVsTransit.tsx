@@ -337,6 +337,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     routeLayers.forEach((routeLayer) => {
       routeLayer.on('layerview-create', (evt) => {
         const layerView = evt.layerView as __esri.GeoJSONLayerView;
+        //I need to changes this to deal with layers.
         setStopsLayerView(layerView);
       });
     });
