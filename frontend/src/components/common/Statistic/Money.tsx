@@ -15,6 +15,8 @@ interface MoneyProps {
   wrap?: boolean;
   /** When true, renders 'per person' after the value */
   perCapita?: boolean;
+  /** Whether to render the statistic. Defaults to `true`. */
+  if?: boolean;
 }
 
 export interface NumericalDataInput {
@@ -28,6 +30,10 @@ export interface NumericalDataInput {
  * Renders a dollar amount statistic with a label and value.
  */
 export function Money(props: MoneyProps) {
+  if (props.if === false) {
+    return null;
+  }
+
   const data = (() => {
     if (Array.isArray(props.data)) {
       const parsedInputs = props.data.map((row) => ({

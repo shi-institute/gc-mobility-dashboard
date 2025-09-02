@@ -1,10 +1,19 @@
-import { useAppData } from '../../hooks';
+import { flatSectionBundleIds } from '.';
+import { useAppData, useSectionsVisibility } from '../../hooks';
+import { shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 
 export function ServiceStatistics() {
   const { data } = useAppData();
 
   const ridershipDataExists = data?.some((area) => area.ridership) || false;
+
+  const [visibleSections] = useSectionsVisibility();
+  const shouldRender = shouldRenderStatistic.bind(
+    null,
+    visibleSections,
+    flatSectionBundleIds.ServiceStatistics
+  );
 
   return (
     <Section title="Service Statistics">
@@ -21,6 +30,7 @@ export function ServiceStatistics() {
           };
         })}
         unit="miles"
+        if={shouldRender('mos')}
       />
       <Statistic.Number
         wrap
@@ -31,6 +41,7 @@ export function ServiceStatistics() {
             value: area.coverage?.stops_count || NaN,
           };
         })}
+        if={shouldRender('nostop')}
       />
       <Statistic.Money
         wrap
@@ -46,6 +57,7 @@ export function ServiceStatistics() {
             value: localFunding / population,
           };
         })}
+        if={shouldRender('lf')}
       />
       {ridershipDataExists ? (
         <>
@@ -62,6 +74,7 @@ export function ServiceStatistics() {
                 value: boardingsTotal,
               };
             })}
+            if={shouldRender('on')}
           />
           <Statistic.Number
             wrap
@@ -76,6 +89,7 @@ export function ServiceStatistics() {
                 value: alightingsTotal,
               };
             })}
+            if={shouldRender('off')}
           />
         </>
       ) : null}
@@ -92,6 +106,7 @@ export function ServiceStatistics() {
           };
         })}
         unit="square miles"
+        if={shouldRender('servsqmi')}
       />
       <Statistic.Percent
         wrap
@@ -106,6 +121,7 @@ export function ServiceStatistics() {
             value: ((area_households_covered / area_households) * 100).toFixed(1),
           };
         })}
+        if={shouldRender('hhacc')}
       />
     </Section>
   );

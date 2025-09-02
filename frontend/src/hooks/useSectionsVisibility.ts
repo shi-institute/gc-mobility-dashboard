@@ -8,6 +8,7 @@ import {
   TAB_5_FRAGMENT,
 } from '../components/navigation';
 import { manualSectionIds, sectionBundleId } from '../components/sections';
+import { notEmpty } from '../utils';
 
 type VisibleSectionItems = string[];
 export type VisibleSections = Record<string, VisibleSectionItems>;
@@ -28,8 +29,22 @@ export function useSectionsVisibility() {
   let visibleSections: VisibleSections | null = null;
   if (sectionsParam) {
     // visible sections are encoded as section1:item1,item2;section2:item1,item2
-    const toSet = sectionsParam.split(';').map((section) => section.split(':')[0]);
-    visibleSections = Object.fromEntries(toSet.map((section) => [section, []])) as VisibleSections;
+    const sections = sectionsParam
+      .split(';')
+      .map((section) => section.split(':'))
+      .filter(notEmpty);
+
+    const processedSections = sections
+      .filter((arr): arr is [string, string] => notEmpty(arr[0]) && notEmpty(arr[1]))
+      .map(([sectionName, items]) => {
+        const itemIds = items
+          .split(',')
+          .map((item) => item.trim())
+          .filter(notEmpty);
+        return [sectionName.trim(), itemIds] as [string, VisibleSectionItems];
+      });
+
+    visibleSections = Object.fromEntries(processedSections);
   }
 
   // create a function to update the sections parameter in the URL

@@ -16,9 +16,15 @@ export interface FigureProps {
   wrap?: boolean | Omit<SectionEntryProps, 'children'>;
   /** Show the legend swatches before the plot title */
   legendBeforeTitle?: boolean;
+  /** Whether to render the statistic. Defaults to `true`. */
+  if?: boolean;
 }
 
 export function Figure(props: FigureProps) {
+  if (props.if === false) {
+    return null;
+  }
+
   const content = (
     <StatisticContainer legendBeforeTitle={props.legendBeforeTitle}>
       {props.icon}

@@ -1,9 +1,17 @@
-import { useAppData } from '../../hooks';
-import { requireKey, toTidyNominal } from '../../utils';
+import { flatSectionBundleIds } from '.';
+import { useAppData, useSectionsVisibility } from '../../hooks';
+import { requireKey, shouldRenderStatistic, toTidyNominal } from '../../utils';
 import { Section, Statistic } from '../common';
 
 export function RiderDemographics() {
   const { data } = useAppData();
+
+  const [visibleSections] = useSectionsVisibility();
+  const shouldRender = shouldRenderStatistic.bind(
+    null,
+    visibleSections,
+    flatSectionBundleIds.AreaDemographics
+  );
 
   return (
     <Section title="Rider Demographics">
@@ -11,6 +19,7 @@ export function RiderDemographics() {
         wrap={{ f: { gridColumn: '1 / -1' } }}
         label="Population by race"
         legendBeforeTitle
+        if={shouldRender('race')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
@@ -70,6 +79,7 @@ export function RiderDemographics() {
         wrap={{ f: { gridColumn: '1 / -1' } }}
         label="Population by ethnicity"
         legendBeforeTitle
+        if={shouldRender('eth')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
@@ -126,6 +136,7 @@ export function RiderDemographics() {
         wrap={{ f: { gridColumn: '1 / -1' } }}
         label="Educational attainment"
         legendBeforeTitle
+        if={shouldRender('edu')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {

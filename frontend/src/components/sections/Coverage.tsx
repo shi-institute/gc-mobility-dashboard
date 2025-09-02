@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router';
-import { useAppData } from '../../hooks';
-import { notEmpty } from '../../utils';
+import { flatSectionBundleIds } from '.';
+import { useAppData, useSectionsVisibility } from '../../hooks';
+import { notEmpty, shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 import { useComparisonModeState } from '../options';
 
@@ -18,11 +19,19 @@ export function Coverage() {
     selectedRouteIds.includes(future.__routeId)
   );
 
+  const [visibleSections] = useSectionsVisibility();
+  const shouldRender = shouldRenderStatistic.bind(
+    null,
+    visibleSections,
+    flatSectionBundleIds.AreaDemographics
+  );
+
   return (
     <Section title="Coverage">
       <Statistic.Number
         wrap
         label="Route length"
+        if={shouldRender('l')}
         data={futures.map(({ stats, __routeId }) => {
           const meters_distance = stats?.route_distance_meters || 0;
           const miles_distance = meters_distance / 1609.344; // convert meters to miles
@@ -37,6 +46,7 @@ export function Coverage() {
       <Statistic.Number
         wrap
         label="Route stops"
+        if={shouldRender('st')}
         data={futures.map(({ stats, __routeId }) => {
           return {
             label: __routeId,
@@ -47,6 +57,7 @@ export function Coverage() {
       <Statistic.Number
         wrap
         label="Service coverage"
+        if={shouldRender('cov')}
         data={futures.map(({ stats, __routeId }) => {
           const meters_area = stats?.walk_service_area_area_square_meters || 0;
           const miles_area = meters_area / 1609.344 / 1609.344; // convert square meters to square miles

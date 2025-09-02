@@ -1,8 +1,17 @@
-import { useAppData } from '../../hooks';
+import { flatSectionBundleIds } from '.';
+import { useAppData, useSectionsVisibility } from '../../hooks';
+import { shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 
 export function EssentialServicesTravelTimeViaPublicTransit() {
   const { data } = useAppData();
+
+  const [visibleSections] = useSectionsVisibility();
+  const shouldRender = shouldRenderStatistic.bind(
+    null,
+    visibleSections,
+    flatSectionBundleIds.AreaDemographics
+  );
 
   return (
     <Section
@@ -13,6 +22,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Grocery Stores"
         wrap
+        if={shouldRender('groc')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.grocery_store__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -22,6 +32,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Dental Care"
         wrap
+        if={shouldRender('dent')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.dental__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -31,6 +42,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Eye Care"
         wrap
+        if={shouldRender('eye')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.eye_care__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -40,6 +52,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Family Medicine"
         wrap
+        if={shouldRender('fam')}
         data={data?.map((area) => {
           const stat =
             area.essential_services_access_stats?.family_medicine__mean_travel_time ?? NaN;
@@ -50,6 +63,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Free Clinics"
         wrap
+        if={shouldRender('free')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.free_clinics__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -59,6 +73,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Hospitals"
         wrap
+        if={shouldRender('hosp')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.hospitals__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -68,6 +83,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Internal Medicine"
         wrap
+        if={shouldRender('intm')}
         data={data?.map((area) => {
           const stat =
             area.essential_services_access_stats?.internal_medicine__mean_travel_time ?? NaN;
@@ -78,6 +94,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Urgent Care"
         wrap
+        if={shouldRender('urg')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.urgent_care__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -87,6 +104,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Child Care Centers"
         wrap
+        if={shouldRender('child')}
         data={data?.map((area) => {
           const stat = area.essential_services_access_stats?.child_care__mean_travel_time ?? NaN;
           return { label: area.__label, value: stat.toFixed(1) };
@@ -96,6 +114,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
       <Statistic.Number
         label="Commercial Zones"
         wrap
+        if={shouldRender('com')}
         data={data?.map((area) => {
           const stat =
             area.essential_services_access_stats?.commercial_zone__mean_travel_time ?? NaN;

@@ -1,7 +1,9 @@
 import { useLocation, useSearchParams } from 'react-router';
-import { useAppData } from '../../hooks';
-import { notEmpty, toTidyNominal } from '../../utils';
+import { flatSectionBundleIds } from '.';
+import { useAppData, useSectionsVisibility } from '../../hooks';
+import { notEmpty, shouldRenderStatistic, toTidyNominal } from '../../utils';
 import { Button, Section, SectionEntry, Statistic } from '../common';
+import { TAB_3_FRAGMENT } from '../navigation';
 import { useComparisonModeState } from '../options';
 
 export function WorkAndSchool2() {
@@ -19,6 +21,13 @@ export function WorkAndSchool2() {
     selectedRouteIds.includes(future.__routeId)
   );
 
+  const [visibleSections, , visibleTabs] = useSectionsVisibility();
+  const shouldRender = shouldRenderStatistic.bind(
+    null,
+    visibleSections,
+    flatSectionBundleIds.AreaDemographics
+  );
+
   const jobAccessSearch = (() => {
     const currentSearchParams = new URLSearchParams(search);
     currentSearchParams.set('jobAreas', selectedRouteIds.map((id) => `${id}::future`).join(','));
@@ -30,6 +39,7 @@ export function WorkAndSchool2() {
       <Statistic.Percent
         wrap
         label="Trips currently using public transit"
+        if={shouldRender('curr')}
         data={futures.map(({ stats, __routeId }) => {
           const publicTransitTrips = stats?.methods.commute.public_transit ?? NaN;
           const allTrips = Object.values(stats?.methods.commute || {}).reduce(
@@ -47,6 +57,7 @@ export function WorkAndSchool2() {
         wrap
         label="Trips that could use public transit"
         description="Excludes existing public transit trips"
+        if={shouldRender('poten')}
         data={futures.map(({ stats, __routeId }) => {
           const possibleConversions = stats?.possible_conversions.via_walk || 0;
           const allTrips = Object.values(stats?.methods.__all || {}).reduce(
@@ -64,26 +75,30 @@ export function WorkAndSchool2() {
         wrap
         label="Current median commute time (all modes)"
         unit="minutes"
+        if={shouldRender('medt')}
         data={futures.map(({ stats, __routeId }) => {
           const medianDuration = stats?.median_duration.commute || 0;
           return { label: __routeId, value: medianDuration.toFixed(2) };
         })}
       />
-      <SectionEntry
-        s={{ gridColumn: '1 / 3' }}
-        m={{ gridColumn: '1 / 4' }}
-        l={{ gridColumn: '1 / 5' }}
-      >
-        <div>
-          <Button href={'#/job-access' + jobAccessSearch}>
-            Explore industry/sector of employment
-          </Button>
-        </div>
-      </SectionEntry>
+      {!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT) ? (
+        <SectionEntry
+          s={{ gridColumn: '1 / 3' }}
+          m={{ gridColumn: '1 / 4' }}
+          l={{ gridColumn: '1 / 5' }}
+        >
+          <div>
+            <Button href={'#/job-access' + jobAccessSearch}>
+              Explore industry/sector of employment
+            </Button>
+          </div>
+        </SectionEntry>
+      ) : null}
       <Statistic.Figure
         wrap={{ f: { gridColumn: '1 / -1' } }}
         label="Current commute travel modes"
         legendBeforeTitle
+        if={shouldRender('currmode')}
         plot={futures
           .map(({ stats, __routeId, __label }) => {
             return {

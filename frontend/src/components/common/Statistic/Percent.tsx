@@ -14,12 +14,18 @@ interface PercentProps {
   data?: NumericalDataInput[] | NumericalDataInput['value'];
   /** If true, the statisitic container will be wrapped in a `<SectionEntry>` */
   wrap?: boolean;
+  /** Whether to render the statistic. Defaults to `true`. */
+  if?: boolean;
 }
 
 /**
  * Renders a percentage statistic with a label and value.
  */
 export function Percent(props: PercentProps) {
+  if (props.if === false) {
+    return null;
+  }
+
   const data = (() => {
     if (Array.isArray(props.data)) {
       const parsedInputs = props.data.map((row) => ({
