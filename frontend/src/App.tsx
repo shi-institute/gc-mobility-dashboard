@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Button, CoreFrameContext, createCoreFrameContextValue } from './components';
 import {
@@ -24,7 +24,7 @@ import {
 } from './views';
 
 export default function App() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
   const [, , visibleTabs] = useSectionsVisibility();
 
@@ -151,11 +151,43 @@ export default function App() {
   const resolvedAreas = isOnJobAccessPage ? jobAccessAreasOverride : areas;
   const resolvedSeasons = isOnJobAccessPage ? jobAccessSeasonsOverride : seasons;
 
+  // add an event listener to trigger edit mode: Meta + Shift + E
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'E' && event.shiftKey && event.metaKey) {
+        const editMode = searchParams.get('edit') === 'true';
+        if (editMode) {
+          searchParams.delete('edit');
+        } else {
+          searchParams.set('edit', 'true');
+        }
+        setSearchParams(searchParams, { replace: true });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [searchParams, setSearchParams]);
+
   return (
     <AppWrapper>
       <AppDataContext.Provider
         value={createAppDataContext(resolvedAreas, resolvedSeasons, travelMethod)}
       >
+        {searchParams.get('edit') === 'true' ? (
+          <EditModeBanner>
+            <h1>You are currently in edit mode</h1>
+            <p>
+              E Click any statistic to show/hide it. Hidden elements will be 50% transparent while
+              in edit mode but will be hidden when not in edit mode.
+            </p>
+            <p>Tabs without visible items will be hidden outside of edit mode.</p>
+            <p>Press Meta + Shift + E to exit edit mode.</p>
+          </EditModeBanner>
+        ) : null}
         <CoreFrameContext.Provider value={createCoreFrameContextValue()}>
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 
@@ -243,4 +275,21 @@ const PlaceholderGreenvilleConnectsWebsiteHeader = styled.div`
   background-color: var(--color-green2);
   flex-grow: 0;
   flex-shrink: 0;
+`;
+
+const EditModeBanner = styled.div`
+  background-color: var(--color-secondary);
+  color: #e0e0e0;
+  padding: 0.5rem 1rem;
+
+  h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  p {
+    font-size: 0.875rem;
+    margin: 0;
+  }
 `;

@@ -49,8 +49,16 @@ export function renderSections(sections: (React.ReactElement | null)[], checkSce
 /**
  * Whether a section should be rendered based on the visibleSections object.
  */
-export function shouldRenderSection(visibleSections: VisibleSections, sectionId: string) {
-  return !visibleSections || sectionId in visibleSections;
+export function shouldRenderSection(
+  visibleSections: VisibleSections,
+  sectionId: string,
+  editMode = false
+) {
+  return (
+    editMode ||
+    !visibleSections ||
+    (sectionId in visibleSections && visibleSections[sectionId] !== null)
+  );
 }
 
 /**
@@ -61,12 +69,13 @@ export function shouldRenderSection(visibleSections: VisibleSections, sectionId:
  */
 export function renderSection(
   visibleSections: VisibleSections | null,
+  editMode: boolean,
   sectionName: keyof typeof flatSectionBundleIds,
   key: string
 ) {
   // if the section should not be visible, return null
   const sectionId = flatSectionBundleIds[sectionName];
-  if (!shouldRenderSection(visibleSections as VisibleSections, sectionId)) {
+  if (!shouldRenderSection(visibleSections as VisibleSections, sectionId, editMode)) {
     return null;
   }
 

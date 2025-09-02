@@ -31,16 +31,19 @@ export function useSectionsVisibility() {
     // visible sections are encoded as section1:item1,item2;section2:item1,item2
     const sections = sectionsParam
       .split(';')
-      .map((section) => section.split(':'))
+      .map(
+        (section) => section.split(':') as [string | undefined | null, string | undefined | null]
+      )
       .filter(notEmpty);
 
     const processedSections = sections
-      .filter((arr): arr is [string, string] => notEmpty(arr[0]) && notEmpty(arr[1]))
+      .filter((arr): arr is [string, string | undefined | null] => notEmpty(arr[0]))
       .map(([sectionName, items]) => {
-        const itemIds = items
-          .split(',')
-          .map((item) => item.trim())
-          .filter(notEmpty);
+        const itemIds =
+          items
+            ?.split(',')
+            .map((item) => item.trim())
+            .filter(notEmpty) ?? null;
         return [sectionName.trim(), itemIds] as [string, VisibleSectionItems];
       });
 
@@ -58,7 +61,7 @@ export function useSectionsVisibility() {
       // we need to encode the visible sections as section1:item1,item2;section2:item1,item2
       const sectionsParam = Object.entries(newVisibleSections || {})
         .map(([section, items]) => {
-          if (items.length > 0) {
+          if (items && items.length > 0) {
             return `${section}:${items.join(',')}`;
           } else {
             return section;
@@ -77,9 +80,11 @@ export function useSectionsVisibility() {
     [searchParams, setSearchParams]
   );
 
+  const editMode = searchParams.get('edit') === 'true' ? true : false;
+
   /** The tabs that should be shown by the app. If null, show all tabs. */
   const visibleTabs =
-    visibleSections === null
+    editMode || visibleSections === null
       ? null
       : Object.keys(visibleSections).reduce((tabs, section) => {
           const tab = sectionsToTabs.get(section);
@@ -89,7 +94,7 @@ export function useSectionsVisibility() {
           return tabs;
         }, [] as string[]);
 
-  return [visibleSections, setVisibleSections, visibleTabs] as const;
+  return [visibleSections, setVisibleSections, visibleTabs, editMode] as const;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { requireKey, shouldRenderStatistic, toTidyNominal } from '../../utils';
 import { Section, Statistic } from '../common';
 
@@ -7,10 +7,12 @@ export function RiderDemographics() {
   const { data } = useAppData();
 
   const [visibleSections] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility('RiderDemographics');
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.AreaDemographics
+    flatSectionBundleIds.RiderDemographics,
+    editMode
   );
 
   return (
@@ -20,6 +22,7 @@ export function RiderDemographics() {
         label="Population by race"
         legendBeforeTitle
         if={shouldRender('race')}
+        onClick={handleClick('race')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
@@ -80,6 +83,7 @@ export function RiderDemographics() {
         label="Population by ethnicity"
         legendBeforeTitle
         if={shouldRender('eth')}
+        onClick={handleClick('eth')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
@@ -137,6 +141,7 @@ export function RiderDemographics() {
         label="Educational attainment"
         legendBeforeTitle
         if={shouldRender('edu')}
+        onClick={handleClick('edu')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {

@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router';
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { notEmpty, shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 import { useComparisonModeState } from '../options';
@@ -20,10 +20,12 @@ export function Coverage() {
   );
 
   const [visibleSections] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility('Future.Coverage');
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.AreaDemographics
+    flatSectionBundleIds['Future.Coverage'],
+    editMode
   );
 
   return (
@@ -42,6 +44,7 @@ export function Coverage() {
           };
         })}
         unit="miles"
+        onClick={handleClick('l')}
       />
       <Statistic.Number
         wrap
@@ -53,6 +56,7 @@ export function Coverage() {
             value: stats?.stops_count ?? NaN,
           };
         })}
+        onClick={handleClick('st')}
       />
       <Statistic.Number
         wrap
@@ -68,6 +72,7 @@ export function Coverage() {
           };
         })}
         unit="square miles"
+        onClick={handleClick('cov')}
       />
     </Section>
   );

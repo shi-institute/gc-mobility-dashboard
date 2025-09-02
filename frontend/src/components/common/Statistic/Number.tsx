@@ -16,7 +16,9 @@ interface NumberProps {
   /** If true, the statisitic container will be wrapped in a `<SectionEntry>` */
   wrap?: boolean;
   /** Whether to render the statistic. Defaults to `true`. */
-  if?: boolean;
+  if?: boolean | 'partial';
+  /** A function that is called when the click event is triggered on this statistic */
+  onClick?: (event: React.MouseEvent) => void;
 }
 
 export interface NumericalDataInput {
@@ -59,7 +61,7 @@ export function Number(props: NumberProps) {
   })();
 
   const content = (
-    <StatisticContainer>
+    <StatisticContainer onClick={props.onClick} partial={props.if === 'partial'}>
       {props.icon}
       <div className="content">
         <div className="label">

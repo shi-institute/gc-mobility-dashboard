@@ -45,7 +45,10 @@ export const manualSectionIds = {
 
 export const flatSectionBundleIds = flattenObject(sectionBundleId);
 
-export const allSectionIds = [
-  ...Object.values(flatSectionBundleIds),
-  ...Object.values(manualSectionIds),
-];
+export const allSectionIds: Record<
+  keyof typeof flatSectionBundleIds | keyof typeof manualSectionIds,
+  string
+> = {
+  ...flatSectionBundleIds,
+  ...manualSectionIds,
+};

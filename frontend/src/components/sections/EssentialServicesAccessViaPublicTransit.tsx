@@ -1,5 +1,5 @@
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 
@@ -7,10 +7,14 @@ export function EssentialServicesAccessViaPublicTransit() {
   const { data } = useAppData();
 
   const [visibleSections] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility(
+    'EssentialServices.AccessViaPublicTransit'
+  );
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.AreaDemographics
+    flatSectionBundleIds['EssentialServices.AccessViaPublicTransit'],
+    editMode
   );
 
   return (
@@ -27,6 +31,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.grocery_store__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('groc')}
       />
       <Statistic.Percent
         label="Dental Care"
@@ -36,6 +41,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.dental__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('dent')}
       />
       <Statistic.Percent
         label="Eye Care"
@@ -45,6 +51,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.eye_care__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('eye')}
       />
       <Statistic.Percent
         label="Family Medicine"
@@ -55,6 +62,7 @@ export function EssentialServicesAccessViaPublicTransit() {
             area.essential_services_access_stats?.family_medicine__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('fam')}
       />
       <Statistic.Percent
         label="Free Clinics"
@@ -64,6 +72,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.free_clinics__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('free')}
       />
       <Statistic.Percent
         label="Hospitals"
@@ -73,6 +82,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.hospitals__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('hosp')}
       />
       <Statistic.Percent
         label="Internal Medicine"
@@ -83,6 +93,7 @@ export function EssentialServicesAccessViaPublicTransit() {
             area.essential_services_access_stats?.internal_medicine__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('intm')}
       />
       <Statistic.Percent
         label="Urgent Care"
@@ -92,6 +103,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.urgent_care__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('urg')}
       />
       <Statistic.Percent
         label="Child Care Centers"
@@ -101,6 +113,7 @@ export function EssentialServicesAccessViaPublicTransit() {
           const stat = area.essential_services_access_stats?.child_care__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('child')}
       />
       <Statistic.Percent
         label="Commercial Zones"
@@ -111,6 +124,7 @@ export function EssentialServicesAccessViaPublicTransit() {
             area.essential_services_access_stats?.commercial_zone__access_fraction ?? NaN;
           return { label: area.__label, value: (stat * 100).toFixed(1) };
         })}
+        onClick={handleClick('com')}
       />
     </Section>
   );

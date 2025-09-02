@@ -1,5 +1,5 @@
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 
@@ -7,10 +7,14 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
   const { data } = useAppData();
 
   const [visibleSections] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility(
+    'EssentialServices.TravelTimeViaPublicTransit'
+  );
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.AreaDemographics
+    flatSectionBundleIds['EssentialServices.TravelTimeViaPublicTransit'],
+    editMode
   );
 
   return (
@@ -28,6 +32,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('groc')}
       />
       <Statistic.Number
         label="Dental Care"
@@ -38,6 +43,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('dent')}
       />
       <Statistic.Number
         label="Eye Care"
@@ -48,6 +54,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('eye')}
       />
       <Statistic.Number
         label="Family Medicine"
@@ -59,6 +66,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('fam')}
       />
       <Statistic.Number
         label="Free Clinics"
@@ -69,6 +77,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('free')}
       />
       <Statistic.Number
         label="Hospitals"
@@ -79,6 +88,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('hosp')}
       />
       <Statistic.Number
         label="Internal Medicine"
@@ -90,6 +100,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('intm')}
       />
       <Statistic.Number
         label="Urgent Care"
@@ -100,6 +111,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('urg')}
       />
       <Statistic.Number
         label="Child Care Centers"
@@ -110,6 +122,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('child')}
       />
       <Statistic.Number
         label="Commercial Zones"
@@ -121,6 +134,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
           return { label: area.__label, value: stat.toFixed(1) };
         })}
         unit="minutes"
+        onClick={handleClick('com')}
       />
     </Section>
   );

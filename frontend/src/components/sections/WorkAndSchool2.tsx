@@ -1,6 +1,6 @@
 import { useLocation, useSearchParams } from 'react-router';
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { notEmpty, shouldRenderStatistic, toTidyNominal } from '../../utils';
 import { Button, Section, SectionEntry, Statistic } from '../common';
 import { TAB_3_FRAGMENT } from '../navigation';
@@ -22,10 +22,12 @@ export function WorkAndSchool2() {
   );
 
   const [visibleSections, , visibleTabs] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility('Future.WorkAndSchoolCommute');
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.AreaDemographics
+    flatSectionBundleIds['Future.WorkAndSchoolCommute'],
+    editMode
   );
 
   const jobAccessSearch = (() => {
@@ -40,6 +42,7 @@ export function WorkAndSchool2() {
         wrap
         label="Trips currently using public transit"
         if={shouldRender('curr')}
+        onClick={handleClick('curr')}
         data={futures.map(({ stats, __routeId }) => {
           const publicTransitTrips = stats?.methods.commute.public_transit ?? NaN;
           const allTrips = Object.values(stats?.methods.commute || {}).reduce(
@@ -58,6 +61,7 @@ export function WorkAndSchool2() {
         label="Trips that could use public transit"
         description="Excludes existing public transit trips"
         if={shouldRender('poten')}
+        onClick={handleClick('poten')}
         data={futures.map(({ stats, __routeId }) => {
           const possibleConversions = stats?.possible_conversions.via_walk || 0;
           const allTrips = Object.values(stats?.methods.__all || {}).reduce(
@@ -76,6 +80,7 @@ export function WorkAndSchool2() {
         label="Current median commute time (all modes)"
         unit="minutes"
         if={shouldRender('medt')}
+        onClick={handleClick('medt')}
         data={futures.map(({ stats, __routeId }) => {
           const medianDuration = stats?.median_duration.commute || 0;
           return { label: __routeId, value: medianDuration.toFixed(2) };
@@ -99,6 +104,7 @@ export function WorkAndSchool2() {
         label="Current commute travel modes"
         legendBeforeTitle
         if={shouldRender('currmode')}
+        onClick={handleClick('currmode')}
         plot={futures
           .map(({ stats, __routeId, __label }) => {
             return {

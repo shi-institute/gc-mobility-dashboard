@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router';
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { notEmpty, shouldRenderStatistic } from '../../utils';
 import { Button, Section, SectionEntry, Statistic } from '../common';
 import { TAB_3_FRAGMENT } from '../navigation';
@@ -11,10 +11,12 @@ export function WorkAndSchoolCommute() {
   const { search } = useLocation();
 
   const [visibleSections, , visibleTabs] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility('WorkAndSchoolCommute');
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.AreaDemographics
+    flatSectionBundleIds.WorkAndSchoolCommute,
+    editMode
   );
 
   const jobAccessSearch = (() => {
@@ -39,7 +41,10 @@ export function WorkAndSchoolCommute() {
           m={{ gridColumn: '1 / 4' }}
           l={{ gridColumn: '1 / 5' }}
         >
-          <div>
+          <div
+            onClick={handleClick('bluelines')}
+            style={{ opacity: shouldRender('bluelines') === 'partial' ? 0.5 : 1 }}
+          >
             <SelectTravelMethod
               travelMethodList={travelMethodList}
               label={
@@ -54,6 +59,7 @@ export function WorkAndSchoolCommute() {
         wrap
         label="Any trip using public transit"
         if={shouldRender('curr')}
+        onClick={handleClick('curr')}
         data={data?.map((area) => {
           const publicTransitTrips =
             area.statistics?.thursday_trip.methods.commute.public_transit || 0;
@@ -72,6 +78,7 @@ export function WorkAndSchoolCommute() {
         label="Any trip that could use public transit"
         description="Excludes existing public transit trips"
         if={shouldRender('poten')}
+        onClick={handleClick('poten')}
         data={data?.map((area) => {
           const possibleConversions =
             area.statistics?.thursday_trip.possible_conversions.via_walk || 0;
@@ -90,6 +97,7 @@ export function WorkAndSchoolCommute() {
         wrap
         label="Households without a vehicle (ACS)"
         if={shouldRender('novehic')}
+        onClick={handleClick('novehic')}
         data={data?.map((area) => {
           const households =
             area.census_acs_5year
@@ -111,6 +119,7 @@ export function WorkAndSchoolCommute() {
         label="Median commute time (all modes)"
         unit="minutes"
         if={shouldRender('medt')}
+        onClick={handleClick('medt')}
         data={data?.map((area) => {
           const medianDuration = area.statistics?.thursday_trip.median_duration.commute || 0;
           return { label: area.__label, value: medianDuration.toFixed(2) };

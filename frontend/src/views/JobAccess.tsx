@@ -3,8 +3,10 @@ import * as d3 from 'd3';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import {
+  Button,
   CoreFrame,
   IconButton,
+  manualSectionIds,
   PageHeader,
   renderManualSection,
   renderSections,
@@ -64,12 +66,49 @@ export function JobAccess() {
 }
 
 function Sections() {
-  const [visibleSections] = useSectionsVisibility();
+  const [visibleSections, setVisibleSections] = useSectionsVisibility();
+  const [searchParams] = useSearchParams();
+  const editMode = searchParams.get('edit') === 'true';
+
   const { jobDataByArea, domain, colorScheme } = useJobData();
 
   const render = renderManualSection.bind(null, visibleSections, 'jobsTreeMap');
 
   return renderSections([
+    (() => {
+      if (!editMode) {
+        return null;
+      }
+
+      if (visibleSections?.[manualSectionIds.jobsTreeMap]) {
+        return (
+          <Button
+            onClick={() => {
+              setVisibleSections((prev) => {
+                const newVisibleSections = { ...prev };
+                delete newVisibleSections[manualSectionIds.jobsTreeMap];
+                return newVisibleSections;
+              });
+            }}
+          >
+            Hide this tab
+          </Button>
+        );
+      }
+
+      return (
+        <Button
+          onClick={() => {
+            setVisibleSections((prev) => ({
+              ...prev,
+              [manualSectionIds.jobsTreeMap]: [''],
+            }));
+          }}
+        >
+          Show this tab
+        </Button>
+      );
+    })(),
     ...jobDataByArea.map((areaData, index) => {
       return render(
         <Section title={areaData.name} noGrid flexParent key={index}>

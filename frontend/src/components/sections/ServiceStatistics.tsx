@@ -1,5 +1,5 @@
 import { flatSectionBundleIds } from '.';
-import { useAppData, useSectionsVisibility } from '../../hooks';
+import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { shouldRenderStatistic } from '../../utils';
 import { Section, Statistic } from '../common';
 
@@ -9,10 +9,12 @@ export function ServiceStatistics() {
   const ridershipDataExists = data?.some((area) => area.ridership) || false;
 
   const [visibleSections] = useSectionsVisibility();
+  const { editMode, handleClick } = useToggleSectionItemVisibility('ServiceStatistics');
   const shouldRender = shouldRenderStatistic.bind(
     null,
     visibleSections,
-    flatSectionBundleIds.ServiceStatistics
+    flatSectionBundleIds.ServiceStatistics,
+    editMode
   );
 
   return (
@@ -31,6 +33,7 @@ export function ServiceStatistics() {
         })}
         unit="miles"
         if={shouldRender('mos')}
+        onClick={handleClick('mos')}
       />
       <Statistic.Number
         wrap
@@ -42,6 +45,7 @@ export function ServiceStatistics() {
           };
         })}
         if={shouldRender('nostop')}
+        onClick={handleClick('nostop')}
       />
       <Statistic.Money
         wrap
@@ -58,6 +62,7 @@ export function ServiceStatistics() {
           };
         })}
         if={shouldRender('lf')}
+        onClick={handleClick('lf')}
       />
       {ridershipDataExists ? (
         <>
@@ -75,6 +80,7 @@ export function ServiceStatistics() {
               };
             })}
             if={shouldRender('on')}
+            onClick={handleClick('on')}
           />
           <Statistic.Number
             wrap
@@ -90,6 +96,7 @@ export function ServiceStatistics() {
               };
             })}
             if={shouldRender('off')}
+            onClick={handleClick('off')}
           />
         </>
       ) : null}
@@ -107,6 +114,7 @@ export function ServiceStatistics() {
         })}
         unit="square miles"
         if={shouldRender('servsqmi')}
+        onClick={handleClick('servsqmi')}
       />
       <Statistic.Percent
         wrap
@@ -122,6 +130,7 @@ export function ServiceStatistics() {
           };
         })}
         if={shouldRender('hhacc')}
+        onClick={handleClick('hhacc')}
       />
     </Section>
   );

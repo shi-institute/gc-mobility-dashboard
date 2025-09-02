@@ -25,7 +25,7 @@ import { notEmpty } from '../utils';
 
 export function EssentialServicesAccess() {
   const { data, loading } = useAppData();
-  const [visibleSections] = useSectionsVisibility();
+  const [visibleSections, , , editMode] = useSectionsVisibility();
 
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
@@ -46,7 +46,7 @@ export function EssentialServicesAccess() {
     commercialZones,
   } = useMapData(data, mapView, { zoomTo: 'areas' });
 
-  const render = renderSection.bind(null, visibleSections);
+  const render = renderSection.bind(null, visibleSections, editMode);
 
   return (
     <CoreFrame

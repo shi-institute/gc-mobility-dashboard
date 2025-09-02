@@ -25,7 +25,7 @@ import { notEmpty } from '../utils';
 
 export function FutureOpportunities() {
   const { data, scenarios: scenariosData, loading } = useAppData();
-  const [visibleSections] = useSectionsVisibility();
+  const [visibleSections, , , editMode] = useSectionsVisibility();
 
   const [isComparing] = useComparisonModeState();
   const [searchParams] = useSearchParams();
@@ -53,7 +53,7 @@ export function FutureOpportunities() {
     zoomTo: 'paratransit',
   });
 
-  const render = renderSection.bind(null, visibleSections);
+  const render = renderSection.bind(null, visibleSections, editMode);
 
   return (
     <CoreFrame
