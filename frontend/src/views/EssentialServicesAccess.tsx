@@ -7,11 +7,11 @@ import {
   IconButton,
   Map,
   PageHeader,
-  Section,
+  renderSections,
   SidebarContent,
-  Statistic,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
+import { renderSection } from '../components/layout/SectionRenderer/renderSections';
 import { AppNavigation } from '../components/navigation';
 import {
   ComparisonModeSwitch,
@@ -20,11 +20,12 @@ import {
   SelectTravelMethod,
   useComparisonModeState,
 } from '../components/options';
-import { useAppData, useLocalStorage, useMapData } from '../hooks';
+import { useAppData, useLocalStorage, useMapData, useSectionsVisibility } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function EssentialServicesAccess() {
   const { data, loading } = useAppData();
+  const [visibleSections, , , editMode] = useSectionsVisibility();
 
   const [mapView, setMapView] = useState<__esri.MapView | null>(null);
   const {
@@ -44,6 +45,8 @@ export function EssentialServicesAccess() {
     childCareCenters,
     commercialZones,
   } = useMapData(data, mapView, { zoomTo: 'areas' });
+
+  const render = renderSection.bind(null, visibleSections, editMode);
 
   return (
     <CoreFrame
@@ -79,7 +82,10 @@ export function EssentialServicesAccess() {
           />
         </div>
       }
-      sections={Sections()}
+      sections={renderSections([
+        render('EssentialServices.AccessViaPublicTransit', 'Via Public Transit'),
+        render('EssentialServices.TravelTimeViaPublicTransit', 'Travel Time'),
+      ])}
     />
   );
 }
@@ -135,217 +141,6 @@ function SectionsHeader() {
       ) : null}
     </PageHeader>
   );
-}
-
-function Sections() {
-  const { data, loading, errors } = useAppData();
-
-  if (loading && !data) {
-    return [
-      <div key="placeholder-loading">
-        <p>Loading...</p>
-      </div>,
-    ];
-  }
-
-  if (errors) {
-    return [
-      <div key="placeholder-error">
-        <p>Error: {errors.join(', ')}</p>
-      </div>,
-    ];
-  }
-
-  return [
-    <Section
-      title="Essential Services Access via Public Transit"
-      shortTitle="Via Public Transit"
-      key={0}
-    >
-      <Statistic.Percent
-        label="Grocery Stores"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.grocery_store__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Dental Care"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.dental__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Eye Care"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.eye_care__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Family Medicine"
-        wrap
-        data={data?.map((area) => {
-          const stat =
-            area.essential_services_access_stats?.family_medicine__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Free Clinics"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.free_clinics__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Hospitals"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.hospitals__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Internal Medicine"
-        wrap
-        data={data?.map((area) => {
-          const stat =
-            area.essential_services_access_stats?.internal_medicine__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Urgent Care"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.urgent_care__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Child Care Centers"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.child_care__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-      <Statistic.Percent
-        label="Commercial Zones"
-        wrap
-        data={data?.map((area) => {
-          const stat =
-            area.essential_services_access_stats?.commercial_zone__access_fraction ?? NaN;
-          return { label: area.__label, value: (stat * 100).toFixed(1) };
-        })}
-      />
-    </Section>,
-    <Section
-      title="Recorded Average Travel Time to Essential Services via Public Transit"
-      shortTitle="Travel Time"
-      key={1}
-    >
-      <Statistic.Number
-        label="Grocery Stores"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.grocery_store__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Dental Care"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.dental__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Eye Care"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.eye_care__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Family Medicine"
-        wrap
-        data={data?.map((area) => {
-          const stat =
-            area.essential_services_access_stats?.family_medicine__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Free Clinics"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.free_clinics__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Hospitals"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.hospitals__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Internal Medicine"
-        wrap
-        data={data?.map((area) => {
-          const stat =
-            area.essential_services_access_stats?.internal_medicine__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Urgent Care"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.urgent_care__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Child Care Centers"
-        wrap
-        data={data?.map((area) => {
-          const stat = area.essential_services_access_stats?.child_care__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-      <Statistic.Number
-        label="Commercial Zones"
-        wrap
-        data={data?.map((area) => {
-          const stat =
-            area.essential_services_access_stats?.commercial_zone__mean_travel_time ?? NaN;
-          return { label: area.__label, value: stat.toFixed(1) };
-        })}
-        unit="minutes"
-      />
-    </Section>,
-  ];
 }
 
 function Sidebar() {

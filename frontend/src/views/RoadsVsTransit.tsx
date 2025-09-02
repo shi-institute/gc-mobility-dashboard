@@ -1,10 +1,22 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import React, { ComponentProps, useRef, useState } from 'react';
-import { CoreFrame, IconButton, Map, OptionTrack, PageHeader, SelectOne } from '../components';
+import { useSearchParams } from 'react-router';
+import {
+  Button,
+  CoreFrame,
+  IconButton,
+  manualSectionIds,
+  Map,
+  OptionTrack,
+  PageHeader,
+  renderManualSection,
+  renderSections,
+  SelectOne,
+} from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
-import { useAppData, useLocalStorage, useRect } from '../hooks';
+import { useAppData, useLocalStorage, useRect, useSectionsVisibility } from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
 import { notEmpty } from '../utils';
 
@@ -30,6 +42,12 @@ export function RoadsVsTransit() {
     zoomTo: 'routes',
   });
 
+  const [visibleSections, setVisibleSections] = useSectionsVisibility();
+  const [searchParams] = useSearchParams();
+  const editMode = searchParams.get('edit') === 'true';
+
+  const render = renderManualSection.bind(null, visibleSections, 'roadsVsTransitScenarios');
+
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
@@ -37,28 +55,66 @@ export function RoadsVsTransit() {
       header={<AppNavigation />}
       sectionsHeader={<SectionsHeader />}
       map={
-        <div style={{ height: '100%' }} title="Map">
-          <Map
-            layers={[
-              walkServiceAreas,
-              ...futureWalkServiceAreas,
-              cyclingServiceAreas,
-              ...futureCyclingServiceAreas,
-              paratransitServiceAreas,
-              ...futureParatransitServiceAreas,
-              ...futureRoutes,
-              routes,
-              ...futureStops,
-              stops,
-              ...areaPolygons,
-            ].filter(notEmpty)}
-            onMapReady={(_, view) => {
-              setMapView(view);
-            }}
-          />
-        </div>
+        render(
+          <div style={{ height: '100%' }} title="Map">
+            <Map
+              layers={[
+                walkServiceAreas,
+                ...futureWalkServiceAreas,
+                cyclingServiceAreas,
+                ...futureCyclingServiceAreas,
+                paratransitServiceAreas,
+                ...futureParatransitServiceAreas,
+                ...futureRoutes,
+                routes,
+                ...futureStops,
+                stops,
+                ...areaPolygons,
+              ].filter(notEmpty)}
+              onMapReady={(_, view) => {
+                setMapView(view);
+              }}
+            />
+          </div>
+        ) ?? undefined
       }
-      sections={[<Comparison key={0} title="Scenarios" />]}
+      sections={renderSections([
+        (() => {
+          if (!editMode) {
+            return null;
+          }
+
+          if (visibleSections?.[manualSectionIds.roadsVsTransitScenarios]) {
+            return (
+              <Button
+                onClick={() => {
+                  setVisibleSections((prev) => {
+                    const newVisibleSections = { ...prev };
+                    delete newVisibleSections[manualSectionIds.roadsVsTransitScenarios];
+                    return newVisibleSections;
+                  });
+                }}
+              >
+                Hide this tab
+              </Button>
+            );
+          }
+
+          return (
+            <Button
+              onClick={() => {
+                setVisibleSections((prev) => ({
+                  ...prev,
+                  [manualSectionIds.roadsVsTransitScenarios]: [''],
+                }));
+              }}
+            >
+              Show this tab
+            </Button>
+          );
+        })(),
+        render(<Comparison key={0} title="Scenarios" />),
+      ])}
       disableSectionColumns
     />
   );

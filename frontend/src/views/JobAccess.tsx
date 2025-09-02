@@ -2,11 +2,22 @@ import styled from '@emotion/styled';
 import * as d3 from 'd3';
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { CoreFrame, IconButton, PageHeader, Section, SidebarContent, TreeMap } from '../components';
+import {
+  Button,
+  CoreFrame,
+  IconButton,
+  manualSectionIds,
+  PageHeader,
+  renderManualSection,
+  renderSections,
+  Section,
+  SidebarContent,
+  TreeMap,
+} from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
-import { useAppData, useLocalStorage } from '../hooks';
+import { useAppData, useLocalStorage, useSectionsVisibility } from '../hooks';
 import { notEmpty } from '../utils';
 
 export function JobAccess() {
@@ -55,27 +66,51 @@ export function JobAccess() {
 }
 
 function Sections() {
-  const { jobDataByArea, domain, colorScheme, loading, errors } = useJobData();
+  const [visibleSections, setVisibleSections] = useSectionsVisibility();
+  const [searchParams] = useSearchParams();
+  const editMode = searchParams.get('edit') === 'true';
 
-  if (loading && !jobDataByArea) {
-    return [
-      <div key="placeholder-loading">
-        <p>Loading...</p>
-      </div>,
-    ];
-  }
+  const { jobDataByArea, domain, colorScheme } = useJobData();
 
-  if (errors) {
-    return [
-      <div key="placeholder-error">
-        <p>Error: {errors.join(', ')}</p>
-      </div>,
-    ];
-  }
+  const render = renderManualSection.bind(null, visibleSections, 'jobsTreeMap');
 
-  return [
-    ...jobDataByArea.map((areaData, index) => {
+  return renderSections([
+    (() => {
+      if (!editMode) {
+        return null;
+      }
+
+      if (visibleSections?.[manualSectionIds.jobsTreeMap]) {
+        return (
+          <Button
+            onClick={() => {
+              setVisibleSections((prev) => {
+                const newVisibleSections = { ...prev };
+                delete newVisibleSections[manualSectionIds.jobsTreeMap];
+                return newVisibleSections;
+              });
+            }}
+          >
+            Hide this tab
+          </Button>
+        );
+      }
+
       return (
+        <Button
+          onClick={() => {
+            setVisibleSections((prev) => ({
+              ...prev,
+              [manualSectionIds.jobsTreeMap]: [''],
+            }));
+          }}
+        >
+          Show this tab
+        </Button>
+      );
+    })(),
+    ...jobDataByArea.map((areaData, index) => {
+      return render(
         <Section title={areaData.name} noGrid flexParent key={index}>
           <TreeMap
             data={areaData}
@@ -86,7 +121,7 @@ function Sections() {
         </Section>
       );
     }),
-  ];
+  ]);
 }
 
 function useJobData() {

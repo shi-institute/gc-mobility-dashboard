@@ -1,5 +1,6 @@
 export { createPopupRoot } from './createPopupRoot';
 export { debounce } from './debounce';
+export { flattenObject } from './flattenObject';
 export { generateHash } from './generateHash';
 export { hasKey } from './hasKey';
 export { inflateResponse } from './inflateResponse';
@@ -8,6 +9,7 @@ export { notEmpty } from './notEmpty';
 export { quadraticBezierToPolygon } from './quadraticBezierToPolygon';
 export { replaceLast } from './replaceLast';
 export { requireKey } from './requireKey';
+export { shouldRenderStatistic } from './shouldRenderStatistic';
 export { toTidyNominal } from './toTidyNominal';
 export { withOpacity } from './withOpacity';
 export { zoomToLayers } from './zoomToLayers';
