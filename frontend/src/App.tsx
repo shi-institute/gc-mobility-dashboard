@@ -181,8 +181,8 @@ export default function App() {
           <EditModeBanner>
             <h1>You are currently in edit mode</h1>
             <p>
-              E Click any statistic to show/hide it. Hidden elements will be 50% transparent while
-              in edit mode but will be hidden when not in edit mode.
+              Click any statistic to show/hide it. Hidden elements will be 50% transparent while in
+              edit mode but will be hidden when not in edit mode.
             </p>
             <p>Tabs without visible items will be hidden outside of edit mode.</p>
             <p>Press Meta + Shift + E to exit edit mode.</p>
