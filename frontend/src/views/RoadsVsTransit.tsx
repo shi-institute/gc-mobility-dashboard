@@ -1,6 +1,6 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import React, { ComponentProps, useRef, useState } from 'react';
+import React, { ComponentProps, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   Button,
@@ -163,7 +163,7 @@ function Comparison(_props: { title: string }) {
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
   const transitioning = selectedIndex !== delayedSelectedIndex;
 
-  function switchSelectedIndex(index: number) {
+  function switchSelectedIndex(index: number | null) {
     if (transitioning) {
       return; // prevent switching while another transition is in progress
     }
@@ -243,11 +243,17 @@ function Comparison(_props: { title: string }) {
     } satisfies ComponentProps<typeof OptionTrack.Button>;
   };
 
+  function resetSelectedIndex() {
+    if (selectedIndex !== null) {
+      switchSelectedIndex(null);
+    }
+  }
+
   return (
     <ComparisionContainer ref={containerRef}>
       <div className="left-bar"></div>
       <ComparisonComponent>
-        <div className="background"></div>
+        <ClickableBackground className="background" onClick={resetSelectedIndex} />
 
         <div
           className="imagine-prose"
@@ -320,6 +326,49 @@ function Comparison(_props: { title: string }) {
       </ComparisonComponent>
     </ComparisionContainer>
   );
+}
+
+interface ClickableBackgroundProps {
+  className?: string;
+  onClick?: (event: MouseEvent) => void;
+}
+
+function ClickableBackground(props: ClickableBackgroundProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rect = useRect(ref);
+
+  // Add an event listener to the document and detects any click that occurs in the rectangle
+  // defined by the rect above. If a click occurs in that rectangle, log to the console.
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      if (
+        rect &&
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      ) {
+        // do not proceed if the click originated from a button, select, anchor, or foreignObject
+        let element = event.target as Element;
+        while (element && element !== event.currentTarget) {
+          if (['BUTTON', 'SELECT', 'A', 'foreignObject'].includes(element.tagName)) {
+            return; // Ignore the event
+          }
+          element = element.parentElement as HTMLElement;
+        }
+
+        // forward the event to the onClick prop
+        props.onClick?.(event);
+      }
+    }
+
+    ref?.current?.parentElement?.addEventListener('click', onClick);
+    return () => {
+      ref?.current?.parentElement?.removeEventListener('click', onClick);
+    };
+  }, [rect, ref.current, props.onClick]);
+
+  return <div ref={ref} className={props.className}></div>;
 }
 
 interface TrackButtonExpandedContentProps {
