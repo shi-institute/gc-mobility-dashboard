@@ -536,6 +536,7 @@ const ComparisonComponent = styled.div`
   height: 100%;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
 
   flex-grow: 1;
   flex-shrink: 0;
