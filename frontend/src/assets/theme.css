@@ -13,6 +13,9 @@
   --color-primary: var(--color-green3);
   --color-secondary: var(--color-purple);
 
+  --color-primary--hover: hsl(145, 39%, 35%);
+  --color-primary--active: hsl(145, 39%, 30%);
+
   --button-radius: 0.188em;
   --surface-radius: 0.375em;
 
@@ -30,6 +33,30 @@
   --subtle-fill-secondary: hsla(0, 0%, 0%, 3.73%);
   --subtle-fill-tertiary: hsla(0, 0%, 0%, 2.41%);
   --subtle-fill-disabled: var(--subtle-fill-transparent);
+
+  --control-alt-disabled: hsla(0, 0%, 100%, 0);
+  --control-alt-quarternary: hsla(0, 0%, 0%, 0.09);
+  --control-alt-secondary: hsla(0, 0%, 0%, 0.02);
+  --control-alt-tertiary: hsla(0, 0%, 0%, 0.06);
+  --control-alt-transparent: hsla(0, 0%, 100%, 0);
+
+  --control-strong-stroke-default: hsla(0, 0%, 0%, 0.45);
+  --control-strong-stroke-disabled: hsla(0, 0%, 0%, 0.22);
+
+  --wui-control-slow-duration: 333ms;
+  --wui-control-normal-duration: 250ms;
+  --wui-control-fast-duration: 167ms;
+  --wui-control-faster-duration: 87ms;
+  --wui-control-fast-out-slow-in-easing: cubic-bezier(0, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    --wui-control-slow-duration: 0;
+    --wui-control-normal-duration: 0;
+    --wui-control-fast-duration: 0;
+    --wui-control-faster-duration: 0;
+  }
 }
 
 :host {

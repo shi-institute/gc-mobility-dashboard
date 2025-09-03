@@ -15,4 +15,5 @@ export { Statistic } from './Statistic';
 export { PlotContainer } from './Statistic/plot/PlotContainer';
 export { Tab } from './Tabs/Tab';
 export { Tabs } from './Tabs/Tabs';
+export { ToggleSwitch } from './ToggleSwitch/ToggleSwitch';
 export { TreeMap } from './TreeMap/TreeMap';

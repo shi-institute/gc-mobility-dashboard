@@ -1,16 +1,16 @@
+import { ToggleSwitch } from '../../common';
 import { useComparisonModeState } from './useComparisonModeState';
 
 export function ComparisonModeSwitch() {
   const [isCompareEnabled, setIsComparisonEnabled] = useComparisonModeState();
 
-  function handleChangeComparisonMode(evt: React.ChangeEvent<HTMLInputElement>) {
-    setIsComparisonEnabled(evt.target.checked);
+  function handleChangeComparisonMode(checked: boolean) {
+    setIsComparisonEnabled(checked);
   }
 
   return (
-    <label style={{ display: 'block' }}>
-      <input type="checkbox" checked={isCompareEnabled} onChange={handleChangeComparisonMode} />
+    <ToggleSwitch checked={isCompareEnabled} onChange={handleChangeComparisonMode}>
       Enable comparison mode
-    </label>
+    </ToggleSwitch>
   );
 }
