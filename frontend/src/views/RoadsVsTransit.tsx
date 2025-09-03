@@ -319,29 +319,75 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   // get the layer views, which allow us to highlight and apply effects
   const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
   const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
+
   useEffect(() => {
     if (!props.mapView || !stopsLayer) {
       return;
     }
 
-    stopsLayer.on('layerview-create', (evt) => {
+    // Store the event handler reference so we can remove it later
+    const handler = stopsLayer.on('layerview-create', (evt) => {
       const layerView = evt.layerView as __esri.GeoJSONLayerView;
       setStopsLayerView(layerView);
     });
+
+    // Cleanup function to prevent memory leak.
+    return () => {
+      // Remove the event listener when the component unmounts or dependencies change
+      handler.remove();
+    };
   }, [props.mapView, stopsLayer]);
+
   useEffect(() => {
     if (!props.mapView || !routeLayers) {
+      // If dependencies aren't ready, ensure we clear any stale layer views
+      setRouteLayerViews(null);
       return;
     }
 
-    routeLayers.forEach((routeLayer) => {
-      routeLayer.on('layerview-create', (evt) => {
-        const layerView = evt.layerView as __esri.GeoJSONLayerView;
-        //I need to changes this to deal with layers.
-        setStopsLayerView(layerView);
+    const newLayerViews: __esri.GeoJSONLayerView[] = []; // Temporary array to collect new layer views
+    const handlers: __esri.Handle[] = []; // Array to store all event handler references for cleanup
+
+    // Use Promise.all to wait for all layer views to be created
+    // This is more robust than collecting one-by-one with setRouteLayerViews in the loop.
+    const getLayerViewsPromises = routeLayers.map((routeLayer) => {
+      return new Promise<__esri.GeoJSONLayerView>((resolve) => {
+        // First, check if the layer view already exists (e.g., if the map hasn't changed)
+        props.mapView?.whenLayerView(routeLayer).then((existingLayerView) => {
+          if (existingLayerView) {
+            resolve(existingLayerView as __esri.GeoJSONLayerView);
+            return; // Exit if already found
+          }
+
+          // If not existing, attach a listener to wait for its creation
+          const handler = routeLayer.on('layerview-create', (evt) => {
+            resolve(evt.layerView as __esri.GeoJSONLayerView);
+          });
+          handlers.push(handler); // Store the handler for cleanup
+        });
       });
     });
-  }, [props.mapView, routeLayers]);
+
+    // Execute all promises concurrently and update state once all are resolved
+    Promise.all(getLayerViewsPromises)
+      .then((layerViews) => {
+        // Filter out any potential null/undefined if a promise didn't resolve correctly,
+        // though with `resolve` directly, it should be fine.
+        setRouteLayerViews(layerViews.filter(Boolean));
+      })
+      .catch((error) => {
+        console.error('Error getting route layer views:', error);
+        setRouteLayerViews(null); // Set to null on error
+      });
+
+    // Cleanup function
+    return () => {
+      // Remove all event handlers that were attached during this effect's run
+      handlers.forEach((h) => h.remove());
+      // No need to clear setRouteLayerViews here because Promise.all will overwrite
+      // it when it completes, or the initial null check will handle it.
+    };
+  }, [props.mapView, routeLayers]); // Dependencies: Re-run if props.mapView or routeLayers changes.
 
   // build a mapping of line_id to layer id for the route layers
   // so that we can easily find the right layer to highlight for a given line_id
