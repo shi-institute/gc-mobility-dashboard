@@ -81,7 +81,7 @@ const StyledButton = styled.button<{ solidSurfaceColor?: string }>`
   user-select: none;
   background-color: transparent;
   flex-wrap: nowrap;
-  transition: 120ms;
+  transition: var(--wui-control-faster-duration);
   position: relative;
 
   .label {

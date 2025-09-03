@@ -655,7 +655,7 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
       user-select: none;
       background-color: #fff;
       flex-wrap: nowrap;
-      transition: 120ms;
+      transition: var(--wui-control-faster-duration);
     }
 
     &:hover:not(.disabled)::after {

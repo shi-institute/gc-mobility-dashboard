@@ -78,7 +78,7 @@ const SelectOneComponent = styled.select`
   user-select: none;
   background-color: #fff;
   flex-wrap: nowrap;
-  transition: 120ms;
+  transition: var(--wui-control-faster-duration);
   width: 100%;
 
   /* add a down chevron icon */

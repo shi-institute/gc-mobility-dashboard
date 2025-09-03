@@ -182,7 +182,6 @@ export function TreeMap(props: TreeMapProps) {
                   fillOpacity={0.7}
                   stroke="white"
                   strokeWidth={1}
-                  style={{ cursor: 'default', transition: 'fill-opacity 0.2s' }}
                   onMouseEnter={() => setHoveredNode(leaf)}
                   onMouseLeave={() => setHoveredNode(null)}
                   rx={3}

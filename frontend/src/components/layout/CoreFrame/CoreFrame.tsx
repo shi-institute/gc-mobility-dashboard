@@ -123,7 +123,8 @@ export function CoreFrame(props: CoreFrameProps) {
               opacity: loadingDelayed ? 1 : 0,
               backgroundColor: '#ffffff77',
               backdropFilter: 'blur(14px)',
-              transition: 'opacity 300ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition:
+                'opacity var(--wui-control-normal-duration) cubic-bezier(0.16, 1, 0.3, 1)',
               fontSize: '1rem',
               fontWeight: 500,
             }}
@@ -176,7 +177,7 @@ const InnerFrame = styled.div<{ fixedSidebarOpen: boolean; hasMapElement?: boole
   padding: 0 0 0 var(--padding);
   // gap: 1rem;
 
-  transition: 120ms;
+  transition: var(--wui-control-normal-duration);
 
   position: relative;
 
