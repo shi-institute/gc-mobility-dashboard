@@ -1,6 +1,6 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import React, { ComponentProps, useRef, useState } from 'react';
+import React, { ComponentProps, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   Button,
@@ -163,7 +163,7 @@ function Comparison(_props: { title: string }) {
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
   const transitioning = selectedIndex !== delayedSelectedIndex;
 
-  function switchSelectedIndex(index: number) {
+  function switchSelectedIndex(index: number | null) {
     if (transitioning) {
       return; // prevent switching while another transition is in progress
     }
@@ -243,11 +243,17 @@ function Comparison(_props: { title: string }) {
     } satisfies ComponentProps<typeof OptionTrack.Button>;
   };
 
+  function resetSelectedIndex() {
+    if (selectedIndex !== null) {
+      switchSelectedIndex(null);
+    }
+  }
+
   return (
     <ComparisionContainer ref={containerRef}>
       <div className="left-bar"></div>
       <ComparisonComponent>
-        <div className="background"></div>
+        <ClickableBackground className="background" onClick={resetSelectedIndex} />
 
         <div
           className="imagine-prose"
@@ -315,11 +321,54 @@ function Comparison(_props: { title: string }) {
             switchSelectedIndex(index);
           }}
           value={selectedIndex !== null ? mileOptions[selectedIndex] || '' : ''}
-          placeholder="Imagine"
+          placeholder="Compare"
         ></SelectOne>
       </ComparisonComponent>
     </ComparisionContainer>
   );
+}
+
+interface ClickableBackgroundProps {
+  className?: string;
+  onClick?: (event: MouseEvent) => void;
+}
+
+function ClickableBackground(props: ClickableBackgroundProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rect = useRect(ref);
+
+  // Add an event listener to the document and detects any click that occurs in the rectangle
+  // defined by the rect above. If a click occurs in that rectangle, log to the console.
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      if (
+        rect &&
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      ) {
+        // do not proceed if the click originated from a button, select, anchor, or foreignObject
+        let element = event.target as Element;
+        while (element && element !== event.currentTarget) {
+          if (['BUTTON', 'SELECT', 'A', 'foreignObject'].includes(element.tagName)) {
+            return; // Ignore the event
+          }
+          element = element.parentElement as HTMLElement;
+        }
+
+        // forward the event to the onClick prop
+        props.onClick?.(event);
+      }
+    }
+
+    ref?.current?.parentElement?.addEventListener('click', onClick);
+    return () => {
+      ref?.current?.parentElement?.removeEventListener('click', onClick);
+    };
+  }, [rect, ref.current, props.onClick]);
+
+  return <div ref={ref} className={props.className}></div>;
 }
 
 interface TrackButtonExpandedContentProps {
@@ -536,12 +585,16 @@ const ComparisonComponent = styled.div`
   height: 100%;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
 
   flex-grow: 1;
   flex-shrink: 0;
 
+  --blue-background: hsla(229, 100%, 66%, 0.6);
+  --blue-background--solid: #9fa9fd;
+
   .background {
-    background-color: hsla(229, 100%, 66%, 0.6);
+    background-color: var(--blue-background--solid);
     position: absolute;
     top: 0;
     right: 0;
@@ -584,19 +637,24 @@ const ComparisonComponent = styled.div`
     position: absolute;
     top: 100px;
     right: 20px;
+    z-index: 1;
 
     p:first-of-type {
       font-size: 1.4rem;
       font-weight: 600;
       color: white;
+    }
+
+    p {
       text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      background-color: var(--blue-background--solid);
     }
 
     p:last-of-type {
       font-size: 1.1rem;
       font-weight: 500;
       color: hsl(83, 97%, 75%);
-      text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      color: white;
     }
   }
 
