@@ -297,6 +297,8 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   // so that we can hihglight relevant route and stop features as needed
   const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
   const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
+  const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
+
   useEffect(() => {
     props.mapView?.when(() => {
       const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
@@ -430,6 +432,103 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       abortController.abort();
     };
   }, [routeLayers, setLineIdToLayerIdMap]);
+
+  //add highlighing logic here with useEffect
+  // Main effect for applying highlights based on the selected feature
+  useEffect(() => {
+    // Immediate cleanup of old highlights from previous effect run.
+    activeHighlightHandles.forEach((handle) => handle.remove());
+    setActiveHighlightHandles([]);
+
+    // --- REVISED EARLY EXIT CONDITION ---
+    // Only exit if the absolute core dependencies are missing:
+    // - props.mapView: We can't do anything without the map itself.
+    // - feature: We need *what* to highlight.
+    if (!props.mapView || !feature) {
+      return;
+    }
+    // --- END REVISED EARLY EXIT CONDITION ---
+
+    const highlightPromises: Promise<__esri.Handle | null>[] = [];
+
+    // --- Case 1: Highlighting Routes (for features of type 'addition') ---
+    // Now, specific dependencies for ROUTES are checked *inside* this branch.
+    if (feature.type === 'addition' && feature.routeIds && feature.routeIds.length > 0) {
+      // Only attempt route highlighting if route-specific dependencies are available
+      if (!lineIdToLayerIdMap || !routeLayerViews || routeLayerViews.length === 0) {
+        console.warn('Skipping route highlighting: Missing lineIdToLayerIdMap or routeLayerViews.');
+        return; // Exit this specific branch, but allow others to proceed
+      }
+
+      const targetLayerIds = feature.routeIds
+        .map((lineId) => lineIdToLayerIdMap.get(lineId))
+        .filter((id): id is string => id !== undefined);
+
+      targetLayerIds.forEach((layerId) => {
+        const routeLayerView = routeLayerViews.find((lv) => lv.layer.id === layerId);
+        if (routeLayerView) {
+          highlightPromises.push(
+            routeLayerView
+              .queryFeatures()
+              .then((featureSet) => {
+                if (featureSet.features.length > 0) {
+                  return routeLayerView.highlight(featureSet.features);
+                }
+                return null;
+              })
+              .catch((error) => {
+                console.error(`Error getting highlight handle for route layer ${layerId}:`, error);
+                return null;
+              })
+          );
+        }
+      });
+    }
+    // --- Case 2: Highlighting Stops (for features where 'affects' property is 'stops') ---
+    // Now, specific dependencies for STOPS are checked *inside* this branch.
+    else if (feature.affects === 'stops' && feature.stopIds && feature.stopIds.length > 0) {
+      // Only attempt stop highlighting if stops-specific dependencies are available
+      if (!stopsLayerView) {
+        console.warn('Skipping stop highlighting: Missing stopsLayerView.');
+        return; // Exit this specific branch, but allow others to proceed
+      }
+
+      // We also implicitly need lineIdToLayerIdMap to be available if there could be a mix of types
+      // in a single `feature`. However, for 'stops' type, it's not directly used here.
+
+      const stopIdList = feature.stopIds.map((id) => `'${id}'`).join(', ');
+      const whereClause = `stop_id IN (${stopIdList})`;
+
+      highlightPromises.push(
+        stopsLayerView
+          .queryFeatures({ where: whereClause })
+          .then((featureSet) => {
+            if (featureSet.features.length > 0) {
+              return stopsLayerView.highlight(featureSet.features);
+            }
+            return null;
+          })
+          .catch((error) => {
+            console.error('Error getting highlight handle for stops:', error);
+            return null;
+          })
+      );
+    }
+
+    // Resolve all highlight promises and update the state with their handles
+    Promise.all(highlightPromises).then((handles) => {
+      setActiveHighlightHandles(handles.filter((h): h is __esri.Handle => h !== null));
+    });
+  }, [
+    props.mapView,
+    feature,
+    routeLayerViews,
+    stopsLayerView,
+    lineIdToLayerIdMap,
+    // setActiveHighlightHandles is a stable setter, can omit
+  ]);
+
+  //end add highlighting logic here with useEffect
 
   if (scenario && !props.transitioning) {
     if (!feature) {
