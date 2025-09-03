@@ -627,6 +627,11 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
     width: 160px;
     position: relative;
     cursor: default;
+    &:focus-within {
+      outline: Highlight auto 1px;
+      outline: -webkit-focus-ring-color auto 1px;
+      outline-offset: 2px;
+    }
     .esri-collapse__icon {
       display: none;
     }
