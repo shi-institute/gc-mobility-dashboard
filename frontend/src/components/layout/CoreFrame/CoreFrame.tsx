@@ -1,5 +1,6 @@
 import styled from '@emotion/styled';
 import { useContext, useEffect, useRef, useState } from 'react';
+import { notEmpty } from '../../../utils';
 import { ProgressRing, Tab } from '../../common';
 import { CoreFrameContext } from './CoreFrameContext';
 import { SidebarWrapper } from './SidebarWrapper';
@@ -61,26 +62,24 @@ export function CoreFrame(props: CoreFrameProps) {
           {isMobile ? (
             <>
               <div style={{ gridArea: 'section-tabs' }}>
-                {[props.map, ...(props.sections || [])]
-                  .filter((x) => !!x)
-                  .map((section, index) => {
-                    const tabLabel =
-                      (section.props as Record<string, unknown>).title?.toString() ||
-                      (section.props as Record<string, unknown>).shortTitle?.toString() ||
-                      section.key?.toString() ||
-                      `Tab ${index + 1}`;
-                    return (
-                      <Tab
-                        key={index}
-                        onClick={() => {
-                          setActiveMobileSection(index);
-                        }}
-                        label={tabLabel}
-                        variant="line"
-                        isActive={activeMobileSection === index}
-                      />
-                    );
-                  })}
+                {[props.map, ...(props.sections || [])].filter(notEmpty).map((section, index) => {
+                  const tabLabel =
+                    (section.props as Record<string, unknown>).title?.toString() ||
+                    (section.props as Record<string, unknown>).shortTitle?.toString() ||
+                    section.key?.toString() ||
+                    `Tab ${index + 1}`;
+                  return (
+                    <Tab
+                      key={index}
+                      onClick={() => {
+                        setActiveMobileSection(index);
+                      }}
+                      label={tabLabel}
+                      variant="line"
+                      isActive={activeMobileSection === index}
+                    />
+                  );
+                })}
               </div>
               <MainAreaWrapper>
                 {props.sectionsHeader}
@@ -88,7 +87,7 @@ export function CoreFrame(props: CoreFrameProps) {
                   disableSectionColumns={props.disableSectionColumns}
                   style={props.sectionsStyle}
                 >
-                  {[props.map, ...(props.sections || [])][activeMobileSection]}
+                  {[props.map, ...(props.sections || [])].filter(notEmpty)[activeMobileSection]}
                 </MainArea>
               </MainAreaWrapper>
             </>
