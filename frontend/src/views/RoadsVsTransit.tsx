@@ -590,8 +590,11 @@ const ComparisonComponent = styled.div`
   flex-grow: 1;
   flex-shrink: 0;
 
+  --blue-background: hsla(229, 100%, 66%, 0.6);
+  --blue-background--solid: #9fa9fd;
+
   .background {
-    background-color: hsla(229, 100%, 66%, 0.6);
+    background-color: var(--blue-background--solid);
     position: absolute;
     top: 0;
     right: 0;
@@ -634,6 +637,7 @@ const ComparisonComponent = styled.div`
     position: absolute;
     top: 100px;
     right: 20px;
+    z-index: 1;
 
     p:first-of-type {
       font-size: 1.4rem;
@@ -643,6 +647,7 @@ const ComparisonComponent = styled.div`
 
     p {
       text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      background-color: var(--blue-background--solid);
     }
 
     p:last-of-type {
