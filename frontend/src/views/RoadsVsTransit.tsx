@@ -293,13 +293,10 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
   const feature = scenario?.features?.[selectedFeatureIndex];
 
-  // get the routes and stops layers from the map view
-  // so that we can hihglight relevant route and stop features as needed
+  // get the routes and stops layers from the map view so that we can highlight relevant route and stop features as needed
   const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
   const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
-  //const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
 
-  //begin debugging block
   useEffect(() => {
     props.mapView?.when(() => {
       const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
@@ -316,22 +313,14 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
 
       setRouteLayers(routeLayersFound || null);
       setStopsLayer(stopsLayerFound || null);
-
-      // You can also add logs here to see what was actually set:
-      //console.log('setRouteLayers called with:', routeLayersFound);
-      //console.log('setStopsLayer called with:', stopsLayerFound);
     });
   }, [props.mapView]);
-  //end debugging block
 
   // get the layer views, which allow us to highlight and apply effects
   const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
   const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
 
-  // State for the stops layer view
-
-  // Effect hook to get the LayerView for the 'stopsLayer'.
-  // This LayerView is essential for applying visual effects like highlighting.
+  // Effect to get and set the stops layer view
   useEffect(() => {
     if (!props.mapView || !stopsLayer) {
       setStopsLayerView(null); // Ensure state is cleared if conditions aren't met
@@ -361,18 +350,15 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     };
   }, [props.mapView, stopsLayer]);
 
+  // Effect to get and set the route layer views
   useEffect(() => {
     if (!props.mapView || !routeLayers) {
-      // If dependencies aren't ready, ensure we clear any stale layer views
       setRouteLayerViews(null);
       return;
     }
-
-    const newLayerViews: __esri.GeoJSONLayerView[] = []; // Temporary array to collect new layer views
     const handlers: __esri.Handle[] = []; // Array to store all event handler references for cleanup
 
     // Use Promise.all to wait for all layer views to be created
-    // This is more robust than collecting one-by-one with setRouteLayerViews in the loop.
     const getLayerViewsPromises = routeLayers.map((routeLayer) => {
       return new Promise<__esri.GeoJSONLayerView>((resolve) => {
         // First, check if the layer view already exists (e.g., if the map hasn't changed)
@@ -395,7 +381,6 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     Promise.all(getLayerViewsPromises)
       .then((layerViews) => {
         // Filter out any potential null/undefined if a promise didn't resolve correctly,
-        // though with `resolve` directly, it should be fine.
         setRouteLayerViews(layerViews.filter(Boolean));
       })
       .catch((error) => {
@@ -407,13 +392,10 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     return () => {
       // Remove all event handlers that were attached during this effect's run
       handlers.forEach((h) => h.remove());
-      // No need to clear setRouteLayerViews here because Promise.all will overwrite
-      // it when it completes, or the initial null check will handle it.
     };
   }, [props.mapView, routeLayers]); // Dependencies: Re-run if props.mapView or routeLayers changes.
 
-  // build a mapping of line_id to layer id for the route layers
-  // so that we can easily find the right layer to highlight for a given line_id
+  // build a mapping of line_id to layer id for the route layers so that we can easily find the right layer to highlight for a given line_id
   const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
   useEffect(() => {
     const abortController = new AbortController();
@@ -454,22 +436,19 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     };
   }, [routeLayers, setLineIdToLayerIdMap]);
 
-  //add highlighing logic here with useEffect
   // Keep this state for managing highlight handles, needed for cleanup via closure.
   const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
 
   // Main effect for applying highlights based on the selected feature
   useEffect(() => {
-    // Collect promises for new highlight handles
     const highlightPromises: Promise<__esri.Handle | null>[] = [];
 
     // Early exit if absolute core dependencies are missing
     if (!props.mapView || !feature) {
-      // Return a cleanup function that clears the currently active highlights
-      // (those stored in `activeHighlightHandles` *from the last successful run*).
       return () => {
         activeHighlightHandles.forEach((handle) => handle.remove());
         setActiveHighlightHandles([]); // Explicitly clear state on early exit
+        console.log('Highlighting useEffect CLEANUP running');
       };
     }
 
@@ -509,12 +488,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       });
     }
     // --- Case 2: Highlighting Stops ---
-
-    //debug code starts here.
-
-    // Inside the main highlighting useEffect, in the 'stops' branch:
     else if (feature.affects === 'stops' && feature.stopIds && feature.stopIds.length > 0) {
-      console.log('--- Highlighting stops branch entered ---');
       if (!stopsLayerView) {
         console.warn('Skipping stop highlighting: Missing stopsLayerView.');
         return () => {
@@ -523,50 +497,33 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
         };
       }
 
-      console.log('--- Attempting to highlight stops ---');
-      console.log('Feature affects:', feature.affects, 'Stop IDs from feature:', feature.stopIds);
-
-      //const stopIdList = feature.stopIds.map((id) => `'${id}'`).join(', ');
       const stopIdList = feature.stopIds.join(', ');
-      console.log('Constructed stopIdList for SQL IN clause:', stopIdList);
       const whereClause = `ID IN (${stopIdList})`;
-      console.log('Generated WHERE clause:', whereClause);
 
       highlightPromises.push(
         stopsLayerView
           .queryFeatures({ where: whereClause })
           .then((featureSet) => {
-            console.log('stopsLayerView.queryFeatures result:');
-            console.log('  Number of features found:', featureSet.features.length);
             if (featureSet.features.length > 0) {
-              console.log(
-                '  Found features attributes (first 2):',
-                featureSet.features.slice(0, 2).map((f) => f.attributes)
-              );
-              console.log(
-                '  Calling stopsLayerView.highlight() for',
-                featureSet.features.length,
-                'features.'
-              );
+              // If features are found, apply the highlight.
               return stopsLayerView.highlight(featureSet.features);
             } else {
-              console.warn('  NO FEATURES FOUND for stops with WHERE clause:', whereClause);
+              // If no features are found, return null (no highlight handle created).
+              console.warn('No features found for stops with WHERE clause:', whereClause);
             }
             return null;
           })
           .catch((error) => {
+            // Log any errors during the queryFeatures call and return null.
             console.error('Error during stopsLayerView.queryFeatures:', error);
             return null;
           })
       );
-      console.log('--- End of stops highlighting attempt ---'); // To see if it completes
     }
 
-    //debug code ends here.
     // --- Case 3: No specific highlight type matched or no data to highlight ---
     else {
-      // If feature exists but doesn't match a highlight type, or has no relevant IDs,
-      // we should ensure any previous highlights are cleared.
+      // If feature exists but doesn't match a highlight type, or has no relevant IDs, we should ensure any previous highlights are cleared.
       return () => {
         // Return cleanup function for this scenario
         activeHighlightHandles.forEach((handle) => handle.remove());
@@ -585,29 +542,11 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
         setActiveHighlightHandles([]); // Clear highlights on error
       });
 
-    // THIS IS THE CRITICAL CLEANUP FUNCTION RETURNED BY THIS EFFECT
-    // It will remove highlights that were created by the *previous* run of this effect,
-    // using the `activeHighlightHandles` value that was current *when this cleanup function was created*.
-    // It also runs when the component unmounts.
+    // Cleanup function to remove highlights when dependencies change or component unmounts
     return () => {
       activeHighlightHandles.forEach((handle) => handle.remove());
-      // Do NOT call setActiveHighlightHandles([]) here inside the cleanup function,
-      // as this could cause an infinite loop by re-triggering the effect.
-      // The `setActiveHighlightHandles` in the Promise.all() will set the new state.
-      // If the component unmounts, the state will be garbage collected anyway.
     };
-  }, [
-    props.mapView,
-    feature,
-    routeLayerViews,
-    stopsLayerView,
-    lineIdToLayerIdMap,
-    // activeHighlightHandles is NOT included here. Its value is used in the cleanup function
-    // via closure, but changes to it don't trigger the *effect itself* to re-run.
-    // setActiveHighlightHandles (the setter) is stable and can be omitted.
-  ]);
-
-  //end add highlighting logic here with useEffect
+  }, [props.mapView, feature, routeLayerViews, stopsLayerView, lineIdToLayerIdMap]);
 
   if (scenario && !props.transitioning) {
     if (!feature) {
