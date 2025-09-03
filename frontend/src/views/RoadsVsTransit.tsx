@@ -319,7 +319,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
 
       // You can also add logs here to see what was actually set:
       //console.log('setRouteLayers called with:', routeLayersFound);
-      console.log('setStopsLayer called with:', stopsLayerFound);
+      //console.log('setStopsLayer called with:', stopsLayerFound);
     });
   }, [props.mapView]);
   //end debugging block
@@ -328,20 +328,35 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
   const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
 
+  // State for the stops layer view
+
+  // Effect hook to get the LayerView for the 'stopsLayer'.
+  // This LayerView is essential for applying visual effects like highlighting.
   useEffect(() => {
     if (!props.mapView || !stopsLayer) {
+      setStopsLayerView(null); // Ensure state is cleared if conditions aren't met
       return;
     }
 
-    // Store the event handler reference so we can remove it later
     const handler = stopsLayer.on('layerview-create', (evt) => {
       const layerView = evt.layerView as __esri.GeoJSONLayerView;
       setStopsLayerView(layerView);
     });
 
-    // Cleanup function to prevent memory leak.
+    // Also check if layer view already exists (e.g., on re-renders where layer didn't change)
+    props.mapView
+      .whenLayerView(stopsLayer)
+      .then((existingLayerView) => {
+        if (existingLayerView) {
+          setStopsLayerView(existingLayerView as __esri.GeoJSONLayerView);
+        }
+      })
+      .catch((error) => {
+        console.error('Error getting existing stops layer view:', error);
+        setStopsLayerView(null); // Clear on error
+      });
+
     return () => {
-      // Remove the event listener when the component unmounts or dependencies change
       handler.remove();
     };
   }, [props.mapView, stopsLayer]);
@@ -511,7 +526,8 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       console.log('--- Attempting to highlight stops ---');
       console.log('Feature affects:', feature.affects, 'Stop IDs from feature:', feature.stopIds);
 
-      const stopIdList = feature.stopIds.map((id) => `'${id}'`).join(', ');
+      //const stopIdList = feature.stopIds.map((id) => `'${id}'`).join(', ');
+      const stopIdList = feature.stopIds.join(', ');
       console.log('Constructed stopIdList for SQL IN clause:', stopIdList);
       const whereClause = `ID IN (${stopIdList})`;
       console.log('Generated WHERE clause:', whereClause);
