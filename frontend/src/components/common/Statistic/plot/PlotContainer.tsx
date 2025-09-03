@@ -1,17 +1,29 @@
 import styled from '@emotion/styled';
 import * as Plot from '@observablehq/plot';
 import * as d3 from 'd3';
+import { html } from 'htl';
 import { useEffect, useRef } from 'react';
 import { useRect } from '../../../../hooks';
+import { hasKey, notEmpty } from '../../../../utils';
 import { facetedHorizontalBar } from './presets/facetedHorizontalBar';
 import { horizontalBar } from './presets/hoizontalBar';
 
+interface PlotOptions extends Plot.PlotOptions {
+  /**
+   * When true, show the message that appears when the sample size is too small.
+   * If undefined, the sample size will be calculated from the length of the
+   * largest data array in the marks.
+   * */
+  sampleSizeIsTooSmall?: boolean;
+}
+
 export interface PlotFigureProps {
   options:
-    | Plot.PlotOptions
-    | ((plotLib: typeof Plot, d3Lib: typeof d3, helpers: Helpers) => Plot.PlotOptions);
+    | PlotOptions
+    | ((plotLib: typeof Plot, d3Lib: typeof d3, helpers: Helpers) => PlotOptions);
   className?: string;
   titleTag?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+  minSampleSize?: number;
 }
 
 export function PlotContainer(props: PlotFigureProps) {
@@ -40,7 +52,34 @@ export function PlotContainer(props: PlotFigureProps) {
       options.title = node;
     }
 
-    const plot = Plot.plot(options);
+    let plot: ReturnType<typeof Plot.plot> | null = null;
+
+    const minSampleSize = props.minSampleSize || 0;
+    const isSampleSizeTooSmall =
+      options.sampleSizeIsTooSmall ??
+      (options.marks || [])
+        .filter(notEmpty)
+        .filter(
+          (mark): mark is Plot.RenderableMark & { data: Plot.Data } =>
+            hasKey(mark, 'data') && Array.isArray(mark.data)
+        )
+        .map((mark) => Array.from(mark.data))
+        .every((data) => data.length < minSampleSize);
+    if (isSampleSizeTooSmall) {
+      plot = Plot.plot({
+        ...options,
+        marks: [],
+        height: 0,
+        caption: html`<i>The data sample size is too small to display this figure.</i>`,
+      });
+    } else {
+      plot = Plot.plot(options);
+    }
+
+    if (plot == null) {
+      return;
+    }
+
     containerRef.current.append(plot);
 
     return () => {
