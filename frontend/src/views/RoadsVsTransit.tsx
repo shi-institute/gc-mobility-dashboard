@@ -315,7 +315,7 @@ function Comparison(_props: { title: string }) {
             switchSelectedIndex(index);
           }}
           value={selectedIndex !== null ? mileOptions[selectedIndex] || '' : ''}
-          placeholder="Imagine"
+          placeholder="Compare"
         ></SelectOne>
       </ComparisonComponent>
     </ComparisionContainer>
