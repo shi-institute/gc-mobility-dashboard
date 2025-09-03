@@ -158,6 +158,9 @@ export function WorkAndSchool2() {
                   ...preset.color,
                   legend: index === 0,
                 },
+                // require a sample size of at least 30 to display the figure
+                sampleSizeIsTooSmall:
+                  Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
               };
             };
           })}
