@@ -19,7 +19,7 @@ export function NavBarItem(props: NavItemProps) {
   }
 
   return (
-    <NavBarElement onClick={props.onClick} active={props.isActive}>
+    <NavBarElement onClick={props.onClick} active={props.isActive} as="button">
       <span className="nav-icon">{props.icon}</span>
       <span className="label">{props.label}</span>
     </NavBarElement>

@@ -53,7 +53,7 @@ export function CoreFrame(props: CoreFrameProps) {
   return (
     <Container ref={containerRef}>
       <OuterFrame style={props.outerStyle}>
-        <div style={{ gridArea: 'header' }}>{props.header}</div>
+        <div style={{ gridArea: 'header', overflow: 'hidden' }}>{props.header}</div>
         <InnerFrame
           fixedSidebarOpen={!props.sidebar ? false : fixedSidebarOpen && isFullDesktop}
           hasMapElement={!!props.map}
