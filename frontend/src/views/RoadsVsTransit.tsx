@@ -589,6 +589,9 @@ const ComparisonComponent = styled.div`
       font-size: 1.4rem;
       font-weight: 600;
       color: white;
+    }
+
+    p {
       text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
     }
 
@@ -596,7 +599,7 @@ const ComparisonComponent = styled.div`
       font-size: 1.1rem;
       font-weight: 500;
       color: hsl(83, 97%, 75%);
-      text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      color: white;
     }
   }
 
