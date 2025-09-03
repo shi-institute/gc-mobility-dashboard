@@ -151,11 +151,12 @@ export default function App() {
   const resolvedAreas = isOnJobAccessPage ? jobAccessAreasOverride : areas;
   const resolvedSeasons = isOnJobAccessPage ? jobAccessSeasonsOverride : seasons;
 
+  const editMode = searchParams.get('edit') === 'true';
+
   // add an event listener to trigger edit mode: Meta + Shift + E
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'E' && event.shiftKey && event.metaKey) {
-        const editMode = searchParams.get('edit') === 'true';
         if (editMode) {
           searchParams.delete('edit');
         } else {
@@ -170,15 +171,25 @@ export default function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, editMode]);
+
+  const subsetTitle = searchParams.get('subsetTitle') ?? 'Currently viewing a subset';
+  const setSubsetTitle = (title: string) => {
+    if (title.trim().length === 0) {
+      searchParams.delete('subsetTitle');
+    } else {
+      searchParams.set('subsetTitle', title.trim());
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
 
   return (
     <AppWrapper>
       <AppDataContext.Provider
         value={createAppDataContext(resolvedAreas, resolvedSeasons, travelMethod)}
       >
-        {searchParams.get('edit') === 'true' ? (
-          <EditModeBanner>
+        {editMode ? (
+          <Banner>
             <h1>You are currently in edit mode</h1>
             <p>
               Click any statistic to show/hide it. Hidden elements will be 50% transparent while in
@@ -186,7 +197,30 @@ export default function App() {
             </p>
             <p>Tabs without visible items will be hidden outside of edit mode.</p>
             <p>Press Meta + Shift + E to exit edit mode.</p>
-          </EditModeBanner>
+          </Banner>
+        ) : null}
+        {searchParams.has('sections') ? (
+          <Banner flex>
+            <p>
+              <span
+                contentEditable={editMode}
+                onBlur={(evt) => setSubsetTitle(evt.currentTarget.textContent || '')}
+              >
+                {subsetTitle}
+              </span>
+              {editMode ? <span> (⬅️ type to edit title)</span> : null}
+            </p>
+            <Button
+              solidSurfaceColor="#e0e0e0"
+              onClick={() => {
+                searchParams.delete('sections');
+                searchParams.delete('subsetTitle');
+                setSearchParams(searchParams, { replace: true });
+              }}
+            >
+              View all data
+            </Button>
+          </Banner>
         ) : null}
         <CoreFrameContext.Provider value={createCoreFrameContextValue()}>
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
@@ -277,10 +311,23 @@ const PlaceholderGreenvilleConnectsWebsiteHeader = styled.div`
   flex-shrink: 0;
 `;
 
-const EditModeBanner = styled.div`
+const Banner = styled.aside<{ flex?: boolean }>`
   background-color: var(--color-secondary);
   color: #e0e0e0;
   padding: 0.5rem 1rem;
+  box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 10%);
+
+  ${({ flex }) => {
+    if (flex) {
+      return `
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      `;
+    }
+  }}
 
   h1 {
     font-size: 1rem;
@@ -291,5 +338,23 @@ const EditModeBanner = styled.div`
   p {
     font-size: 0.875rem;
     margin: 0;
+  }
+
+  button {
+    color: var(--text-primary);
+    background-color: hsla(0, 0%, 100%, 0.06);
+    height: 1.825rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    padding: 0 1em;
+
+    --text-primary: hsl(0, 0%, 100%);
+    --text-secondary: hsla(0, 0%, 100%, 0.77);
+
+    --subtle-fill-secondary: hsla(0, 0%, 100%, 0.09);
+    --subtle-fill-tertiary: hsla(0, 0%, 100%, 0.03);
+
+    --control-stroke-default: hsla(0, 0%, 100%, 0.07);
+    --control-stroke-secondary-overlay: hsla(0, 0%, 0%, 2.32%);
   }
 `;
