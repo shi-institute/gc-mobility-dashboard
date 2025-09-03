@@ -19,6 +19,8 @@ interface MyButtonProps {
   style?: React.CSSProperties;
   /** draws a solid surface of the specified color under the button */
   solidSurfaceColor?: string;
+
+  inert?: boolean;
 }
 
 /**
@@ -35,6 +37,7 @@ export function Button(props: MyButtonProps) {
         title={props.href}
         style={props.style}
         solidSurfaceColor={props.solidSurfaceColor}
+        inert={props.inert}
       >
         {props.iconLeft}
         <span className="label">{props.children}</span>
@@ -52,6 +55,7 @@ export function Button(props: MyButtonProps) {
       className={props.disabled ? 'disabled' : ''}
       style={props.style}
       solidSurfaceColor={props.solidSurfaceColor}
+      inert={props.inert}
     >
       {props.iconLeft}
       <span className="label">{props.children}</span>

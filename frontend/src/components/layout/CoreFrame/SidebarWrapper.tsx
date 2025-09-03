@@ -51,6 +51,7 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
     <OpenButtonWrapper visible={showButtonVisible}>
       <Button
         onClick={() => (props.frameWidth >= 1280 ? setForceClosed(false) : setOptionsOpen(true))}
+        inert={optionsOpen}
         iconLeft={
           props.frameWidth >= 900 ? (
             <svg
@@ -80,7 +81,7 @@ export function SidebarWrapper(props: SidebarWrapperProps) {
 
   return (
     <>
-      <FloatingSidebarWrapper isOpen={optionsOpen}>
+      <FloatingSidebarWrapper isOpen={optionsOpen} inert={!optionsOpen}>
         {props.children}
         <CloseButton onClick={() => setOptionsOpen(false)} size="1rem">
           <svg

@@ -168,4 +168,8 @@ const ToggleContainer = styled.label`
     box-shadow: none;
     background-color: #ddd;
   }
+
+  .toggle-switch:focus-visible {
+    outline-offset: 3px !important;
+  }
 `;
