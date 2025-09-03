@@ -297,26 +297,32 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   // so that we can hihglight relevant route and stop features as needed
   const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
   const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
-  const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
+  //const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
 
+  //begin debugging block
   useEffect(() => {
     props.mapView?.when(() => {
       const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
         (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
       );
 
-      const routeLayers = geoJsonLayers.filter((layer) => {
+      const routeLayersFound = geoJsonLayers.filter((layer) => {
         return layer.id.startsWith('future_route__');
       });
 
-      const stopsLayer = geoJsonLayers.find(
+      const stopsLayerFound = geoJsonLayers.find(
         (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
       );
 
-      setRouteLayers(routeLayers || null);
-      setStopsLayer(stopsLayer || null);
+      setRouteLayers(routeLayersFound || null);
+      setStopsLayer(stopsLayerFound || null);
+
+      // You can also add logs here to see what was actually set:
+      //console.log('setRouteLayers called with:', routeLayersFound);
+      console.log('setStopsLayer called with:', stopsLayerFound);
     });
-  }, [props.mapView, setRouteLayers]);
+  }, [props.mapView]);
+  //end debugging block
 
   // get the layer views, which allow us to highlight and apply effects
   const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
@@ -434,30 +440,33 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   }, [routeLayers, setLineIdToLayerIdMap]);
 
   //add highlighing logic here with useEffect
+  // Keep this state for managing highlight handles, needed for cleanup via closure.
+  const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
+
   // Main effect for applying highlights based on the selected feature
   useEffect(() => {
-    // Immediate cleanup of old highlights from previous effect run.
-    activeHighlightHandles.forEach((handle) => handle.remove());
-    setActiveHighlightHandles([]);
-
-    // --- REVISED EARLY EXIT CONDITION ---
-    // Only exit if the absolute core dependencies are missing:
-    // - props.mapView: We can't do anything without the map itself.
-    // - feature: We need *what* to highlight.
-    if (!props.mapView || !feature) {
-      return;
-    }
-    // --- END REVISED EARLY EXIT CONDITION ---
-
+    // Collect promises for new highlight handles
     const highlightPromises: Promise<__esri.Handle | null>[] = [];
 
-    // --- Case 1: Highlighting Routes (for features of type 'addition') ---
-    // Now, specific dependencies for ROUTES are checked *inside* this branch.
+    // Early exit if absolute core dependencies are missing
+    if (!props.mapView || !feature) {
+      // Return a cleanup function that clears the currently active highlights
+      // (those stored in `activeHighlightHandles` *from the last successful run*).
+      return () => {
+        activeHighlightHandles.forEach((handle) => handle.remove());
+        setActiveHighlightHandles([]); // Explicitly clear state on early exit
+      };
+    }
+
+    // --- Case 1: Highlighting Routes ---
     if (feature.type === 'addition' && feature.routeIds && feature.routeIds.length > 0) {
-      // Only attempt route highlighting if route-specific dependencies are available
       if (!lineIdToLayerIdMap || !routeLayerViews || routeLayerViews.length === 0) {
         console.warn('Skipping route highlighting: Missing lineIdToLayerIdMap or routeLayerViews.');
-        return; // Exit this specific branch, but allow others to proceed
+        return () => {
+          // Return cleanup if this branch can't run
+          activeHighlightHandles.forEach((handle) => handle.remove());
+          setActiveHighlightHandles([]);
+        };
       }
 
       const targetLayerIds = feature.routeIds
@@ -484,48 +493,102 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
         }
       });
     }
-    // --- Case 2: Highlighting Stops (for features where 'affects' property is 'stops') ---
-    // Now, specific dependencies for STOPS are checked *inside* this branch.
+    // --- Case 2: Highlighting Stops ---
+
+    //debug code starts here.
+
+    // Inside the main highlighting useEffect, in the 'stops' branch:
     else if (feature.affects === 'stops' && feature.stopIds && feature.stopIds.length > 0) {
-      // Only attempt stop highlighting if stops-specific dependencies are available
+      console.log('--- Highlighting stops branch entered ---');
       if (!stopsLayerView) {
         console.warn('Skipping stop highlighting: Missing stopsLayerView.');
-        return; // Exit this specific branch, but allow others to proceed
+        return () => {
+          activeHighlightHandles.forEach((handle) => handle.remove());
+          setActiveHighlightHandles([]);
+        };
       }
 
-      // We also implicitly need lineIdToLayerIdMap to be available if there could be a mix of types
-      // in a single `feature`. However, for 'stops' type, it's not directly used here.
+      console.log('--- Attempting to highlight stops ---');
+      console.log('Feature affects:', feature.affects, 'Stop IDs from feature:', feature.stopIds);
 
       const stopIdList = feature.stopIds.map((id) => `'${id}'`).join(', ');
-      const whereClause = `stop_id IN (${stopIdList})`;
+      console.log('Constructed stopIdList for SQL IN clause:', stopIdList);
+      const whereClause = `ID IN (${stopIdList})`;
+      console.log('Generated WHERE clause:', whereClause);
 
       highlightPromises.push(
         stopsLayerView
           .queryFeatures({ where: whereClause })
           .then((featureSet) => {
+            console.log('stopsLayerView.queryFeatures result:');
+            console.log('  Number of features found:', featureSet.features.length);
             if (featureSet.features.length > 0) {
+              console.log(
+                '  Found features attributes (first 2):',
+                featureSet.features.slice(0, 2).map((f) => f.attributes)
+              );
+              console.log(
+                '  Calling stopsLayerView.highlight() for',
+                featureSet.features.length,
+                'features.'
+              );
               return stopsLayerView.highlight(featureSet.features);
+            } else {
+              console.warn('  NO FEATURES FOUND for stops with WHERE clause:', whereClause);
             }
             return null;
           })
           .catch((error) => {
-            console.error('Error getting highlight handle for stops:', error);
+            console.error('Error during stopsLayerView.queryFeatures:', error);
             return null;
           })
       );
+      console.log('--- End of stops highlighting attempt ---'); // To see if it completes
     }
 
-    // Resolve all highlight promises and update the state with their handles
-    Promise.all(highlightPromises).then((handles) => {
-      setActiveHighlightHandles(handles.filter((h): h is __esri.Handle => h !== null));
-    });
+    //debug code ends here.
+    // --- Case 3: No specific highlight type matched or no data to highlight ---
+    else {
+      // If feature exists but doesn't match a highlight type, or has no relevant IDs,
+      // we should ensure any previous highlights are cleared.
+      return () => {
+        // Return cleanup function for this scenario
+        activeHighlightHandles.forEach((handle) => handle.remove());
+        setActiveHighlightHandles([]);
+      };
+    }
+
+    // Resolve all highlight promises and then update the state with the new handles.
+    Promise.all(highlightPromises)
+      .then((handles) => {
+        const newHandles = handles.filter((h): h is __esri.Handle => h !== null);
+        setActiveHighlightHandles(newHandles); // Update state once all async ops are done
+      })
+      .catch((error) => {
+        console.error('Promise.all for highlights failed:', error);
+        setActiveHighlightHandles([]); // Clear highlights on error
+      });
+
+    // THIS IS THE CRITICAL CLEANUP FUNCTION RETURNED BY THIS EFFECT
+    // It will remove highlights that were created by the *previous* run of this effect,
+    // using the `activeHighlightHandles` value that was current *when this cleanup function was created*.
+    // It also runs when the component unmounts.
+    return () => {
+      activeHighlightHandles.forEach((handle) => handle.remove());
+      // Do NOT call setActiveHighlightHandles([]) here inside the cleanup function,
+      // as this could cause an infinite loop by re-triggering the effect.
+      // The `setActiveHighlightHandles` in the Promise.all() will set the new state.
+      // If the component unmounts, the state will be garbage collected anyway.
+    };
   }, [
     props.mapView,
     feature,
     routeLayerViews,
     stopsLayerView,
     lineIdToLayerIdMap,
-    // setActiveHighlightHandles is a stable setter, can omit
+    // activeHighlightHandles is NOT included here. Its value is used in the cleanup function
+    // via closure, but changes to it don't trigger the *effect itself* to re-run.
+    // setActiveHighlightHandles (the setter) is stable and can be omitted.
   ]);
 
   //end add highlighting logic here with useEffect
