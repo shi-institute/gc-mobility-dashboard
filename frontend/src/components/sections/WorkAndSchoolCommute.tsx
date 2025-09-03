@@ -3,6 +3,7 @@ import { flatSectionBundleIds } from '.';
 import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { notEmpty, shouldRenderStatistic } from '../../utils';
 import { Button, Section, SectionEntry, Statistic } from '../common';
+import { StatisticContainer } from '../common/Statistic/StatisticContainer';
 import { TAB_3_FRAGMENT } from '../navigation';
 import { SelectTravelMethod } from '../options';
 
@@ -41,7 +42,7 @@ export function WorkAndSchoolCommute() {
           m={{ gridColumn: '1 / 4' }}
           l={{ gridColumn: '1 / 5' }}
         >
-          <div
+          <StatisticContainer
             onClick={handleClick('bluelines')}
             style={{ opacity: shouldRender('bluelines') === 'partial' ? 0.5 : 1 }}
           >
@@ -52,7 +53,7 @@ export function WorkAndSchoolCommute() {
                 (data?.length === 1 ? 'this area' : 'the selected seasons and areas')
               }
             />
-          </div>
+          </StatisticContainer>
         </SectionEntry>
       ) : null}
       <Statistic.Percent
