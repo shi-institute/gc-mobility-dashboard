@@ -95,7 +95,7 @@ export function CoreFrame(props: CoreFrameProps) {
           ) : (
             <>
               {props.map ? <MapArea>{props.map}</MapArea> : null}
-              <MainAreaWrapper>
+              <MainAreaWrapper tabIndex={0}>
                 {props.sectionsHeader}
                 <MainArea
                   disableSectionColumns={props.disableSectionColumns}
