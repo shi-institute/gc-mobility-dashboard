@@ -127,7 +127,7 @@ const FloatingSidebarWrapper = styled.div<{ isOpen?: boolean }>`
   z-index: 9999;
   margin: 1rem;
   box-sizing: border-box;
-  transition: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: var(--wui-control-normal-duration) cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid hsla(0, 0%, 46%, 40%);
   border-radius: var(--surface-radius);
   box-shadow: 0px 32px 64px hsla(0, 0%, 0%, 18.76%), 0px 2px 21px hsl(0, 0%, 0%, 14.74%);
@@ -149,14 +149,14 @@ const Scrim = styled.div<{ optionsOpen: boolean; visible: boolean }>`
   z-index: 9998;
   opacity: ${({ optionsOpen }) => (optionsOpen ? 0.12 : 0)};
   visibility: ${({ visible }) => (visible ? 'visible' : 'hidden')};
-  transition: opacity 360ms;
+  transition: opacity var(--wui-control-normal-duration);
 `;
 
 const OpenButtonWrapper = styled.div<{ visible: boolean }>`
   position: absolute;
   right: 0;
   bottom: 1rem;
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--wui-control-fast-duration) cubic-bezier(0.16, 1, 0.3, 1);
 
   @container core (min-width: 900px) {
     transform: ${({ visible }) => (visible ? 'translateX(0)' : 'translateX(100%)')};

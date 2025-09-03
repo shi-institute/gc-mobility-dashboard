@@ -76,7 +76,7 @@ const StyledButton = styled.button<{ active?: boolean; solidSurfaceColor?: strin
   user-select: none;
   background-color: transparent;
   flex-wrap: nowrap;
-  transition: 120ms;
+  transition: var(--wui-control-faster-duration);
   position: relative;
   ${(props) => props.title && `cursor: help;`}
 

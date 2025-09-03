@@ -163,15 +163,20 @@ function Comparison(_props: { title: string }) {
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
   const transitioning = selectedIndex !== delayedSelectedIndex;
 
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   function switchSelectedIndex(index: number | null) {
     if (transitioning) {
       return; // prevent switching while another transition is in progress
     }
 
     setSelectedIndex(index);
-    setTimeout(() => {
-      setDelayedSelectedIndex(index);
-    }, 300); // delay to allow for transition effect
+    setTimeout(
+      () => {
+        setDelayedSelectedIndex(index);
+      },
+      prefersReducedMotion ? 0 : 300
+    ); // delay to allow for transition effect
   }
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -190,6 +195,8 @@ function Comparison(_props: { title: string }) {
     const buttonScenarios = scenarios.filter(
       (s) => s.pavementMiles === parseFloat(mileOptions[index]?.split(' ')[0] ?? '-1')
     );
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     return {
       size: selectedIndex === index ? 400 : undefined,
@@ -220,7 +227,7 @@ function Comparison(_props: { title: string }) {
             style={{
               position: 'absolute',
               opacity: selectedIndex !== index ? 1 : 0,
-              transition: '120ms opacity',
+              transition: 'var(--wui-control-faster-duration) opacity',
             }}
           >
             {optionLabel}
@@ -229,7 +236,12 @@ function Comparison(_props: { title: string }) {
             className="expanded"
             style={{
               opacity: selectedIndex === index ? 1 : 0,
-              transition: selectedIndex !== index ? '120ms opacity' : '1000ms opacity',
+              transition:
+                selectedIndex !== index
+                  ? 'var(--wui-control-faster-duration) opacity'
+                  : prefersReducedMotion
+                  ? '0 opacity'
+                  : '1000ms opacity',
             }}
           >
             <TrackButtonExpandedContent
@@ -257,7 +269,10 @@ function Comparison(_props: { title: string }) {
 
         <div
           className="imagine-prose"
-          style={{ opacity: selectedIndex === null ? 1 : 0, transition: '120ms opacity' }}
+          style={{
+            opacity: selectedIndex === null ? 1 : 0,
+            transition: 'var(--wui-control-faster-duration) opacity',
+          }}
         >
           <p>1 mile of road pavement costs around $1 Million -</p>
           <p>What happens when this amount is spent on public transit instead?</p>
