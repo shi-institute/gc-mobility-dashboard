@@ -13,7 +13,7 @@ import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
 import { useAppData, useLocalStorage, useRect } from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
-import { notEmpty, requireKey } from '../utils';
+import { notEmpty } from '../utils';
 
 export function RoadsVsTransit() {
   const { data, loading, scenarios: scenariosData } = useAppData();
@@ -282,125 +282,118 @@ interface TrackButtonExpandedContentProps {
 }
 
 function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
+  // =========================================================================
+  // SECTION 1: useState Hooks
+  // =========================================================================
   const [selectedScenarioIndex, _setSelectedScenarioIndex] = useState<number | null>(null);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
+  const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
+  const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
+  const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
+  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
+  const activeHighlightHandlesRef = useRef<__esri.Handle[]>([]);
+
+  // =========================================================================
+  // SECTION 2: REGULAR FUNCTIONS & useCallback HOOKS
+  // =========================================================================
   function setSelectedScenarioIndex(index: number | null) {
     _setSelectedScenarioIndex(index);
     setSelectedFeatureIndex(0);
   }
 
-  const scenario =
-    selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
-  const feature = scenario?.features?.[selectedFeatureIndex];
+  // =========================================================================
+  // SECTION 3:useEffect HOOKS
+  // =========================================================================
 
-  // get the routes and stops layers from the map view so that we can highlight relevant route and stop features as needed
-  const [routeLayers, setRouteLayers] = useState<__esri.GeoJSONLayer[] | null>(null);
-  const [stopsLayer, setStopsLayer] = useState<__esri.GeoJSONLayer | null>(null);
-
+  // Effect: Get the routes and stops layers from the map view
   useEffect(() => {
     props.mapView?.when(() => {
       const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
         (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
       );
-
-      const routeLayersFound = geoJsonLayers.filter((layer) => {
-        return layer.id.startsWith('future_route__');
-      });
-
+      const routeLayersFound = geoJsonLayers.filter((layer) =>
+        layer.id.startsWith('future_route__')
+      );
       const stopsLayerFound = geoJsonLayers.find(
         (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
       );
-
       setRouteLayers(routeLayersFound || null);
       setStopsLayer(stopsLayerFound || null);
     });
   }, [props.mapView]);
 
-  // get the layer views, which allow us to highlight and apply effects
-  const [routeLayerViews, setRouteLayerViews] = useState<__esri.GeoJSONLayerView[] | null>(null);
-  const [stopsLayerView, setStopsLayerView] = useState<__esri.GeoJSONLayerView | null>(null);
-
-  // Effect to get and set the stops layer view
+  // Effect: Get the stops layer view
   useEffect(() => {
     if (!props.mapView || !stopsLayer) {
-      setStopsLayerView(null); // Ensure state is cleared if conditions aren't met
+      setStopsLayerView(null);
       return;
     }
-
-    const handler = stopsLayer.on('layerview-create', (evt) => {
-      const layerView = evt.layerView as __esri.GeoJSONLayerView;
-      setStopsLayerView(layerView);
-    });
-
-    // Also check if layer view already exists (e.g., on re-renders where layer didn't change)
     props.mapView
       .whenLayerView(stopsLayer)
-      .then((existingLayerView) => {
-        if (existingLayerView) {
-          setStopsLayerView(existingLayerView as __esri.GeoJSONLayerView);
+      .then((layerView) => {
+        if (layerView) {
+          setStopsLayerView(layerView as __esri.GeoJSONLayerView);
+        } else {
+          setStopsLayerView(null);
+          console.warn(`whenLayerView resolved null for stopsLayer ID: ${stopsLayer.id}`);
         }
       })
       .catch((error) => {
-        console.error('Error getting existing stops layer view:', error);
-        setStopsLayerView(null); // Clear on error
+        console.error(`Error getting stops layer view for ID: ${stopsLayer.id}:`, error);
+        setStopsLayerView(null);
       });
-
-    return () => {
-      handler.remove();
-    };
   }, [props.mapView, stopsLayer]);
 
-  // Effect to get and set the route layer views
+  // Effect: Get the route layer views
   useEffect(() => {
-    if (!props.mapView || !routeLayers) {
+    if (!props.mapView || !routeLayers || routeLayers.length === 0) {
       setRouteLayerViews(null);
       return;
     }
-    const handlers: __esri.Handle[] = []; // Array to store all event handler references for cleanup
+    const handlers: __esri.Handle[] = [];
 
-    // Use Promise.all to wait for all layer views to be created
     const getLayerViewsPromises = routeLayers.map((routeLayer) => {
-      return new Promise<__esri.GeoJSONLayerView>((resolve) => {
-        // First, check if the layer view already exists (e.g., if the map hasn't changed)
-        props.mapView?.whenLayerView(routeLayer).then((existingLayerView) => {
-          if (existingLayerView) {
-            resolve(existingLayerView as __esri.GeoJSONLayerView);
-            return; // Exit if already found
-          }
-
-          // If not existing, attach a listener to wait for its creation
-          const handler = routeLayer.on('layerview-create', (evt) => {
-            resolve(evt.layerView as __esri.GeoJSONLayerView);
-          });
-          handlers.push(handler); // Store the handler for cleanup
-        });
+      return new Promise<__esri.GeoJSONLayerView>((resolve, reject) => {
+        props.mapView
+          ?.whenLayerView(routeLayer)
+          .then((existingLayerView) => {
+            if (existingLayerView) {
+              resolve(existingLayerView as __esri.GeoJSONLayerView);
+              return;
+            }
+            const handler = routeLayer.on('layerview-create', (evt) => {
+              resolve(evt.layerView as __esri.GeoJSONLayerView);
+            });
+            handlers.push(handler);
+          })
+          .catch(reject);
       });
     });
 
-    // Execute all promises concurrently and update state once all are resolved
     Promise.all(getLayerViewsPromises)
       .then((layerViews) => {
-        // Filter out any potential null/undefined if a promise didn't resolve correctly,
         setRouteLayerViews(layerViews.filter(Boolean));
       })
       .catch((error) => {
         console.error('Error getting route layer views:', error);
-        setRouteLayerViews(null); // Set to null on error
+        setRouteLayerViews(null);
       });
 
-    // Cleanup function
     return () => {
-      // Remove all event handlers that were attached during this effect's run
       handlers.forEach((h) => h.remove());
     };
-  }, [props.mapView, routeLayers]); // Dependencies: Re-run if props.mapView or routeLayers changes.
+  }, [props.mapView, routeLayers]);
 
-  // build a mapping of line_id to layer id for the route layers so that we can easily find the right layer to highlight for a given line_id
-  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
+  // Effect: Build a mapping of line_id to layer id
   useEffect(() => {
     const abortController = new AbortController();
+    if (!routeLayers || routeLayers.length === 0) {
+      setLineIdToLayerIdMap(new Map());
+      return;
+    }
 
-    const promises = Array.from(routeLayers || []).map(async (layer) => {
+    const promises = Array.from(routeLayers).map(async (layer) => {
       return await layer
         .queryFeatures(undefined, { signal: abortController.signal })
         .then((featureSet) => {
@@ -408,47 +401,63 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
             (feature) => feature.attributes.line_id as string
           );
           const uniqueLineIds = Array.from(new Set(lineIds));
-
           if (uniqueLineIds.length > 1) {
             console.warn(`Layer ${layer.id} has multiple line_ids:`, uniqueLineIds);
           }
-
-          return {
-            layerId: layer.id,
-            lineId: uniqueLineIds[0],
-          };
+          return { layerId: layer.id, lineId: uniqueLineIds[0] };
+        })
+        .catch((error) => {
+          if (error.name === 'AbortError') {
+            console.log(`Query for layer ${layer.id} was aborted.`);
+          } else {
+            console.error(`Error querying features for layer ${layer.id}:`, error);
+          }
+          return null;
         });
     });
 
-    Promise.all(promises).then((results) => {
-      const validResults = results.filter(requireKey('lineId'));
+    Promise.all(promises)
+      .then((results) => {
+        const validResults = results.filter((result) => result !== null && result.lineId);
 
-      const lineIdToLayerIdMap = new Map<string, string>();
-      validResults.forEach((result) => {
-        lineIdToLayerIdMap.set(result.lineId, result.layerId);
+        const newLineIdToLayerIdMap = new Map<string, string>();
+        validResults.forEach((result) => {
+          if (result && result.lineId !== undefined && result.layerId !== undefined) {
+            newLineIdToLayerIdMap.set(result.lineId, result.layerId);
+          }
+        });
+        setLineIdToLayerIdMap(newLineIdToLayerIdMap);
+      })
+      .catch((error) => {
+        console.error('Failed to build lineIdToLayerIdMap:', error);
+        setLineIdToLayerIdMap(new Map<string, string>());
       });
-
-      setLineIdToLayerIdMap(lineIdToLayerIdMap);
-    });
 
     return () => {
       abortController.abort();
     };
-  }, [routeLayers, setLineIdToLayerIdMap]);
+  }, [routeLayers]);
 
-  // Keep this state for managing highlight handles, needed for cleanup via closure.
-  const [activeHighlightHandles, setActiveHighlightHandles] = useState<__esri.Handle[]>([]);
+  // =========================================================================
+  // SECTION 4: NON-HOOK DERIVATIONS
+  // =========================================================================
 
-  // Main effect for applying highlights based on the selected feature
+  const scenario =
+    selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
+
+  const feature = scenario?.features?.[selectedFeatureIndex];
+
+  // --- Main highlighting useEffect  ---
   useEffect(() => {
+    // Collect promises for new highlight handles
     const highlightPromises: Promise<__esri.Handle | null>[] = [];
 
     // Early exit if absolute core dependencies are missing
     if (!props.mapView || !feature) {
       return () => {
-        activeHighlightHandles.forEach((handle) => handle.remove());
-        setActiveHighlightHandles([]); // Explicitly clear state on early exit
-        console.log('Highlighting useEffect CLEANUP running');
+        // Cleanup function
+        activeHighlightHandlesRef.current.forEach((handle) => handle.remove()); // Use ref for cleanup
+        activeHighlightHandlesRef.current = []; // Clear the ref
       };
     }
 
@@ -458,17 +467,16 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
         console.warn('Skipping route highlighting: Missing lineIdToLayerIdMap or routeLayerViews.');
         return () => {
           // Return cleanup if this branch can't run
-          activeHighlightHandles.forEach((handle) => handle.remove());
-          setActiveHighlightHandles([]);
+          activeHighlightHandlesRef.current.forEach((handle) => handle.remove());
+          activeHighlightHandlesRef.current = [];
         };
       }
-
       const targetLayerIds = feature.routeIds
         .map((lineId) => lineIdToLayerIdMap.get(lineId))
         .filter((id): id is string => id !== undefined);
 
       targetLayerIds.forEach((layerId) => {
-        const routeLayerView = routeLayerViews.find((lv) => lv.layer.id === layerId);
+        const routeLayerView = routeLayerViews?.find((lv) => lv.layer.id === layerId);
         if (routeLayerView) {
           highlightPromises.push(
             routeLayerView
@@ -492,8 +500,9 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       if (!stopsLayerView) {
         console.warn('Skipping stop highlighting: Missing stopsLayerView.');
         return () => {
-          activeHighlightHandles.forEach((handle) => handle.remove());
-          setActiveHighlightHandles([]);
+          // Return cleanup if this branch can't run
+          activeHighlightHandlesRef.current.forEach((handle) => handle.remove());
+          activeHighlightHandlesRef.current = [];
         };
       }
 
@@ -505,46 +514,42 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
           .queryFeatures({ where: whereClause })
           .then((featureSet) => {
             if (featureSet.features.length > 0) {
-              // If features are found, apply the highlight.
               return stopsLayerView.highlight(featureSet.features);
             } else {
-              // If no features are found, return null (no highlight handle created).
               console.warn('No features found for stops with WHERE clause:', whereClause);
             }
             return null;
           })
           .catch((error) => {
-            // Log any errors during the queryFeatures call and return null.
             console.error('Error during stopsLayerView.queryFeatures:', error);
             return null;
           })
       );
     }
-
     // --- Case 3: No specific highlight type matched or no data to highlight ---
     else {
-      // If feature exists but doesn't match a highlight type, or has no relevant IDs, we should ensure any previous highlights are cleared.
       return () => {
         // Return cleanup function for this scenario
-        activeHighlightHandles.forEach((handle) => handle.remove());
-        setActiveHighlightHandles([]);
+        activeHighlightHandlesRef.current.forEach((handle) => handle.remove());
+        activeHighlightHandlesRef.current = [];
       };
     }
 
-    // Resolve all highlight promises and then update the state with the new handles.
+    // Resolve all highlight promises and then update the ref with the new handles.
     Promise.all(highlightPromises)
       .then((handles) => {
         const newHandles = handles.filter((h): h is __esri.Handle => h !== null);
-        setActiveHighlightHandles(newHandles); // Update state once all async ops are done
+        activeHighlightHandlesRef.current = newHandles; //
       })
       .catch((error) => {
         console.error('Promise.all for highlights failed:', error);
-        setActiveHighlightHandles([]); // Clear highlights on error
+        activeHighlightHandlesRef.current = []; // Clear ref on error
       });
 
-    // Cleanup function to remove highlights when dependencies change or component unmounts
+    // Function will always access the MOST RECENT value stored in the ref's `.current` property.
     return () => {
-      activeHighlightHandles.forEach((handle) => handle.remove());
+      activeHighlightHandlesRef.current.forEach((handle) => handle.remove());
+      activeHighlightHandlesRef.current = []; // Clear the ref's content as well
     };
   }, [props.mapView, feature, routeLayerViews, stopsLayerView, lineIdToLayerIdMap]);
 
