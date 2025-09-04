@@ -1,4 +1,5 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
+import styled from '@emotion/styled';
 import { useContext, useState } from 'react';
 import {
   Button,
@@ -56,30 +57,39 @@ export function EssentialServicesAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%' }} title="Map">
-          <Map
-            layers={[
-              ...networkSegments,
-              walkServiceAreas,
-              routes,
-              stops,
-              groceryStores,
-              dentalCareFacilities,
-              eyeCareFacilities,
-              familyMedicineFacilities,
-              freeClinicsFacilities,
-              hospitalsFacilities,
-              internalMedicineFacilities,
-              urgentCareFacilities,
-              childCareCenters,
-              commercialZones,
-              ...areaPolygons,
-            ].filter(notEmpty)}
-            onMapReady={(_, view) => {
-              setMapView(view);
-            }}
-            neverShowExpandedLayersListOnLoad
-          />
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ height: '100%' }} title="Map">
+            <Map
+              layers={[
+                ...networkSegments,
+                walkServiceAreas,
+                commercialZones,
+                routes,
+                stops,
+                groceryStores,
+                dentalCareFacilities,
+                eyeCareFacilities,
+                familyMedicineFacilities,
+                freeClinicsFacilities,
+                hospitalsFacilities,
+                internalMedicineFacilities,
+                urgentCareFacilities,
+                childCareCenters,
+                ...areaPolygons,
+              ].filter(notEmpty)}
+              onMapReady={(_, view) => {
+                setMapView(view);
+              }}
+              neverShowExpandedLayersListOnLoad
+            />
+          </div>
+          <CompactMapLegend>
+            <span>Color Code:</span>
+            <span style={{ background: '#fed7ff' }}>Commercial</span>
+            <span style={{ background: '#64f3ab' }}>Grocery</span>
+            <span style={{ background: '#f1e32b' }}>Medical/Dental</span>
+            <span style={{ background: '#7b47f5', color: '#fff' }}>Child Care</span>
+          </CompactMapLegend>
         </div>
       }
       sections={renderSections([
@@ -89,6 +99,28 @@ export function EssentialServicesAccess() {
     />
   );
 }
+
+const CompactMapLegend = styled.aside`
+  display: flex;
+  flex-direction: row;
+  gap: 0.25rem 0.5rem;
+  justify-content: start;
+  align-items: center;
+  font-size: 0.875rem;
+  flex-wrap: wrap;
+  padding: 0.25rem 0;
+
+  span:first-of-type {
+    font-weight: 600;
+    margin-right: 0.25rem;
+    padding: 0;
+  }
+
+  span {
+    padding: 0.125rem 0.25rem;
+    border-radius: var(--button-radius);
+  }
+`;
 
 function SectionsHeader() {
   const [isComparing] = useComparisonModeState();

@@ -561,8 +561,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Dental Care Locations (${__year} ${__quarter})`,
             id: `dental-locations${__year}_${__quarter}`,
             data: dental_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -589,8 +589,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Eye Care Locations (${__year} ${__quarter})`,
             id: `eye-care-locations${__year}_${__quarter}`,
             data: eye_care_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -619,8 +619,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Family Medicine Locations (${__year} ${__quarter})`,
             id: `family-medicine-locations${__year}_${__quarter}`,
             data: family_medicine_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -649,8 +649,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Free Clinics Locations (${__year} ${__quarter})`,
             id: `free-clinics-locations${__year}_${__quarter}`,
             data: free_clinics_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -679,8 +679,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Hospitals Locations (${__year} ${__quarter})`,
             id: `hospitals-locations${__year}_${__quarter}`,
             data: hospitals_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -709,8 +709,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Internal Medicine Locations (${__year} ${__quarter})`,
             id: `internal-medicine-locations${__year}_${__quarter}`,
             data: internal_medicine_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -739,8 +739,8 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             title: `Urgent Care Locations (${__year} ${__quarter})`,
             id: `urgent-care-locations${__year}_${__quarter}`,
             data: urgent_care_locations,
+            renderer: healthAndDentalRenderer,
             popupEnabled: true,
-            // TODO: add a fancy renderer
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
               content: [
@@ -772,9 +772,9 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: new SimpleRenderer({
               symbol: new SimpleMarkerSymbol({
                 angle: 0,
-                color: new Color([71, 100, 245, 1]),
+                color: new Color('rgba(123, 71, 245, 1)'),
                 outline: new SimpleLineSymbol({
-                  color: new Color([0, 47, 189, 1]),
+                  color: new Color('rgba(88, 0, 189, 1)'),
                   style: 'solid',
                   width: 1,
                 }),
@@ -1150,6 +1150,29 @@ const futureServiceAreaRenderer = new SimpleRenderer({
       width: 1,
     },
   }),
+});
+
+const healthAndDentalRenderer = new SimpleRenderer({
+  symbol: new SimpleMarkerSymbol({
+    color: new Color('rgba(245, 226, 8, 1)'),
+    outline: new SimpleLineSymbol({
+      color: new Color('rgba(83, 78, 16, 1)'),
+      style: 'solid',
+      width: 1,
+    }),
+    style: 'circle',
+  }),
+  visualVariables: [
+    new SizeVariable({
+      valueExpression: '$view.scale',
+      stops: [
+        { size: 2, value: 360000 },
+        { size: 4, value: 240000 },
+        { size: 12, value: 12000 },
+        { size: 20, value: 0 },
+      ],
+    }),
+  ],
 });
 
 function popupFieldsFromObject(obj: Record<string, any>) {
