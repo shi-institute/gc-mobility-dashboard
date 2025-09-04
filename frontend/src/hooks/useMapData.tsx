@@ -186,6 +186,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                 style: 'solid',
               }),
             }),
+            objectIdField: 'ID',
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
               title: `{Name} (${__year} ${__quarter})`,
