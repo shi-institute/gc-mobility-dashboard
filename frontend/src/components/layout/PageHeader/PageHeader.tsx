@@ -80,6 +80,7 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
     border: 1px solid lightgray;
     padding: 0.5rem;
     border-radius: var(--surface-radius);
+    text-align: left;
 
     ${_StyledIconButton} {
       position: absolute;
@@ -111,6 +112,36 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
     margin-top: 1rem;
     @container core (max-width: 899px) {
       margin-top: 0.5rem;
+    }
+  }
+
+  .showAside {
+    appearance: none;
+    border: none;
+    background-color: transparent;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+
+    color: var(--color-primary);
+    box-shadow: 0 1px 0 0 var(--color-primary);
+    transition: background-color 0.2s, box-shadow 0.1s, color 0.2s;
+    text-decoration: none;
+
+    &:hover {
+      box-shadow: 0 2px 0 0 var(--color-primary);
+      background-color: hsla(var(--color-primary--parts), 0.1);
+      color: var(--text-primary);
+    }
+
+    &:active {
+      background-color: hsla(var(--color-primary--parts), 0.16);
+    }
+
+    @media print {
+      display: none;
     }
   }
 `;

@@ -90,9 +90,37 @@ function SectionsHeader() {
 
   const uniqueAreaNames = Array.from(new Set((data || []).map((area) => area.__area))).sort();
 
+  const seasons = Array.from(
+    new Set(
+      (data || []).map((area) => {
+        let seasonString = '';
+        if (area.__quarter === 'Q2') {
+          seasonString = 'April-June';
+        } else if (area.__quarter === 'Q4') {
+          seasonString = 'October-December';
+        }
+        if (area.__year) {
+          seasonString += ` ${area.__year}`;
+        }
+        return seasonString;
+      })
+    )
+  ).sort();
+
   return (
     <PageHeader isComparing={isComparing}>
-      <h2>{listOxford(uniqueAreaNames)}</h2>
+      <h2>Where does transit go?</h2>
+      <p>
+        Viewing: {listOxford(uniqueAreaNames)} for {listOxford(seasons)}
+        {showAside ? null : (
+          <>
+            {' '}
+            <button className="showAside" onClick={() => setShowAside(true)}>
+              More info
+            </button>
+          </>
+        )}
+      </p>
       {isFullDesktop || isMobile ? null : (
         <div className="button-row">
           {isComparing ? (
@@ -108,22 +136,25 @@ function SectionsHeader() {
       )}
       {showAside ? (
         <aside>
-          <h1>About this tab</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
+          <h1>Welcome to the Greenville Connects transit data dashboard!</h1>
+          <IconButton onClick={() => setShowAside(false)}>
             <DismissIcon size={16} />
           </IconButton>
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            This is the General Access page. Here, you can see where Greenlink’s routes go, how many
+            riders they service, and how they match with other modes of transportation.
           </p>
           <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
-            officia deserunt mollit anim id est laborum.
+            In the options menu, you can select which area you’d like to get data about, and when
+            that data is from.
+          </p>
+          <p>
+            You can also select which mode of transportation you’d like to see. The weight of the
+            blue lines indicates how often those routes are taken using that form of transportation.{' '}
+          </p>
+          <p>
+            You can enter comparison mode to see how two areas of Greenville compare in their
+            mobility and transit access.
           </p>
         </aside>
       ) : null}

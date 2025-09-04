@@ -8,21 +8,13 @@ import {
   IconButton,
   manualSectionIds,
   OptionTrack,
-  PageHeader,
   renderManualSection,
   renderSections,
   SelectOne,
   Map as WebMap,
 } from '../components';
-import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
-import {
-  useAppData,
-  useHighlightHandles,
-  useLocalStorage,
-  useRect,
-  useSectionsVisibility,
-} from '../hooks';
+import { useAppData, useHighlightHandles, useRect, useSectionsVisibility } from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
 import { mapUtils, notEmpty } from '../utils';
 
@@ -59,7 +51,6 @@ export function RoadsVsTransit() {
       outerStyle={{ height: '100%' }}
       loading={loading || scenariosData.loading}
       header={<AppNavigation />}
-      sectionsHeader={<SectionsHeader />}
       map={
         render(
           <div style={{ height: '100%' }} title="Map">
@@ -124,38 +115,6 @@ export function RoadsVsTransit() {
       disableSectionColumns
     />
   );
-}
-
-function SectionsHeader() {
-  const [showAside, setShowAside] = useLocalStorage('aside--tab-5', true);
-
-  if (showAside) {
-    return (
-      <PageHeader>
-        <aside>
-          <h1>About this tab</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
-            <DismissIcon size={16} />
-          </IconButton>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-          </p>
-          <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
-            officia deserunt mollit anim id est laborum.
-          </p>
-        </aside>
-      </PageHeader>
-    );
-  }
-
-  return null;
 }
 
 function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
@@ -281,8 +240,11 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
             transition: 'var(--wui-control-faster-duration) opacity',
           }}
         >
-          <p>1 mile of road pavement costs around $1 Million -</p>
-          <p>What happens when this amount is spent on public transit instead?</p>
+          <p>One mile of road costs around $1 million!</p>
+          <p>
+            What if we invested that money in transit infrastructure instead? Click compare, select
+            a distance of paved road, and see how we can fund new transit projects.
+          </p>
         </div>
 
         <img src="./img/bus.webp" alt="" className="bus-container" />

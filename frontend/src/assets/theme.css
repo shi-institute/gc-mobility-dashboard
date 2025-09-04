@@ -7,10 +7,12 @@
   --color-green1: #67a24e;
   --color-green2: #83bd45;
   --color-green3: #3d9356;
+  --color-green3--parts: 137, 41%, 41%;
   --color-blue: #222e5d;
   --color-purple: #5e1c6f;
 
   --color-primary: var(--color-green3);
+  --color-primary--parts: var(--color-green3--parts);
   --color-secondary: var(--color-purple);
 
   --color-primary--hover: hsl(145, 39%, 35%);

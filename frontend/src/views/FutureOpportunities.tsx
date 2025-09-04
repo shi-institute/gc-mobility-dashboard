@@ -106,8 +106,18 @@ function SectionsHeader() {
 
   return (
     <PageHeader isComparing={isComparing}>
-      <h2>Future Transit Routes & Stops</h2>
-      <p>Visualize selected future transit routes from Greenlink's transit development plan.</p>
+      <h2>Where can transit expand?</h2>
+      <p>
+        Visualize selected future transit routes from Greenlink's transit development plan.
+        {showAside ? null : (
+          <>
+            {' '}
+            <button className="showAside" onClick={() => setShowAside(true)}>
+              More info
+            </button>
+          </>
+        )}
+      </p>
       {isFullDesktop || isMobile ? null : (
         <div className="button-row">
           {isComparing ? (
@@ -120,22 +130,17 @@ function SectionsHeader() {
       )}
       {showAside ? (
         <aside>
-          <h1>About this tab</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
+          <h1>Welcome to the future!</h1>
+          <IconButton onClick={() => setShowAside(false)}>
             <DismissIcon size={16} />
           </IconButton>
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            On this page, you can see how proposed transit routes can bring mobility to more people
+            in Greenville.
           </p>
           <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
-            officia deserunt mollit anim id est laborum.
+            Click the dropdown menu to select a new route, and check the stats to see how the routes
+            stack up.
           </p>
         </aside>
       ) : null}
