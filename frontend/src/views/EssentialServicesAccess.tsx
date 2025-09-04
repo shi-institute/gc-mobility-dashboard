@@ -88,7 +88,7 @@ export function EssentialServicesAccess() {
             <span style={{ background: '#fed7ff' }}>Commercial</span>
             <span style={{ background: '#64f3ab' }}>Grocery</span>
             <span style={{ background: '#f1e32b' }}>Medical/Dental</span>
-            <span style={{ background: '#5662f2', color: '#fff' }}>Child Care</span>
+            <span style={{ background: '#7b47f5', color: '#fff' }}>Child Care</span>
           </CompactMapLegend>
         </div>
       }

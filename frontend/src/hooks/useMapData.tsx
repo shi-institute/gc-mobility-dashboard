@@ -772,9 +772,9 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: new SimpleRenderer({
               symbol: new SimpleMarkerSymbol({
                 angle: 0,
-                color: new Color([71, 100, 245, 1]),
+                color: new Color('rgba(123, 71, 245, 1)'),
                 outline: new SimpleLineSymbol({
-                  color: new Color([0, 47, 189, 1]),
+                  color: new Color('rgba(88, 0, 189, 1)'),
                   style: 'solid',
                   width: 1,
                 }),
