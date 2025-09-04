@@ -448,6 +448,7 @@ export function Map(props: MapProps) {
               title="Toggle bus stop visibility"
               onClick={() => quickToggleLayer('stops')}
               active={quickToggleLayers.stops.every((layer) => layer.visible)}
+              solidSurfaceColor="#fff"
             >
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -510,7 +511,9 @@ export function Map(props: MapProps) {
                 </div>
               </LayerListContainer>
             ) : (
-              <Button onClick={() => setShowLayerList(true)}>Legend</Button>
+              <Button onClick={() => setShowLayerList(true)} solidSurfaceColor="#fff">
+                Legend
+              </Button>
             )}
           </div>
         </arcgis-placement>
@@ -624,6 +627,11 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
     width: 160px;
     position: relative;
     cursor: default;
+    &:focus-within {
+      outline: Highlight auto 1px;
+      outline: -webkit-focus-ring-color auto 1px;
+      outline-offset: 2px;
+    }
     .esri-collapse__icon {
       display: none;
     }
@@ -652,7 +660,7 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
       user-select: none;
       background-color: #fff;
       flex-wrap: nowrap;
-      transition: 120ms;
+      transition: var(--wui-control-faster-duration);
     }
 
     &:hover:not(.disabled)::after {

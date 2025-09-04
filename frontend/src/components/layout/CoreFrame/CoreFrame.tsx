@@ -54,7 +54,7 @@ export function CoreFrame(props: CoreFrameProps) {
   return (
     <Container ref={containerRef}>
       <OuterFrame style={props.outerStyle}>
-        <div style={{ gridArea: 'header' }}>{props.header}</div>
+        <div style={{ gridArea: 'header', overflow: 'hidden' }}>{props.header}</div>
         <InnerFrame
           fixedSidebarOpen={!props.sidebar ? false : fixedSidebarOpen && isFullDesktop}
           hasMapElement={!!props.map}
@@ -64,8 +64,9 @@ export function CoreFrame(props: CoreFrameProps) {
               <div style={{ gridArea: 'section-tabs' }}>
                 {[props.map, ...(props.sections || [])].filter(notEmpty).map((section, index) => {
                   const tabLabel =
-                    (section.props as Record<string, unknown>).shortTitle?.toString() ||
                     (section.props as Record<string, unknown>).title?.toString() ||
+                    (section.props as Record<string, unknown>).shortTitle?.toString() ||
+                    section.key?.toString() ||
                     `Tab ${index + 1}`;
                   return (
                     <Tab
@@ -93,7 +94,7 @@ export function CoreFrame(props: CoreFrameProps) {
           ) : (
             <>
               {props.map ? <MapArea>{props.map}</MapArea> : null}
-              <MainAreaWrapper>
+              <MainAreaWrapper tabIndex={0}>
                 {props.sectionsHeader}
                 <MainArea
                   disableSectionColumns={props.disableSectionColumns}
@@ -121,7 +122,8 @@ export function CoreFrame(props: CoreFrameProps) {
               opacity: loadingDelayed ? 1 : 0,
               backgroundColor: '#ffffff77',
               backdropFilter: 'blur(14px)',
-              transition: 'opacity 300ms cubic-bezier(0.16, 1, 0.3, 1)',
+              transition:
+                'opacity var(--wui-control-normal-duration) cubic-bezier(0.16, 1, 0.3, 1)',
               fontSize: '1rem',
               fontWeight: 500,
             }}
@@ -174,7 +176,7 @@ const InnerFrame = styled.div<{ fixedSidebarOpen: boolean; hasMapElement?: boole
   padding: 0 0 0 var(--padding);
   // gap: 1rem;
 
-  transition: 120ms;
+  transition: var(--wui-control-normal-duration);
 
   position: relative;
 

@@ -1,17 +1,28 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import React, { ComponentProps, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import {
+  Button,
   CoreFrame,
   IconButton,
+  manualSectionIds,
   OptionTrack,
   PageHeader,
+  renderManualSection,
+  renderSections,
   SelectOne,
   Map as WebMap,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
-import { useAppData, useHighlightHandles, useLocalStorage, useRect } from '../hooks';
+import {
+  useAppData,
+  useHighlightHandles,
+  useLocalStorage,
+  useRect,
+  useSectionsVisibility,
+} from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
 import { mapUtils, notEmpty } from '../utils';
 
@@ -37,6 +48,12 @@ export function RoadsVsTransit() {
     zoomTo: 'routes',
   });
 
+  const [visibleSections, setVisibleSections] = useSectionsVisibility();
+  const [searchParams] = useSearchParams();
+  const editMode = searchParams.get('edit') === 'true';
+
+  const render = renderManualSection.bind(null, visibleSections, 'roadsVsTransitScenarios');
+
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
@@ -44,28 +61,66 @@ export function RoadsVsTransit() {
       header={<AppNavigation />}
       sectionsHeader={<SectionsHeader />}
       map={
-        <div style={{ height: '100%' }} title="Map">
-          <WebMap
-            layers={[
-              walkServiceAreas,
-              ...futureWalkServiceAreas,
-              cyclingServiceAreas,
-              ...futureCyclingServiceAreas,
-              paratransitServiceAreas,
-              ...futureParatransitServiceAreas,
-              ...futureRoutes,
-              routes,
-              ...futureStops,
-              stops,
-              ...areaPolygons,
-            ].filter(notEmpty)}
-            onMapReady={(_, view) => {
-              setMapView(view);
-            }}
-          />
-        </div>
+        render(
+          <div style={{ height: '100%' }} title="Map">
+            <WebMap
+              layers={[
+                walkServiceAreas,
+                ...futureWalkServiceAreas,
+                cyclingServiceAreas,
+                ...futureCyclingServiceAreas,
+                paratransitServiceAreas,
+                ...futureParatransitServiceAreas,
+                ...futureRoutes,
+                routes,
+                ...futureStops,
+                stops,
+                ...areaPolygons,
+              ].filter(notEmpty)}
+              onMapReady={(_, view) => {
+                setMapView(view);
+              }}
+            />
+          </div>
+        ) ?? undefined
       }
-      sections={[<Comparison key={0} title="Scenarios" mapView={mapView} />]}
+      sections={renderSections([
+        (() => {
+          if (!editMode) {
+            return null;
+          }
+
+          if (visibleSections?.[manualSectionIds.roadsVsTransitScenarios]) {
+            return (
+              <Button
+                onClick={() => {
+                  setVisibleSections((prev) => {
+                    const newVisibleSections = { ...prev };
+                    delete newVisibleSections[manualSectionIds.roadsVsTransitScenarios];
+                    return newVisibleSections;
+                  });
+                }}
+              >
+                Hide this tab
+              </Button>
+            );
+          }
+
+          return (
+            <Button
+              onClick={() => {
+                setVisibleSections((prev) => ({
+                  ...prev,
+                  [manualSectionIds.roadsVsTransitScenarios]: [''],
+                }));
+              }}
+            >
+              Show this tab
+            </Button>
+          );
+        })(),
+        render(<Comparison key={0} title="Scenarios" mapView={mapView} />),
+      ])}
       disableSectionColumns
     />
   );
@@ -114,15 +169,20 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
   const transitioning = selectedIndex !== delayedSelectedIndex;
 
-  function switchSelectedIndex(index: number) {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function switchSelectedIndex(index: number | null) {
     if (transitioning) {
       return; // prevent switching while another transition is in progress
     }
 
     setSelectedIndex(index);
-    setTimeout(() => {
-      setDelayedSelectedIndex(index);
-    }, 300); // delay to allow for transition effect
+    setTimeout(
+      () => {
+        setDelayedSelectedIndex(index);
+      },
+      prefersReducedMotion ? 0 : 300
+    ); // delay to allow for transition effect
   }
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,6 +201,8 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
     const buttonScenarios = scenarios.filter(
       (s) => s.pavementMiles === parseFloat(mileOptions[index]?.split(' ')[0] ?? '-1')
     );
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     return {
       size: selectedIndex === index ? 400 : undefined,
@@ -171,7 +233,7 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
             style={{
               position: 'absolute',
               opacity: selectedIndex !== index ? 1 : 0,
-              transition: '120ms opacity',
+              transition: 'var(--wui-control-faster-duration) opacity',
             }}
           >
             {optionLabel}
@@ -180,7 +242,12 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
             className="expanded"
             style={{
               opacity: selectedIndex === index ? 1 : 0,
-              transition: selectedIndex !== index ? '120ms opacity' : '1000ms opacity',
+              transition:
+                selectedIndex !== index
+                  ? 'var(--wui-control-faster-duration) opacity'
+                  : prefersReducedMotion
+                  ? '0 opacity'
+                  : '1000ms opacity',
             }}
           >
             <TrackButtonExpandedContent
@@ -195,15 +262,24 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
     } satisfies ComponentProps<typeof OptionTrack.Button>;
   };
 
+  function resetSelectedIndex() {
+    if (selectedIndex !== null) {
+      switchSelectedIndex(null);
+    }
+  }
+
   return (
     <ComparisionContainer ref={containerRef}>
       <div className="left-bar"></div>
       <ComparisonComponent>
-        <div className="background"></div>
+        <ClickableBackground className="background" onClick={resetSelectedIndex} />
 
         <div
           className="imagine-prose"
-          style={{ opacity: selectedIndex === null ? 1 : 0, transition: '120ms opacity' }}
+          style={{
+            opacity: selectedIndex === null ? 1 : 0,
+            transition: 'var(--wui-control-faster-duration) opacity',
+          }}
         >
           <p>1 mile of road pavement costs around $1 Million -</p>
           <p>What happens when this amount is spent on public transit instead?</p>
@@ -267,11 +343,54 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
             switchSelectedIndex(index);
           }}
           value={selectedIndex !== null ? mileOptions[selectedIndex] || '' : ''}
-          placeholder="Imagine"
+          placeholder="Compare"
         ></SelectOne>
       </ComparisonComponent>
     </ComparisionContainer>
   );
+}
+
+interface ClickableBackgroundProps {
+  className?: string;
+  onClick?: (event: MouseEvent) => void;
+}
+
+function ClickableBackground(props: ClickableBackgroundProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const rect = useRect(ref);
+
+  // Add an event listener to the document and detects any click that occurs in the rectangle
+  // defined by the rect above. If a click occurs in that rectangle, log to the console.
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      if (
+        rect &&
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      ) {
+        // do not proceed if the click originated from a button, select, anchor, or foreignObject
+        let element = event.target as Element;
+        while (element && element !== event.currentTarget) {
+          if (['BUTTON', 'SELECT', 'A', 'foreignObject'].includes(element.tagName)) {
+            return; // Ignore the event
+          }
+          element = element.parentElement as HTMLElement;
+        }
+
+        // forward the event to the onClick prop
+        props.onClick?.(event);
+      }
+    }
+
+    ref?.current?.parentElement?.addEventListener('click', onClick);
+    return () => {
+      ref?.current?.parentElement?.removeEventListener('click', onClick);
+    };
+  }, [rect, ref.current, props.onClick]);
+
+  return <div ref={ref} className={props.className}></div>;
 }
 
 interface TrackButtonExpandedContentProps {
@@ -626,12 +745,16 @@ const ComparisonComponent = styled.div`
   height: 100%;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
 
   flex-grow: 1;
   flex-shrink: 0;
 
+  --blue-background: hsla(229, 100%, 66%, 0.6);
+  --blue-background--solid: #9fa9fd;
+
   .background {
-    background-color: hsla(229, 100%, 66%, 0.6);
+    background-color: var(--blue-background--solid);
     position: absolute;
     top: 0;
     right: 0;
@@ -674,19 +797,24 @@ const ComparisonComponent = styled.div`
     position: absolute;
     top: 100px;
     right: 20px;
+    z-index: 1;
 
     p:first-of-type {
       font-size: 1.4rem;
       font-weight: 600;
       color: white;
+    }
+
+    p {
       text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      background-color: var(--blue-background--solid);
     }
 
     p:last-of-type {
       font-size: 1.1rem;
       font-weight: 500;
       color: hsl(83, 97%, 75%);
-      text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      color: white;
     }
   }
 

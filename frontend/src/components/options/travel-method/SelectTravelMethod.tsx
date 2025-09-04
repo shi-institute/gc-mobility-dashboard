@@ -14,7 +14,7 @@ export function SelectTravelMethod({ travelMethodList, label }: SelectedAreaProp
 
   function handleChange(value: string) {
     searchParams.set('travelMethod', value === 'any' ? '' : value);
-    setSearchParams(searchParams);
+    setSearchParams(searchParams, { replace: true });
   }
 
   const options = ['any', ...travelMethodList];

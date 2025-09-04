@@ -31,5 +31,6 @@ export async function zoomToLayers(view: __esri.MapView, layersToFocusIds: strin
 
   const extentUnion = unionOperator.executeMany(layerExtents.map(({ extent }) => extent));
 
-  view.goTo(extentUnion, { animate: true, duration: 1000 });
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  view.goTo(extentUnion, { animate: true, duration: prefersReducedMotion ? 0 : 1000 });
 }

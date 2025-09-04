@@ -89,13 +89,14 @@ const StyledTab = styled.a`
     fill: currentColor;
     block-size: 1rem;
     inline-size: 1rem;
+    margin-bottom: 2px;
   }
 
   &:has(> svg:first-of-type) {
     padding-left: 0.75rem;
   }
   svg + .label {
-    margin-left: 0.25rem;
+    margin-left: 0.375rem;
   }
 
   &:has(> svg:last-of-type) {

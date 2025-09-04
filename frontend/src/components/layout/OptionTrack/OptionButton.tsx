@@ -152,7 +152,7 @@ const OptionButtonComponent = styled.button<{
   font-family: inherit;
 
   position: relative;
-  transition: 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: var(--wui-control-slow-duration) cubic-bezier(0.16, 1, 0.3, 1);
   block-size: ${(props) => props.size}px;
   inline-size: ${(props) => props.size}px;
 
@@ -169,7 +169,7 @@ const OptionButtonComponent = styled.button<{
   }
 
   svg circle {
-    transition: 120ms;
+    transition: var(--wui-control-fast-duration);
   }
 
   // tint the svg on hover and press, but only when the button is not transitioning/resizing

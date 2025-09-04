@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 
-export const StatisticContainer = styled.div`
+export const StatisticContainer = styled.div<{ partial?: boolean }>`
   display: flex;
   flex-direction: row;
   gap: 0.5rem;
@@ -11,6 +11,8 @@ export const StatisticContainer = styled.div`
   box-sizing: border-box;
   border: 1px solid lightgray;
   border-radius: var(--surface-radius);
+
+  opacity: ${(props) => (props.partial ? 0.5 : 1)};
 
   & > svg {
     fill: currentColor;

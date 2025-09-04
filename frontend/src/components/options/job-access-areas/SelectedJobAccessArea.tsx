@@ -67,7 +67,7 @@ export function SelectedJobAccessArea({ areasList, forceCompare }: SelectedJobAc
         searchParams.set('jobAreas', value);
       }
     }
-    setSearchParams(searchParams);
+    setSearchParams(searchParams, { replace: true });
   }
 
   return (

@@ -18,6 +18,8 @@ interface IconButtonProps {
   active?: boolean;
 
   style?: React.CSSProperties;
+  /** draws a solid surface of the specified color under the button */
+  solidSurfaceColor?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export function IconButton(props: IconButtonProps) {
         title={props.title}
         style={props.style}
         active={props.active}
+        solidSurfaceColor={props.solidSurfaceColor}
       >
         {props.children}
       </StyledAnchorButton>
@@ -47,13 +50,14 @@ export function IconButton(props: IconButtonProps) {
       title={props.title}
       style={props.style}
       active={props.active}
+      solidSurfaceColor={props.solidSurfaceColor}
     >
       {props.children}
     </StyledButton>
   );
 }
 
-const StyledButton = styled.button<{ active?: boolean }>`
+const StyledButton = styled.button<{ active?: boolean; solidSurfaceColor?: string }>`
   font-size: 1rem;
   appearance: none;
   padding: 0;
@@ -72,7 +76,8 @@ const StyledButton = styled.button<{ active?: boolean }>`
   user-select: none;
   background-color: transparent;
   flex-wrap: nowrap;
-  transition: 120ms;
+  transition: var(--wui-control-faster-duration);
+  position: relative;
   ${(props) => props.title && `cursor: help;`}
 
   ${({ active }) => {
@@ -108,6 +113,21 @@ const StyledButton = styled.button<{ active?: boolean }>`
     block-size: 1.5em;
     inline-size: 1.5em;
   }
+
+  ${({ solidSurfaceColor }) => {
+    if (solidSurfaceColor) {
+      return `
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-color: ${solidSurfaceColor};
+            border-radius: inherit;
+            z-index: -1;
+          }
+      `;
+    }
+  }}
 `;
 
 const StyledAnchorButton = StyledButton.withComponent('a');
