@@ -107,7 +107,17 @@ function SectionsHeader() {
   return (
     <PageHeader isComparing={isComparing}>
       <h2>Where can transit expand?</h2>
-      <p>Visualize selected future transit routes from Greenlink's transit development plan.</p>
+      <p>
+        Visualize selected future transit routes from Greenlink's transit development plan.
+        {showAside ? null : (
+          <>
+            {' '}
+            <button className="showAside" onClick={() => setShowAside(true)}>
+              More info
+            </button>
+          </>
+        )}
+      </p>
       {isFullDesktop || isMobile ? null : (
         <div className="button-row">
           {isComparing ? (
@@ -121,10 +131,7 @@ function SectionsHeader() {
       {showAside ? (
         <aside>
           <h1>Welcome to the future!</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
+          <IconButton onClick={() => setShowAside(false)}>
             <DismissIcon size={16} />
           </IconButton>
           <p>

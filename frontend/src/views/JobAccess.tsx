@@ -260,6 +260,14 @@ function Header(props: HeaderProps) {
       <p>
         These tree maps visualize the daily average number of people who use any transport mode to
         reach their job in the selected area(s), grouped by job sector.
+        {showAside ? null : (
+          <>
+            {' '}
+            <button className="showAside" onClick={() => setShowAside(true)}>
+              More info
+            </button>
+          </>
+        )}
       </p>
       <div className="swatches">
         {domain.map((name, index) => {
@@ -278,10 +286,7 @@ function Header(props: HeaderProps) {
       {showAside ? (
         <aside>
           <h1>About this tab</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
+          <IconButton onClick={() => setShowAside(false)}>
             <DismissIcon size={16} />
           </IconButton>
           <p>

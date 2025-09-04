@@ -112,6 +112,14 @@ function SectionsHeader() {
       <h2>Where does transit go?</h2>
       <p>
         Viewing: {listOxford(uniqueAreaNames)} for {listOxford(seasons)}
+        {showAside ? null : (
+          <>
+            {' '}
+            <button className="showAside" onClick={() => setShowAside(true)}>
+              More info
+            </button>
+          </>
+        )}
       </p>
       {isFullDesktop || isMobile ? null : (
         <div className="button-row">
@@ -129,10 +137,7 @@ function SectionsHeader() {
       {showAside ? (
         <aside>
           <h1>Welcome to the Greenville Connects transit data dashboard!</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
+          <IconButton onClick={() => setShowAside(false)}>
             <DismissIcon size={16} />
           </IconButton>
           <p>

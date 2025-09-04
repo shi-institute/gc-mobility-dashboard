@@ -136,6 +136,14 @@ function SectionsHeader() {
       <p>
         Learn what percentage of the population can reach essential services via public transit and
         how long it takes.
+        {showAside ? null : (
+          <>
+            {' '}
+            <button className="showAside" onClick={() => setShowAside(true)}>
+              More info
+            </button>
+          </>
+        )}
       </p>
       {isFullDesktop || isMobile ? null : (
         <div className="button-row">
@@ -153,10 +161,7 @@ function SectionsHeader() {
       {showAside ? (
         <aside>
           <h1>About this tab</h1>
-          <IconButton
-            onClick={() => setShowAside(false)}
-            title="Permanently dismiss this message on this device"
-          >
+          <IconButton onClick={() => setShowAside(false)}>
             <DismissIcon size={16} />
           </IconButton>
           <p>
