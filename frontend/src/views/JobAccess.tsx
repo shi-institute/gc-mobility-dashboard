@@ -256,7 +256,7 @@ function Header(props: HeaderProps) {
 
   return (
     <HeaderComponent {...props}>
-      <h2>What Jobs Are Here?</h2>
+      <h2>How can transit help the economy?</h2>
       <p>
         These tree maps visualize the daily average number of people who use any transport mode to
         reach their job in the selected area(s), grouped by job sector.
@@ -285,14 +285,12 @@ function Header(props: HeaderProps) {
             <DismissIcon size={16} />
           </IconButton>
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            Employment is among the most crucial benefits of transit. More buses, more places, more
+            often means more access to jobs and economic mobility.
           </p>
           <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
-            officia deserunt mollit anim id est laborum.
+            See the industries that create the most jobs in each area. You’ll see we aren’t lacking
+            for jobs, but we are lacking for reliable transportation to those jobs.
           </p>
         </aside>
       ) : null}

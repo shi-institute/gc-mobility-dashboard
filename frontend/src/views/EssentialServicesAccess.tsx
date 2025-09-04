@@ -132,7 +132,7 @@ function SectionsHeader() {
 
   return (
     <PageHeader isComparing={isComparing}>
-      <h2>Which essential services can you access via public transit?</h2>
+      <h2>Who can transit serve?</h2>
       <p>
         Learn what percentage of the population can reach essential services via public transit and
         how long it takes.
@@ -160,14 +160,11 @@ function SectionsHeader() {
             <DismissIcon size={16} />
           </IconButton>
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-            incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+            From childcare, to grocery shopping, to doctor’s offices, transit is how thousands of
+            people get where they need to be.
           </p>
           <p>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-            nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui
-            officia deserunt mollit anim id est laborum.
+            See which essential services are transit accessible and how long it takes to get there.
           </p>
         </aside>
       ) : null}

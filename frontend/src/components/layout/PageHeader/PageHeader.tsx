@@ -80,6 +80,7 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
     border: 1px solid lightgray;
     padding: 0.5rem;
     border-radius: var(--surface-radius);
+    text-align: left;
 
     ${_StyledIconButton} {
       position: absolute;
