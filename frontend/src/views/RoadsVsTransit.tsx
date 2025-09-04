@@ -7,18 +7,24 @@ import {
   CoreFrame,
   IconButton,
   manualSectionIds,
-  Map,
   OptionTrack,
   PageHeader,
   renderManualSection,
   renderSections,
   SelectOne,
+  Map as WebMap,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
 import { AppNavigation } from '../components/navigation';
-import { useAppData, useLocalStorage, useRect, useSectionsVisibility } from '../hooks';
+import {
+  useAppData,
+  useHighlightHandles,
+  useLocalStorage,
+  useRect,
+  useSectionsVisibility,
+} from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
-import { notEmpty } from '../utils';
+import { mapUtils, notEmpty } from '../utils';
 
 export function RoadsVsTransit() {
   const { data, loading, scenarios: scenariosData } = useAppData();
@@ -57,7 +63,7 @@ export function RoadsVsTransit() {
       map={
         render(
           <div style={{ height: '100%' }} title="Map">
-            <Map
+            <WebMap
               layers={[
                 walkServiceAreas,
                 ...futureWalkServiceAreas,
@@ -113,7 +119,7 @@ export function RoadsVsTransit() {
             </Button>
           );
         })(),
-        render(<Comparison key={0} title="Scenarios" />),
+        render(<Comparison key={0} title="Scenarios" mapView={mapView} />),
       ])}
       disableSectionColumns
     />
@@ -152,7 +158,7 @@ function SectionsHeader() {
   return null;
 }
 
-function Comparison(_props: { title: string }) {
+function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
   const { scenarios: scenariosData } = useAppData();
   const scenarios = scenariosData.data?.scenarios?.scenarios || [];
   const mileOptions = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map(
@@ -248,6 +254,7 @@ function Comparison(_props: { title: string }) {
               optionLabel={optionLabel}
               scenarios={buttonScenarios}
               transitioning={transitioning}
+              mapView={props.mapView}
             />
           </ButtonInterior>
         </>
@@ -390,19 +397,157 @@ interface TrackButtonExpandedContentProps {
   optionLabel: string;
   scenarios: Scenario[];
   transitioning: boolean;
+  mapView: __esri.MapView | null;
 }
 
 function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
+  // =========================================================================
+  // SECTION 1: useState Hooks
+  // =========================================================================
   const [selectedScenarioIndex, _setSelectedScenarioIndex] = useState<number | null>(null);
   const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
+  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
+
+  // =========================================================================
+  // SECTION 2: REGULAR FUNCTIONS & useCallback HOOKS
+  // =========================================================================
   function setSelectedScenarioIndex(index: number | null) {
     _setSelectedScenarioIndex(index);
     setSelectedFeatureIndex(0);
   }
 
+  // =========================================================================
+  // SECTION 3:useEffect HOOKS
+  // =========================================================================
+
+  // build a mapping of line_id to layer id for the future route layers
+  // so that we can easily find the right layer to highlight for a given line_id
+  useEffect(() => {
+    props.mapView?.when(async () => {
+      const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
+        (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
+      );
+      const futureRouteLayers = geoJsonLayers.filter((layer) =>
+        layer.id.startsWith('future_route__')
+      );
+
+      if (!futureRouteLayers || futureRouteLayers.length === 0) {
+        setLineIdToLayerIdMap(new Map());
+        return;
+      }
+
+      // prepare a mapping of line_id to layer id
+      const newLineIdToLayerIdMap = new Map<string, string>();
+
+      for await (const layer of futureRouteLayers) {
+        await layer
+          .queryFeatures()
+          .then((featureSet) => {
+            const lineIds = featureSet.features.map(
+              (feature) => feature.attributes.line_id as string
+            );
+
+            const uniqueLineIds = Array.from(new Set(lineIds));
+            if (uniqueLineIds.length > 1) {
+              console.warn(`Layer ${layer.id} has multiple line_ids:`, uniqueLineIds);
+            }
+
+            const firstLineId = uniqueLineIds[0];
+            if (!firstLineId) {
+              console.warn(`Layer ${layer.id} has no line_id.`);
+              return;
+            }
+
+            newLineIdToLayerIdMap.set(firstLineId, layer.id);
+          })
+          .catch((error) => {
+            console.error(`Error querying features for layer ${layer.id}:`, error);
+          });
+      }
+
+      // save the mapping to state
+      setLineIdToLayerIdMap(newLineIdToLayerIdMap);
+    });
+  }, [props.mapView]);
+
+  // =========================================================================
+  // SECTION 4: NON-HOOK DERIVATIONS
+  // =========================================================================
+
   const scenario =
     selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
-  const feature = scenario?.features?.[selectedFeatureIndex];
+
+  const feature = props.transitioning ? undefined : scenario?.features?.[selectedFeatureIndex];
+
+  const handles = useHighlightHandles();
+
+  // --- Main highlighting useEffect  ---
+  useEffect(() => {
+    // since we need the map view to highlight features, do nothing if it's not available
+    if (!props.mapView) {
+      return;
+    }
+
+    // do not attempt to highlight if a scenario (and a feature from that scenario) is not selected
+    if (!feature) {
+      return;
+    }
+
+    // use this controller to abort any in-progress highlighting when the effect is cleaned up
+    const controller = new AbortController();
+
+    // --- Case 1: Highlighting Routes ---
+    if (feature.affects === 'routes' && feature.routeIds && feature.routeIds.length > 0) {
+      if (feature.type === 'addition') {
+        const targetLayerIds = feature.routeIds
+          .map((lineId) => lineIdToLayerIdMap.get(lineId))
+          .filter((id): id is string => id !== undefined);
+
+        mapUtils
+          .highlightFeatures(
+            props.mapView,
+            targetLayerIds.map((layerId) => ({ layerId, options: { signal: controller.signal } }))
+          )
+          .then((layersAndHandles) => {
+            handles.add(layersAndHandles.map(({ handle }) => handle));
+          });
+      } else if (feature.type === 'frequency') {
+        mapUtils
+          .highlightFeatures(props.mapView, [
+            {
+              layerId: (layers) => layers.find((layer) => layer.id.startsWith('routes__')),
+              target: feature.routeIds,
+              options: { signal: controller.signal },
+            },
+          ])
+          .then((layersAndHandles) => {
+            handles.add(layersAndHandles.map(({ handle }) => handle));
+          });
+      }
+    }
+    // --- Case 2: Highlighting Stops ---
+    else if (feature.affects === 'stops' && feature.stopIds && feature.stopIds.length > 0) {
+      mapUtils
+        .highlightFeatures(props.mapView, [
+          {
+            layerId: (layers) =>
+              layers.find(
+                (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
+              ),
+            target: feature.stopIds.map((id) => parseInt(id)),
+            options: { signal: controller.signal },
+          },
+        ])
+        .then((layersAndHandles) => {
+          handles.add(layersAndHandles.map(({ handle }) => handle));
+        });
+    }
+
+    return () => {
+      controller.abort(); // abort any in-progress highlighting
+      handles.removeAll(); // remove all active highlights
+    };
+  }, [props.mapView, feature, lineIdToLayerIdMap]);
 
   if (scenario && !props.transitioning) {
     if (!feature) {

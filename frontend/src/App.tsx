@@ -118,6 +118,10 @@ export default function App() {
     return [regularAreas, seasons, futures] as const;
   }, [searchParams]);
 
+  const roadsVsTransitSeasonsOverride: (typeof seasons)[number][] = useMemo(() => {
+    return [['Q4', 2024]];
+  }, []);
+
   const travelMethod = useMemo(() => {
     const found = searchParams.get('travelMethod') ?? undefined;
 
@@ -147,9 +151,14 @@ export default function App() {
   }, [searchParams]);
 
   const isOnJobAccessPage = pathname === TAB_3_FRAGMENT;
+  const isOnRoadsVsTransitPage = pathname === TAB_5_FRAGMENT;
 
   const resolvedAreas = isOnJobAccessPage ? jobAccessAreasOverride : areas;
-  const resolvedSeasons = isOnJobAccessPage ? jobAccessSeasonsOverride : seasons;
+  const resolvedSeasons = isOnJobAccessPage
+    ? jobAccessSeasonsOverride
+    : isOnRoadsVsTransitPage
+    ? roadsVsTransitSeasonsOverride
+    : seasons;
 
   const editMode = searchParams.get('edit') === 'true';
 
