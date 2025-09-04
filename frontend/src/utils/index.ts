@@ -4,6 +4,7 @@ export { generateHash } from './generateHash';
 export { hasKey } from './hasKey';
 export { inflateResponse } from './inflateResponse';
 export { listOxford } from './listOxford';
+export * as mapUtils from './map';
 export { notEmpty } from './notEmpty';
 export { quadraticBezierToPolygon } from './quadraticBezierToPolygon';
 export { replaceLast } from './replaceLast';
