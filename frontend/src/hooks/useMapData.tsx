@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { useAppData } from '.';
 import { Section, Statistic } from '../components';
 import { GeoJSONLayerInit } from '../components/common/Map/types';
-import { createPopupRoot, notEmpty, requireKey, zoomToLayers } from '../utils';
+import { createPopupRoot, mapUtils, notEmpty, requireKey } from '../utils';
 import { createBusStopRenderer, createInterestAreaRenderer } from '../utils/renderers';
 
 type AppData = ReturnType<typeof useAppData>['data'];
@@ -124,7 +124,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
     view.when(async () => {
       if (areaPolygons.length > 0) {
         const layersToFocusIds = areaPolygons.map((layer) => layer.id);
-        zoomToLayers(view, layersToFocusIds);
+        mapUtils.zoomToLayers(view, layersToFocusIds);
       }
     });
   }, [view, options, areaPolygons]);
@@ -951,7 +951,7 @@ export function useFutureMapData(
     view.when(async () => {
       if (futureRoutes.length > 0) {
         const layersToFocusIds = futureRoutes.map((layer) => layer.id);
-        zoomToLayers(view, layersToFocusIds);
+        mapUtils.zoomToLayers(view, layersToFocusIds);
       }
     });
   }, [view, options, futureRoutes]);
@@ -1120,7 +1120,7 @@ export function useFutureMapData(
     view.when(async () => {
       if (futureParatransitServiceAreas.length > 0) {
         const layersToFocusIds = futureParatransitServiceAreas.map((layer) => layer.id);
-        zoomToLayers(view, layersToFocusIds);
+        mapUtils.zoomToLayers(view, layersToFocusIds);
       }
     });
   }, [view, options, futureParatransitServiceAreas]);
