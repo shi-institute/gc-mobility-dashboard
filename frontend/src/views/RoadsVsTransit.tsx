@@ -251,13 +251,15 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
         <OptionTrack.Track
           mode={mode}
           style={`${(() => {
+            const baseStyle = 'z-index: 1;';
+
             if (mode === 'column') {
               if (hideSmallButtons) {
-                return 'height: calc(100% - 10px); top: 10px;';
+                return baseStyle + 'height: calc(100% - 10px); top: 10px;';
               }
-              return 'height: calc(100% - 120px); top: 120px;';
+              return baseStyle + 'height: calc(100% - 120px); top: 120px;';
             }
-            return '';
+            return baseStyle;
           })()}
             
           ${
@@ -743,6 +745,8 @@ const ComparisonComponent = styled.div`
     border-radius: 0;
     box-shadow: none;
     background-position-y: 21px;
+    z-index: 1;
+    color: inherit !important;
 
     &:hover:not(:disabled) {
       background-color: rgba(255, 255, 255, 0.8);
