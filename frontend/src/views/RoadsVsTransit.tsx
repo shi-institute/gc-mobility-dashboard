@@ -387,51 +387,71 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   // build a mapping of line_id to layer id for the future route layers
   // so that we can easily find the right layer to highlight for a given line_id
   useEffect(() => {
-    props.mapView?.when(async () => {
-      const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
-        (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
-      );
-      const futureRouteLayers = geoJsonLayers.filter((layer) =>
-        layer.id.startsWith('future_route__')
-      );
+    if (!props.mapView) {
+      setLineIdToLayerIdMap(new Map());
+      return;
+    }
 
-      if (!futureRouteLayers || futureRouteLayers.length === 0) {
-        setLineIdToLayerIdMap(new Map());
-        return;
-      }
+    props.mapView
+      .when(() => {
+        // <--- This 'when' callback does NOT need to be async itself for this pattern
+        const processLayers = async () => {
+          // <--- DEFINE an async function here
+          const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
+            (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
+          );
+          const futureRouteLayers = geoJsonLayers.filter((layer) =>
+            layer.id.startsWith('future_route__')
+          );
 
-      // prepare a mapping of line_id to layer id
-      const newLineIdToLayerIdMap = new Map<string, string>();
+          if (!futureRouteLayers || futureRouteLayers.length === 0) {
+            setLineIdToLayerIdMap(new Map());
+            return;
+          }
 
-      for await (const layer of futureRouteLayers) {
-        await layer
-          .queryFeatures()
-          .then((featureSet) => {
-            const lineIds = featureSet.features.map(
-              (feature) => feature.attributes.line_id as string
-            );
+          // prepare a mapping of line_id to layer id
+          const newLineIdToLayerIdMap = new Map<string, string>();
 
-            const uniqueLineIds = Array.from(new Set(lineIds));
-            if (uniqueLineIds.length > 1) {
-              console.warn(`Layer ${layer.id} has multiple line_ids:`, uniqueLineIds);
-            }
+          // Now, the 'for await...of' is inside an async function!
+          // This is the correct place for it.
+          for await (const layer of futureRouteLayers) {
+            // <--- This is now valid!
+            await layer // <--- This await is also valid here.
+              .queryFeatures()
+              .then((featureSet) => {
+                const lineIds = featureSet.features.map(
+                  (feature) => feature.attributes.line_id as string
+                );
 
-            const firstLineId = uniqueLineIds[0];
-            if (!firstLineId) {
-              console.warn(`Layer ${layer.id} has no line_id.`);
-              return;
-            }
+                const uniqueLineIds = Array.from(new Set(lineIds));
+                if (uniqueLineIds.length > 1) {
+                  console.warn(`Layer ${layer.id} has multiple line_ids:`, uniqueLineIds);
+                }
 
-            newLineIdToLayerIdMap.set(firstLineId, layer.id);
-          })
-          .catch((error) => {
-            console.error(`Error querying features for layer ${layer.id}:`, error);
-          });
-      }
+                const firstLineId = uniqueLineIds[0];
+                if (!firstLineId) {
+                  console.warn(`Layer ${layer.id} has no line_id.`);
+                  return;
+                }
 
-      // save the mapping to state
-      setLineIdToLayerIdMap(newLineIdToLayerIdMap);
-    });
+                newLineIdToLayerIdMap.set(firstLineId, layer.id);
+              })
+              .catch((error) => {
+                console.error(`Error querying features for layer ${layer.id}:`, error);
+              });
+          }
+
+          // save the mapping to state
+          setLineIdToLayerIdMap(newLineIdToLayerIdMap);
+        };
+
+        processLayers(); // <--- Call the async function immediately after defining it
+      })
+      .catch((error) => {
+        // Good practice to catch errors from .when()
+        console.error('Error waiting for MapView readiness:', error);
+        setLineIdToLayerIdMap(new Map()); // Ensure state is reset even on map load error
+      });
   }, [props.mapView]);
 
   // =========================================================================
@@ -472,9 +492,27 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
             props.mapView,
             targetLayerIds.map((layerId) => ({ layerId, options: { signal: controller.signal } }))
           )
-          .then((layersAndHandles) => {
+          .then(async (layersAndHandles) => {
+            // <--- This async callback is the key!
             handles.add(layersAndHandles.map(({ handle }) => handle));
+
+            // --- START: Zooming Logic for 'addition' type ---
+            // MOVED: This entire block is now correctly INSIDE the async .then() callback
+            if (targetLayerIds.length > 0) {
+              try {
+                await mapUtils.zoomToLayers(props.mapView!, targetLayerIds); // <--- Non-null assertion added
+              } catch (error) {
+                console.error('Error zooming to features of type "addition":', error);
+              }
+            } else {
+              console.warn(
+                'No layers identified for zooming to highlighted routes (addition type).'
+              );
+            }
+            // --- END: Zooming Logic ---
           });
+        // The .then() chain ends here, and the rest of the useEffect continues synchronously
+        // There should be no other awaits directly here.
       } else if (feature.type === 'frequency') {
         mapUtils
           .highlightFeatures(props.mapView, [
