@@ -106,6 +106,11 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
         font-size: 1rem;
       }
     }
+
+    .footnote {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
   }
 
   * + aside {
@@ -115,7 +120,8 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
     }
   }
 
-  .showAside {
+  .showAside,
+  a {
     appearance: none;
     border: none;
     background-color: transparent;
