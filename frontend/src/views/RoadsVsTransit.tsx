@@ -556,7 +556,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       controller.abort(); // abort any in-progress highlighting
       handles.removeAll(); // remove all active highlights
 
-      //set zoom back to the default extent (the future route layers)
+      // set zoom back to the default extent (the future route layers)
       if (shouldResetZoom) {
         const futureLayerIDs = lineIdToLayerIdMap.values();
         mapUtils.zoomToLayers(props.mapView, Array.from(futureLayerIDs));
