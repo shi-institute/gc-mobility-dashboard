@@ -203,15 +203,23 @@ interface ReplicaTripStatistics {
     via_walk?: number;
     via_bike?: number;
   };
-  destination_building_use?: {
-    via_walk: {
-      type_counts: ReplicaDesinationUseTypeStatistics;
-      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
-    };
-    via_bike: {
-      type_counts: ReplicaDesinationUseTypeStatistics;
-      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
-    };
+  destination_building_use?: ReplicaDestinationUseTypeStatisticsVia;
+  destination_building_use__by_tour_type?: {
+    commute?: ReplicaDestinationUseTypeStatisticsVia;
+    work_based?: ReplicaDestinationUseTypeStatisticsVia;
+    undirected?: ReplicaDestinationUseTypeStatisticsVia;
+    other_home_based?: ReplicaDestinationUseTypeStatisticsVia;
+  };
+}
+
+interface ReplicaDestinationUseTypeStatisticsVia {
+  via_walk: {
+    type_counts: ReplicaDesinationUseTypeStatistics;
+    subtype_counts: ReplicaDesinationUseSubTypeStatistics;
+  };
+  via_bike: {
+    type_counts: ReplicaDesinationUseTypeStatistics;
+    subtype_counts: ReplicaDesinationUseSubTypeStatistics;
   };
 }
 
@@ -372,15 +380,12 @@ interface FutureRouteStatistics {
     via_walk?: number;
     via_bike?: number;
   };
-  destination_building_use?: {
-    via_walk: {
-      type_counts: ReplicaDesinationUseTypeStatistics;
-      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
-    };
-    via_bike: {
-      type_counts: ReplicaDesinationUseTypeStatistics;
-      subtype_counts: ReplicaDesinationUseSubTypeStatistics;
-    };
+  destination_building_use?: ReplicaDestinationUseTypeStatisticsVia;
+  destination_building_use__by_tour_type?: {
+    commute?: ReplicaDestinationUseTypeStatisticsVia;
+    work_based?: ReplicaDestinationUseTypeStatisticsVia;
+    undirected?: ReplicaDestinationUseTypeStatisticsVia;
+    other_home_based?: ReplicaDestinationUseTypeStatisticsVia;
   };
   synthetic_demographics: {
     households_in_service_area: { walk: number; bike: number };

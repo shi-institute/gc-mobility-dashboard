@@ -247,7 +247,7 @@ export function TreeMap(props: TreeMapProps) {
                 return nodeNames[0] + ' → ' + nodeNames.slice(1).join(': ');
               })()}
             </div>
-            <div>Est. Population: {format(hoveredNode.value || 0)}</div>
+            <div>Sample Population: {format(hoveredNode.value || 0)}</div>
           </Tooltip>
         )}
       </div>
