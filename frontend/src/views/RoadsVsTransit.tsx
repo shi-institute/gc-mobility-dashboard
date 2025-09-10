@@ -457,7 +457,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       return;
     }
 
-    // keep trakc of whethere we need to reset the map presentation after removing highlights
+    // keep track of whether we need to reset the map presentation after removing highlights
     let shouldResetZoom = false;
     let busStopLayersToReHideIds: string[] = [];
 
