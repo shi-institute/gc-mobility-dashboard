@@ -1,4 +1,3 @@
-import Query from '@arcgis/core/rest/support/Query.js';
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import React, { ComponentProps, useEffect, useRef, useState } from 'react';
@@ -457,7 +456,11 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
     if (!feature) {
       return;
     }
+
+    // keep trakc of whethere we need to reset the map presentation after removing highlights
     let shouldResetZoom = false;
+    let busStopLayersToReHideIds: string[] = [];
+
     // use this controller to abort any in-progress highlighting when the effect is cleaned up
     const controller = new AbortController();
 
@@ -473,10 +476,12 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
             props.mapView,
             targetLayerIds.map((layerId) => ({ layerId, options: { signal: controller.signal } }))
           )
-          .then(async (layersAndHandles) => {
-            handles.add(layersAndHandles.map(({ handle }) => handle));
-            //Zoom to selected feature
-            await mapUtils.zoomToLayers(props.mapView!, targetLayerIds);
+          .then(async (foundLayers) => {
+            // save the highlight handles so we can remove the highlights later
+            handles.add(foundLayers.map(({ handle }) => handle));
+
+            // zoom to the highlighted features
+            await mapUtils.zoomToLayers(props.mapView, targetLayerIds);
             shouldResetZoom = true;
           });
       } else if (feature.type === 'frequency') {
@@ -488,22 +493,20 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
               options: { signal: controller.signal },
             },
           ])
-          .then(async (layersAndHandles) => {
-            handles.add(layersAndHandles.map(({ handle }) => handle));
-            //Zoom to selected feature
-            if (props.mapView) {
-              await mapUtils.zoomToLayers(
-                props.mapView,
-                layersAndHandles.map(({ layerView }) => {
-                  return {
-                    id: layerView.layer.id,
-                    query: new Query({ where: `ID IN (${feature.routeIds.join(',')})` }),
-                  };
-                })
-              );
-              shouldResetZoom = true;
-            }
-            console.log('query = ', new Query({ where: `ID IN (${feature.routeIds.join(',')})` }));
+          .then(async (foundLayers) => {
+            // save the highlight handles so we can remove the highlights later
+            handles.add(foundLayers.map(({ handle }) => handle));
+
+            // zoom to the highlighted features
+            await mapUtils.zoomToLayers(
+              props.mapView,
+              // only zoom to the layers that were actually found and highlighted
+              foundLayers.map(({ layerView, targetQuery }) => ({
+                id: layerView.layer.id,
+                query: targetQuery,
+              }))
+            );
+            shouldResetZoom = true;
           });
       }
     }
@@ -520,18 +523,51 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
             options: { signal: controller.signal },
           },
         ])
-        .then((layersAndHandles) => {
-          handles.add(layersAndHandles.map(({ handle }) => handle));
+        .then(async (foundLayers) => {
+          // save the highlight handles so we can remove the highlights later
+          handles.add(foundLayers.map(({ handle }) => handle));
+
+          // zoom to the highlighted features
+          await mapUtils.zoomToLayers(
+            props.mapView,
+            // only zoom to the layers that were actually found and highlighted
+            foundLayers.map(({ layerView, targetQuery }) => ({
+              id: layerView.layer.id,
+              query: targetQuery,
+            }))
+          );
+          shouldResetZoom = true;
+
+          // if the bus stops layer is not visible, temporarily make it visible so the highlights are visible
+          const busStopsLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
+            (layer) => layer.id.startsWith('stops__') // current and future
+          );
+          const hiddenBusStopsLayerIds = busStopsLayers
+            .filter((layer) => !layer.visible)
+            .map((layer) => layer.id);
+          if (hiddenBusStopsLayerIds.length > 0) {
+            busStopLayersToReHideIds = hiddenBusStopsLayerIds;
+            busStopsLayers.forEach((layer) => (layer.visible = true));
+          }
         });
     }
 
     return () => {
       controller.abort(); // abort any in-progress highlighting
       handles.removeAll(); // remove all active highlights
-      //set zoom back to full extent
-      if (shouldResetZoom && props.mapView) {
+
+      //set zoom back to the default extent (the future route layers)
+      if (shouldResetZoom) {
         const futureLayerIDs = lineIdToLayerIdMap.values();
         mapUtils.zoomToLayers(props.mapView, Array.from(futureLayerIDs));
+      }
+
+      // re-hide the bus stops layers that were previously hidden
+      if (busStopLayersToReHideIds.length > 0) {
+        const busStopsLayersToHide = Array.from(props.mapView?.map?.allLayers || []).filter(
+          (layer) => busStopLayersToReHideIds.includes(layer.id)
+        );
+        busStopsLayersToHide.forEach((layer) => (layer.visible = false));
       }
     };
   }, [props.mapView, feature, lineIdToLayerIdMap]);
