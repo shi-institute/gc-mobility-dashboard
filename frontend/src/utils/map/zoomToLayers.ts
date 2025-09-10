@@ -1,5 +1,6 @@
 import * as unionOperator from '@arcgis/core/geometry/operators/unionOperator.js';
 import { notEmpty } from '../notEmpty';
+import { requireKey } from '../requireKey';
 
 /**
  * Zooms the map view to the combined extent of the specified layers.
@@ -18,9 +19,13 @@ import { notEmpty } from '../notEmpty';
  * ```
  */
 export async function zoomToLayers(
-  view: __esri.MapView,
+  view: __esri.MapView | null,
   layersToFocus: string[] | { id: string; query?: __esri.Query }[]
-): Promise<void> {
+): Promise<__esri.GeometryUnion | null | undefined> {
+  if (!view) {
+    return;
+  }
+
   const layersToFocusIds = isStringArray(layersToFocus)
     ? layersToFocus
     : layersToFocus.map((l) => l.id);
@@ -37,7 +42,7 @@ export async function zoomToLayers(
 
   const promises =
     foundLayers
-      .map((layer): Promise<{ count: number; extent: __esri.Extent }> | null => {
+      .map((layer): Promise<{ count: number; extent: __esri.Extent | null }> | null => {
         return layer.when(() => {
           if (!('queryExtent' in layer) || typeof layer.queryExtent != 'function') {
             return null;
@@ -49,18 +54,22 @@ export async function zoomToLayers(
 
           return (layer as unknown as __esri.FeatureLayerView).queryExtent(query) as Promise<{
             count: number;
-            extent: __esri.Extent;
+            extent: __esri.Extent | null;
           }>;
         });
       })
       .filter(notEmpty) || [];
 
-  const layerExtents = await Promise.all(promises);
+  const layerExtents = (await Promise.all(promises)).filter(requireKey('extent'));
+  if (layerExtents.length === 0) {
+    return;
+  }
 
   const extentUnion = unionOperator.executeMany(layerExtents.map(({ extent }) => extent));
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   view.goTo(extentUnion, { animate: true, duration: prefersReducedMotion ? 0 : 1000 });
+  return extentUnion;
 }
 
 function isStringArray(arr: any[]): arr is string[] {
