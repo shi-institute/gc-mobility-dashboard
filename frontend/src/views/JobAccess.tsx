@@ -258,8 +258,8 @@ function Header(props: HeaderProps) {
     <HeaderComponent {...props}>
       <h2>How can transit help the economy?</h2>
       <p>
-        These tree maps visualize the daily average number of people who use any transport mode to
-        reach their job in the selected area(s), grouped by job sector.
+        These tree maps visualize the sampled* daily average number of people who use any transport
+        mode to reach their job in the selected area(s), grouped by job sector.
         {showAside ? null : (
           <>
             {' '}
@@ -296,6 +296,11 @@ function Header(props: HeaderProps) {
           <p>
             See the industries that create the most jobs in each area. You’ll see we aren’t lacking
             for jobs, but we are lacking for reliable transportation to those jobs.
+          </p>
+          <p className="footnote">
+            *Sample data are from <a href="https://www.replicahq.com/">Replica</a>. Sample
+            population is less than full population, but it is a representative sample that
+            preserves proportions.
           </p>
         </aside>
       ) : null}
