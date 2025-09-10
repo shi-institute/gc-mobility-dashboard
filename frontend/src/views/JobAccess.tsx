@@ -208,7 +208,7 @@ function useJobData() {
     .map(({ __area, __quarter, __year, __label, statistics }) => {
       return [
         { __area, __quarter, __year, __label },
-        statistics?.thursday_trip.destination_building_use?.via_walk,
+        statistics?.thursday_trip.destination_building_use__by_tour_type?.commute?.via_walk,
       ] as const;
     })
     .filter((x): x is [(typeof x)[0], NonNullable<(typeof x)[1]>] => notEmpty(x[1]))
@@ -216,14 +216,14 @@ function useJobData() {
 
   const futureJobDataByArea = futures
     .map(({ __label, stats }) => {
-      const viaWalk = stats?.destination_building_use?.via_walk;
+      const viaWalk = stats?.destination_building_use__by_tour_type?.commute?.via_walk;
       if (!viaWalk) {
         return null;
       }
 
       return [{ __label }, viaWalk] as [
         { __label: string },
-        NonNullable<NonNullable<FutureRouteStatistics['destination_building_use']>['via_walk']>
+        ReplicaDestinationUseTypeStatisticsVia['via_walk']
       ];
     })
     .filter(notEmpty)

@@ -15,6 +15,7 @@ import tqdm
 from etl.geodesic import geodesic_area_series, geodesic_length_series
 from etl.sources.replica.process_etl import (
     Season, count_destination_building_use_in_service_area,
+    count_destination_building_use_in_service_area_by_tour_type,
     count_median_commute_time, count_trip_travel_methods)
 
 logger = logging.getLogger('future_routes_etl')
@@ -323,9 +324,13 @@ class FutureRoutesETL:
                 f'Missing walk or bike service area files in {scenario_input_folder.name}. Skipping building use analysis.')
             return statistics
 
-        # get destination building uses for trips that use or could use public transit
+        # get destination building uses for all trips
         logger.debug('    Counting destination building uses...')
         statistics['destination_building_use'] = count_destination_building_use_in_service_area(
+            trips_df, crs, walk_gdf, bike_gdf)
+
+        # get desintation building use by tour type for all trips
+        statistics['destination_building_use__by_tour_type'] = count_destination_building_use_in_service_area_by_tour_type(
             trips_df, crs, walk_gdf, bike_gdf)
 
         return statistics
