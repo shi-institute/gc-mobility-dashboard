@@ -457,6 +457,10 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       return;
     }
 
+    // keep track of whether we need to reset the map presentation after removing highlights
+    let shouldResetZoom = false;
+    let busStopLayersToReHideIds: string[] = [];
+
     // use this controller to abort any in-progress highlighting when the effect is cleaned up
     const controller = new AbortController();
 
@@ -472,8 +476,13 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
             props.mapView,
             targetLayerIds.map((layerId) => ({ layerId, options: { signal: controller.signal } }))
           )
-          .then((layersAndHandles) => {
-            handles.add(layersAndHandles.map(({ handle }) => handle));
+          .then(async (foundLayers) => {
+            // save the highlight handles so we can remove the highlights later
+            handles.add(foundLayers.map(({ handle }) => handle));
+
+            // zoom to the highlighted features
+            await mapUtils.zoomToLayers(props.mapView, targetLayerIds);
+            shouldResetZoom = true;
           });
       } else if (feature.type === 'frequency') {
         mapUtils
@@ -484,8 +493,20 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
               options: { signal: controller.signal },
             },
           ])
-          .then((layersAndHandles) => {
-            handles.add(layersAndHandles.map(({ handle }) => handle));
+          .then(async (foundLayers) => {
+            // save the highlight handles so we can remove the highlights later
+            handles.add(foundLayers.map(({ handle }) => handle));
+
+            // zoom to the highlighted features
+            await mapUtils.zoomToLayers(
+              props.mapView,
+              // only zoom to the layers that were actually found and highlighted
+              foundLayers.map(({ layerView, targetQuery }) => ({
+                id: layerView.layer.id,
+                query: targetQuery,
+              }))
+            );
+            shouldResetZoom = true;
           });
       }
     }
@@ -502,14 +523,52 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
             options: { signal: controller.signal },
           },
         ])
-        .then((layersAndHandles) => {
-          handles.add(layersAndHandles.map(({ handle }) => handle));
+        .then(async (foundLayers) => {
+          // save the highlight handles so we can remove the highlights later
+          handles.add(foundLayers.map(({ handle }) => handle));
+
+          // zoom to the highlighted features
+          await mapUtils.zoomToLayers(
+            props.mapView,
+            // only zoom to the layers that were actually found and highlighted
+            foundLayers.map(({ layerView, targetQuery }) => ({
+              id: layerView.layer.id,
+              query: targetQuery,
+            }))
+          );
+          shouldResetZoom = true;
+
+          // if the bus stops layer is not visible, temporarily make it visible so the highlights are visible
+          const busStopsLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
+            (layer) => layer.id.startsWith('stops__') // current and future
+          );
+          const hiddenBusStopsLayerIds = busStopsLayers
+            .filter((layer) => !layer.visible)
+            .map((layer) => layer.id);
+          if (hiddenBusStopsLayerIds.length > 0) {
+            busStopLayersToReHideIds = hiddenBusStopsLayerIds;
+            busStopsLayers.forEach((layer) => (layer.visible = true));
+          }
         });
     }
 
     return () => {
       controller.abort(); // abort any in-progress highlighting
       handles.removeAll(); // remove all active highlights
+
+      // set zoom back to the default extent (the future route layers)
+      if (shouldResetZoom) {
+        const futureLayerIDs = lineIdToLayerIdMap.values();
+        mapUtils.zoomToLayers(props.mapView, Array.from(futureLayerIDs));
+      }
+
+      // re-hide the bus stops layers that were previously hidden
+      if (busStopLayersToReHideIds.length > 0) {
+        const busStopsLayersToHide = Array.from(props.mapView?.map?.allLayers || []).filter(
+          (layer) => busStopLayersToReHideIds.includes(layer.id)
+        );
+        busStopsLayersToHide.forEach((layer) => (layer.visible = false));
+      }
     };
   }, [props.mapView, feature, lineIdToLayerIdMap]);
 

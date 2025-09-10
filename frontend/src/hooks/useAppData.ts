@@ -99,6 +99,23 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   // ensure an area is selected
   useEffect(() => {
     if (areas.length === 0 && areasList[0]) {
+      // prefer 'Greenville County' if it exists
+      const gvlCounty = areasList.findIndex((area) => area === 'Greenville County');
+      if (gvlCounty !== -1) {
+        searchParams.set('areas', 'Greenville County');
+        setSearchParams(searchParams, { replace: true });
+        return;
+      }
+
+      // prefer 'City of Greenville' if it exists
+      const gvlCity = areasList.findIndex((area) => area === 'City of Greenville');
+      if (gvlCity !== -1) {
+        searchParams.set('areas', 'City of Greenville');
+        setSearchParams(searchParams, { replace: true });
+        return;
+      }
+
+      // otherwise, just select the first area in the list
       searchParams.set('areas', areasList[0]);
       setSearchParams(searchParams, { replace: true });
     }

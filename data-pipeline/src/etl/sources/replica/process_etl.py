@@ -83,6 +83,7 @@ class ReplicaProcessETL:
 
     def process(self):
         statistics: dict[str, Any] = {}
+        logger.debug('Cache ID: ' + self.areas_seasons_hash)
 
         population_stats_cache_path = self.output_folder / \
             f'population_stats_cache__{self.areas_seasons_hash}.json.tmp'
@@ -138,7 +139,7 @@ class ReplicaProcessETL:
                         statistics['saturday_trip'][season_str] = saturday_stats[season_str]
 
                         logger.info(
-                            f'Saturday trip stats retrieved for {season_str} from the cache.')
+                            f'Saturday trip stats retrieved for {season_str} from the cache. [Cache ID: {season_areas_hash}]')
                 else:
                     start_time = time.time()
 
@@ -164,7 +165,7 @@ class ReplicaProcessETL:
                         statistics['thursday_trip'][season_str] = thursday_stats[season_str]
 
                         logger.info(
-                            f'Thursday trip stats retrieved for {season_str} from the cache.')
+                            f'Thursday trip stats retrieved for {season_str} from the cache. [Cache ID: {season_areas_hash}]')
                 else:
                     start_time = time.time()
 
@@ -203,7 +204,7 @@ class ReplicaProcessETL:
                         statistics['saturday_rider'][season_str] = saturday_rider_stats[season_str]
 
                         logger.info(
-                            f'Saturday rider stats retrieved for {season_str} from the cache.')
+                            f'Saturday rider stats retrieved for {season_str} from the cache. [Cache ID: {season_areas_hash}]')
                 else:
                     start_time = time.time()
 
@@ -230,7 +231,7 @@ class ReplicaProcessETL:
                         statistics['thursday_rider'][season_str] = thursday_rider_stats[season_str]
 
                         logger.info(
-                            f'Thursday rider stats retrieved for {season_str} from the cache.')
+                            f'Thursday rider stats retrieved for {season_str} from the cache. [Cache ID: {season_areas_hash}]')
                 else:
                     start_time = time.time()
 
@@ -271,13 +272,13 @@ class ReplicaProcessETL:
                 with open(statistics_path, 'w') as file:
                     json.dump(area_stats, file, indent=2)
 
-        start_time = time.time()
-        self.build_network_segments(self.days)
-        elapsed_time = time.time() - start_time
-        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-        logger.info('')
-        logger.info(f'Network segments built in {formatted_time}.')
-        logger.info('')
+        # start_time = time.time()
+        # self.build_network_segments(self.days)
+        # elapsed_time = time.time() - start_time
+        # formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+        # logger.info('')
+        # logger.info(f'Network segments built in {formatted_time}.')
+        # logger.info('')
 
         # # discard the chunks since we no longer need them
         # season_areas_days = list(itertools.product(
@@ -682,7 +683,8 @@ class ReplicaProcessETL:
                         'methods': {},
                         'median_duration': {},
                         'possible_conversions': {},
-                        'destination_building_use': {}
+                        'destination_building_use': {},
+                        'destination_building_use__by_tour_type': {},
                     }
 
                     logger.debug('    Reading areas trips chunks...')
@@ -704,9 +706,13 @@ class ReplicaProcessETL:
                     logger.debug('    Calculating median trip commute time...')
                     statistics['median_duration'] = count_median_commute_time(trips_df)
 
-                    # get destination building uses for trips that use or could use public transit
+                    # get destination building use for all trips
                     logger.debug('    Counting destination building uses...')
                     statistics['destination_building_use'] = count_destination_building_use_in_service_area(
+                        trips_df, trips_crs, walk_gdf, bike_gdf)
+
+                    # get desintation building use by tour type for all trips
+                    statistics['destination_building_use__by_tour_type'] = count_destination_building_use_in_service_area_by_tour_type(
                         trips_df, trips_crs, walk_gdf, bike_gdf)
 
                     # count the possible conversions in chunks (the geometry column is required, but it is huge)
@@ -1105,5 +1111,27 @@ def count_destination_building_use_in_service_area(trips_df: pandas.DataFrame, t
         'type_counts': type_counts__bike.to_dict(),
         'subtype_counts': subtype_counts__bike.to_dict(),
     }
+
+    return stats
+
+
+def count_destination_building_use_in_service_area_by_tour_type(trips_df: pandas.DataFrame, trips_crs: CRS, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[str, dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]]:
+    """Calls `count_destination_building_use_in_service_area` for each tour type and returns the results for each tour type in a dictionary."""
+
+    tour_types = trips_df['tour_type'].dropna().str.lower().unique()
+
+    stats: dict[str, dict[Literal['via_walk', 'via_bike'],
+                          dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]] = {}
+
+    # for each tour type (commute, undirected, etc.)
+    for tour_type in tour_types:
+        logger.debug(f'    Counting destination building uses for {tour_type} trips...')
+        filter = (trips_df['tour_type'] == tour_type.upper())
+        stats[tour_type] = count_destination_building_use_in_service_area(
+            trips_df[filter],
+            trips_crs,
+            walk_gdf,
+            bike_gdf,
+        )
 
     return stats
