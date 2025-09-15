@@ -836,10 +836,6 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
               };
             })
             .catch(handleError('network_segments_style', true, true)),
-        population: (abortSignal?: AbortSignal) =>
-          fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
-            handleError('population')
-          ),
         operating_funds: (abortSignal?: AbortSignal) =>
           fetchData<OperatingFundInfo[]>(
             __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/operating_funds.json.deflate`,
