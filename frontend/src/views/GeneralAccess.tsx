@@ -88,7 +88,9 @@ function SectionsHeader() {
 
   const [showAside, setShowAside] = useLocalStorage('aside--tab-1', true);
 
-  const uniqueAreaNames = Array.from(new Set((data || []).map((area) => area.__area))).sort();
+  const uniqueAreaDisplayNames = Array.from(
+    new Set((data || []).map((area) => area.__displayArea))
+  ).sort();
 
   const seasons = Array.from(
     new Set(
@@ -111,7 +113,7 @@ function SectionsHeader() {
     <PageHeader isComparing={isComparing}>
       <h2>Where does transit go?</h2>
       <p>
-        Viewing: {listOxford(uniqueAreaNames)} for {listOxford(seasons)}
+        Viewing: {listOxford(uniqueAreaDisplayNames)} for {listOxford(seasons)}
         {showAside ? null : (
           <>
             {' '}
