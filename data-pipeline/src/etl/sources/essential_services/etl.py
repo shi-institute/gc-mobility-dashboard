@@ -21,6 +21,7 @@ class EssentialServicesETL:
     geocoder_output_folder = Path('data/geocoded')
     greenlink_gtfs_folder = Path('data/greenlink_gtfs')
     output_folder = Path('data/essential_services')
+    include_full_area_in_areas = os.getenv('INCLUDE_FULL_AREA_IN_AREAS', '0') == '1'
 
     # folder containing subfolders of ISO 8601 dates (no time) which each contain a shapefile of the zoning for that date
     zoning_input_folder = Path('input/zoning')
@@ -40,6 +41,9 @@ class EssentialServicesETL:
 
     def __init__(self) -> None:
         # collect the paths to each area for processing
+        self.areas = [path for path in self.replica_folder.iterdir() if path.is_dir()]
+        if not self.include_full_area_in_areas:
+            self.areas = [path for path in self.areas if path.name != 'full_area']
         self.areas = [path for path in self.replica_folder.iterdir() if path.is_dir()
                       and path.name != 'full_area']
 
@@ -210,8 +214,21 @@ class EssentialServicesETL:
         if not trip_folder.exists():
             return
 
-        season_folders = [path for path in trip_folder.iterdir() if path.is_dir()]
-        seasons = [path.name[-7:len(path.name)] for path in season_folders]
+        folder_to_iterate_over = trip_folder / '_chunks' if area.name == 'full_area' else trip_folder
+
+        season_folders = [path for path in folder_to_iterate_over.iterdir() if path.is_dir()]
+        seasons = [path.name.replace(f'_{day}_trip', '')[-7:len(path.name)]
+                   for path in season_folders]
+
+        if area.name == 'full_area':
+            if season is not None:
+                yield (season, (area / f'{day}_trip' / '_chunks' / ('south_atlantic_' + season)).glob('*.parquet'))
+
+            else:
+                for season in seasons:
+                    season_parquet_files = (
+                        area / f'{day}_trip' / '_chunks' / ('south_atlantic_' + season)).glob('*.parquet')
+                    yield (season, season_parquet_files)
 
         if season is not None:
             yield (season, (area / f'{day}_trip' / ('south_atlantic_' + season) / '_chunks').glob('*.parquet'))
