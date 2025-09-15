@@ -272,13 +272,13 @@ class ReplicaProcessETL:
                 with open(statistics_path, 'w') as file:
                     json.dump(area_stats, file, indent=2)
 
-        # start_time = time.time()
-        # self.build_network_segments(self.days)
-        # elapsed_time = time.time() - start_time
-        # formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-        # logger.info('')
-        # logger.info(f'Network segments built in {formatted_time}.')
-        # logger.info('')
+        start_time = time.time()
+        self.build_network_segments(self.days)
+        elapsed_time = time.time() - start_time
+        formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+        logger.info('')
+        logger.info(f'Network segments built in {formatted_time}.')
+        logger.info('')
 
         # # discard the chunks since we no longer need them
         # season_areas_days = list(itertools.product(
@@ -553,7 +553,7 @@ class ReplicaProcessETL:
         if seasons is None:
             seasons = self.seasons
 
-        logger.info('Processing population data for the following regions and seasons:')
+        logger.info(f'Processing {day}_trip data for the following regions and seasons:')
         for season in seasons:
             region = season['region']
             year = season['year']
@@ -620,6 +620,10 @@ class ReplicaProcessETL:
                     partitions_slice = partitioned_all_trips_dgdf.partitions[start:end]
 
                     for [area_geojson_path, area_name] in self.areas:
+                        if area_name == 'full_area':
+                            # skip the full area since it does not need to be filtered
+                            bar.update(1)
+                            continue
 
                         def process_area():
                             logger.info(f'    Processing area: {area_name}')
@@ -688,7 +692,7 @@ class ReplicaProcessETL:
                     }
 
                     logger.debug('    Reading areas trips chunks...')
-                    area_trips_chunks_path = self.output_folder / \
+                    area_trips_chunks_path = trip_partitions_folder_path if area_name == 'full_area' else self.output_folder / \
                         area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
                     logger.debug(f'      Area trips chunks path: {area_trips_chunks_path}')
                     area_trips_chunks_ddf = cast(dask.dataframe.DataFrame,
@@ -788,6 +792,11 @@ class ReplicaProcessETL:
                 logger.info('  Reading trips chunks...')
                 area_trips_chunks_path = self.output_folder / \
                     area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
+                if area_name == 'full_area':
+                    # use the unfiltered trips chunks for the full area (filtering was skipped because it was uncessary, so the path is different)
+                    area_trips_chunks_path = self.output_folder / \
+                        self.input_files['saturday_trip' if day == 'saturday' else 'thursday_trip'].format(
+                            region=region, year=year, quarter=quarter)
                 logger.debug(f'    Area trips chunks path: {area_trips_chunks_path}')
                 area_trips_chunks_dgdf = cast(dask_geopandas.GeoDataFrame,
                                               dask_geopandas.read_parquet(area_trips_chunks_path, columns=['activity_id', 'tour_type', 'mode', 'geometry']))
@@ -819,7 +828,7 @@ class ReplicaProcessETL:
                         f'*__{self.data_geo_hash}.success')))
                     done_exploded_chunks_count = len(
                         list(intermediate_chunks_folder.glob(f'*__{self.data_geo_hash}.success')))
-                    skip_explode = done_exploded_chunks_count == done_chunks_count
+                    skip_explode = done_exploded_chunks_count > 0 and done_exploded_chunks_count == done_chunks_count
 
                     # calculate the frequencies for the network segments (may be slow)
                     frequency_bar = tqdm.tqdm(

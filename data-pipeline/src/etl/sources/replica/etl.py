@@ -45,6 +45,7 @@ class ReplicaETL:
     greenlink_gtfs_folder_path = './data/greenlink_gtfs'
     columns_to_select = 'household_id'
     use_bqstorage_api = os.getenv('USE_BIGQUERY_STORAGE_API', '0') == '1'
+    include_full_area_in_areas = os.getenv('INCLUDE_FULL_AREA_IN_AREAS', '0') == '1'
 
     years_filter: Optional[list[int]] = None
     quarters_filter: Optional[list[Literal['Q2', 'Q4']]] = None
@@ -175,6 +176,10 @@ class ReplicaETL:
                 seasons_dicts,
                 key=lambda s: (s['region'], s['year'], int(s['quarter'].strip("Q")))
             )
+
+            # if the full_area should be included, add it to the area paths
+            if self.include_full_area_in_areas:
+                geojson_filepaths.append(full_area_path)
 
             # process the data for each season and area
             ReplicaProcessETL(
