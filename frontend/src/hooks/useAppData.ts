@@ -893,10 +893,27 @@ function constructScenarioDataPromises(futureRoutesList: string[]) {
 
   return {
     scenarios: (abortSignal?: AbortSignal) =>
-      fetchData<{ scenarios: Scenario[] }>(
+      fetchData<{ scenarios: Scenario[]; features: ScenarioAnyFeature[] }>(
         __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/tab5_scenarios.json.deflate`,
         abortSignal
-      ).catch(handleError('tab5_scenarios')),
+      )
+        .catch(handleError('tab5_scenarios'))
+        .then((data) => {
+          if (!data) {
+            return null;
+          }
+
+          return {
+            scenarios: data.scenarios.map(({ featureIds, ...rest }) => {
+              return {
+                ...rest,
+                features: featureIds
+                  .map((featureId) => data.features.find((feature) => feature.id === featureId))
+                  .filter(notEmpty),
+              };
+            }),
+          };
+        }),
     futureRoutes: futureRoutesPromises,
   };
 }

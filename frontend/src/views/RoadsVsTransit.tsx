@@ -359,7 +359,9 @@ function ClickableBackground(props: ClickableBackgroundProps) {
 
 interface TrackButtonExpandedContentProps {
   optionLabel: string;
-  scenarios: Scenario[];
+  scenarios: NonNullable<
+    NonNullable<ReturnType<typeof useAppData>['scenarios']['data']>['scenarios']
+  >['scenarios'];
   transitioning: boolean;
   mapView: __esri.MapView | null;
 }
