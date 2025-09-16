@@ -12,6 +12,7 @@ class GreenlinkRidershipETL:
     output_file = Path('./data/greenlink_ridership/ridership_data.json')
     polygons_folder = Path('./input/replica_interest_area_polygons')
     greenlink_gtfs_folder = Path('./data/greenlink_gtfs')
+    include_full_area_in_areas = os.getenv('INCLUDE_FULL_AREA_IN_AREAS', '0') == '1'
 
     def __init__(self):
         """
@@ -128,13 +129,17 @@ class GreenlinkRidershipETL:
         """
         Outputs ridership data by season.
         """
-        area_polygon_files = [
-            file for file in self.polygons_folder.glob("*.geojson")
-            if file.name != "full_area.geojson"
-        ]
+        area_polygon_files = [file for file in self.polygons_folder.glob("*.geojson")]
+        if not self.include_full_area_in_areas:
+            area_polygon_files = [
+                path for path in area_polygon_files if path.name != 'full_area.geojson'
+            ]
 
-        greenlink_gtfs_years = list(sorted([int(year)
-                                    for year in os.listdir(self.greenlink_gtfs_folder)]))
+        greenlink_gtfs_years = sorted(
+            int(y)
+            for y in os.listdir(self.greenlink_gtfs_folder)
+            if (Path(self.greenlink_gtfs_folder) / y).is_dir() and y.isdigit()
+        )
         greenlink_gtfs_seasons = [(year, quarter)
                                   for year in greenlink_gtfs_years for quarter in ['Q2', 'Q4']]
 

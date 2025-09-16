@@ -21,6 +21,7 @@ class EssentialServicesETL:
     geocoder_output_folder = Path('data/geocoded')
     greenlink_gtfs_folder = Path('data/greenlink_gtfs')
     output_folder = Path('data/essential_services')
+    include_full_area_in_areas = os.getenv('INCLUDE_FULL_AREA_IN_AREAS', '0') == '1'
 
     # folder containing subfolders of ISO 8601 dates (no time) which each contain a shapefile of the zoning for that date
     zoning_input_folder = Path('input/zoning')
@@ -40,6 +41,9 @@ class EssentialServicesETL:
 
     def __init__(self) -> None:
         # collect the paths to each area for processing
+        self.areas = [path for path in self.replica_folder.iterdir() if path.is_dir()]
+        if not self.include_full_area_in_areas:
+            self.areas = [path for path in self.areas if path.name != 'full_area']
         self.areas = [path for path in self.replica_folder.iterdir() if path.is_dir()
                       and path.name != 'full_area']
 
@@ -178,7 +182,9 @@ class EssentialServicesETL:
                     flat: dict[str, str | int | float | None] = {
                         'area': area,
                         'replica_table': replica_table,
-                        'season': season
+                        'season': season,
+                        'year': int(season.split('_')[0]),
+                        'quarter': season.split('_')[1],
                     }
                     for stat_name, value in stats.items():
                         flat[stat_name] = value
@@ -188,17 +194,37 @@ class EssentialServicesETL:
         logger.info('Converting flat stats to pandas DataFrame...')
         stats_df = pandas.DataFrame(flat_stats)
 
-        # save the stats dataframe to an array of objects in a JSON file
-        stats_output_path = self.output_folder / 'essential_services_stats.json'
-        logger.info(f'Saving stats DataFrame to {stats_output_path}...')
-        stats_output_path.parent.mkdir(parents=True, exist_ok=True)
-        records = [
-            # remove None/null/NA values
-            {key: value for key, value in row.items() if pandas.notna(value)}
-            for row in stats_df.to_dict(orient="records")
-        ]
-        with open(stats_output_path, 'w') as f:
-            json.dump(records, f, indent=2)
+        # for each combination of year, season, and area, save a separate JSON file
+        for (year, quarter, area), group_df in stats_df.groupby(['year', 'quarter', 'area']):
+            stats_output_path = self.output_folder / \
+                str(year) / quarter / area / 'essential_services_stats.json'
+
+            # drop the redundant columns
+            group_df = group_df.drop(columns=['year', 'quarter'])
+
+            logger.info(
+                f'Saving stats DataFrame for {area} in {year} {quarter} to {stats_output_path}...')
+            stats_output_path.parent.mkdir(parents=True, exist_ok=True)
+            records = [
+                # remove None/null/NA values
+                {key: value for key, value in row.items() if pandas.notna(value)}
+                for row in group_df.to_dict(orient="records")
+            ]
+
+            # save the stats dataframe to an array of objects in a JSON file
+            with open(stats_output_path, 'w') as f:
+                json.dump(records, f, indent=2)
+
+        # collect all essential_services_stats.json files into a single file for easier consumption
+        all_stats_output_path = self.output_folder / 'essential_services_stats.json'
+        logger.info(f'Collecting all stats JSON files into {all_stats_output_path}...')
+        all_stats: list[dict[str, str | int | float | None]] = []
+        for stats_file in self.output_folder.glob('**/essential_services_stats.json'):
+            with open(stats_file, 'r') as f:
+                file_stats = json.load(f)
+                all_stats.extend(file_stats)
+        with open(all_stats_output_path, 'w') as f:
+            json.dump(all_stats, f, indent=2)
 
         return self
 
@@ -210,8 +236,21 @@ class EssentialServicesETL:
         if not trip_folder.exists():
             return
 
-        season_folders = [path for path in trip_folder.iterdir() if path.is_dir()]
-        seasons = [path.name[-7:len(path.name)] for path in season_folders]
+        folder_to_iterate_over = trip_folder / '_chunks' if area.name == 'full_area' else trip_folder
+
+        season_folders = [path for path in folder_to_iterate_over.iterdir() if path.is_dir()]
+        seasons = [path.name.replace(f'_{day}_trip', '')[-7:len(path.name)]
+                   for path in season_folders]
+
+        if area.name == 'full_area':
+            if season is not None:
+                yield (season, (area / f'{day}_trip' / '_chunks' / ('south_atlantic_' + season + f'_{day}_trip')).glob('*.parquet'))
+
+            else:
+                for season in seasons:
+                    season_parquet_files = (
+                        area / f'{day}_trip' / '_chunks' / ('south_atlantic_' + season + f'_{day}_trip')).glob('*.parquet')
+                    yield (season, season_parquet_files)
 
         if season is not None:
             yield (season, (area / f'{day}_trip' / ('south_atlantic_' + season) / '_chunks').glob('*.parquet'))
