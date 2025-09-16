@@ -25,7 +25,8 @@
     "pako": "^2.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router": "^7.5.2"
+    "react-router": "^7.5.2",
+    "slick-bottom-sheet": "^0.1.1"
   },
   "devDependencies": {
     "@emotion/babel-plugin": "^11.13.5",

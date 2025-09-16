@@ -11,6 +11,8 @@ import {
   renderManualSection,
   renderSections,
   SelectOne,
+  Tab,
+  Tabs,
   Map as WebMap,
 } from '../components';
 import { AppNavigation } from '../components/navigation';
@@ -110,7 +112,16 @@ export function RoadsVsTransit() {
             </Button>
           );
         })(),
-        render(<Comparison key={0} title="Scenarios" mapView={mapView} />),
+
+        render(
+          <React.Fragment key={0}>
+            <Tabs style={{ padding: 0, border: 'none' }}>
+              <Tab label="Explore" variant="line" isActive />
+              <Tab label="All" variant="line" />
+            </Tabs>
+            <Comparison title="Scenarios" mapView={mapView} />
+          </React.Fragment>
+        ),
       ])}
       disableSectionColumns
     />

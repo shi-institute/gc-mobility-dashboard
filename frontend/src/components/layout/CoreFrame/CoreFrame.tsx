@@ -2,6 +2,7 @@ import styled from '@emotion/styled';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { notEmpty } from '../../../utils';
 import { ProgressRing, Tab } from '../../common';
+import { BottomSheet } from './BottomSheet';
 import { CoreFrameContext } from './CoreFrameContext';
 import { SidebarWrapper } from './SidebarWrapper';
 
@@ -61,34 +62,37 @@ export function CoreFrame(props: CoreFrameProps) {
         >
           {isMobile ? (
             <>
-              <div style={{ gridArea: 'section-tabs' }}>
-                {[props.map, ...(props.sections || [])].filter(notEmpty).map((section, index) => {
-                  const tabLabel =
-                    (section.props as Record<string, unknown>).title?.toString() ||
-                    (section.props as Record<string, unknown>).shortTitle?.toString() ||
-                    section.key?.toString() ||
-                    `Tab ${index + 1}`;
-                  return (
-                    <Tab
-                      key={index}
-                      onClick={() => {
-                        setActiveMobileSection(index);
-                      }}
-                      label={tabLabel}
-                      variant="line"
-                      isActive={activeMobileSection === index}
-                    />
-                  );
-                })}
-              </div>
               <MainAreaWrapper>
-                {props.sectionsHeader}
                 <MainArea
                   disableSectionColumns={props.disableSectionColumns}
                   style={props.sectionsStyle}
                 >
-                  {[props.map, ...(props.sections || [])].filter(notEmpty)[activeMobileSection]}
+                  {props.map}
                 </MainArea>
+                <BottomSheet>
+                  <div style={{ gridArea: 'section-tabs' }}>
+                    {(props.sections || []).filter(notEmpty).map((section, index) => {
+                      const tabLabel =
+                        (section.props as Record<string, unknown>).title?.toString() ||
+                        (section.props as Record<string, unknown>).shortTitle?.toString() ||
+                        section.key?.toString() ||
+                        `Tab ${index + 1}`;
+                      return (
+                        <Tab
+                          key={index}
+                          onClick={() => {
+                            setActiveMobileSection(index);
+                          }}
+                          label={tabLabel}
+                          variant="line"
+                          isActive={activeMobileSection === index}
+                        />
+                      );
+                    })}
+                  </div>
+                  {props.sectionsHeader}
+                  {(props.sections || []).filter(notEmpty)[activeMobileSection]}
+                </BottomSheet>
               </MainAreaWrapper>
             </>
           ) : (

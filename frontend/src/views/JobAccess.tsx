@@ -15,6 +15,7 @@ import {
   TreeMap,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
+import { BottomSheet } from '../components/layout/CoreFrame/BottomSheet';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
 import { useAppData, useLocalStorage, useSectionsVisibility } from '../hooks';
@@ -75,6 +76,33 @@ function Sections() {
   const render = renderManualSection.bind(null, visibleSections, 'jobsTreeMap');
 
   return renderSections([
+    <BottomSheet>
+      <div className="p-4">
+        <div className="h-48 grid place-items-center font-bold">
+          <div className="text-center">
+            <p className="text-3xl mb-4">Hello There!</p>
+            <p>This is a sheet demo with default breakpoint [&quot;auto&quot;].</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+            <p>You can drag the sheet or backdrop to control the sheet.</p>
+          </div>
+        </div>
+      </div>
+    </BottomSheet>,
     (() => {
       if (!editMode) {
         return null;
