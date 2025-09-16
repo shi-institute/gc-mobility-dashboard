@@ -51,14 +51,9 @@ class FutureRoutesETL:
 
     data_geo_hash: str
 
-    def __init__(self, area_geojson_paths: list[str] | list[Path]) -> None:
+    def __init__(self) -> None:
         # create output directories
         Path(self.output_folder).mkdir(parents=True, exist_ok=True)
-
-        # construct a list of area paths and names
-        area_geojson_paths = [Path(path) for path in area_geojson_paths]
-        area_names = [os.path.splitext(path.name)[0] for path in area_geojson_paths]
-        self.areas = list(zip(area_geojson_paths, area_names))
 
         # find the latest season
         season_paths = (self.replica_output_folder / 'full_area' /
