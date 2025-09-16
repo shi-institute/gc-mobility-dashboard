@@ -585,18 +585,20 @@ interface Scenario {
   pavementMiles: number;
   estimatedCostUSD: number;
   scenarioName: string;
-  features: (
-    | ScenarioStopInfrastructureFeature
-    | ScenarioStopAccessibilityFeature
-    | ScenarioRouteFrequencyFeature
-    | ScenarioRouteAdditionFeature
-    | ScenarioBusPurchaseFeature
-    | ScenarioOnDemandPurchaseFeature
-  )[];
+  featureIds: ScenarioAnyFeature['id'][];
 }
+
+type ScenarioAnyFeature =
+  | ScenarioStopInfrastructureFeature
+  | ScenarioStopAccessibilityFeature
+  | ScenarioRouteFrequencyFeature
+  | ScenarioRouteAdditionFeature
+  | ScenarioBusPurchaseFeature
+  | ScenarioOnDemandPurchaseFeature;
 
 interface ScenarioFeature {
   name: string;
+  id: string;
   description?: string;
   additionalNote?: string;
 }
