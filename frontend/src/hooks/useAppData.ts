@@ -905,7 +905,10 @@ function constructScenarioDataPromises(futureRoutesList: string[]) {
 
           return {
             scenarios: data.scenarios.map(({ featureIds, ...rest }) => {
+              const scenarioId = rest.scenarioName + '_' + featureIds.join('_');
+
               return {
+                id: scenarioId,
                 ...rest,
                 features: featureIds
                   .map((featureId) => data.features.find((feature) => feature.id === featureId))

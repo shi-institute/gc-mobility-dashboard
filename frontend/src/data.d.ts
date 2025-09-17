@@ -601,6 +601,7 @@ interface ScenarioFeature {
   id: string;
   description?: string;
   additionalNote?: string;
+  costUSD?: number;
 }
 
 interface ScenarioStopFeature extends ScenarioFeature {
