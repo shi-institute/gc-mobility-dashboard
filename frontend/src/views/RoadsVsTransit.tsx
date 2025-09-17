@@ -1,16 +1,21 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import React, { ComponentProps, useEffect, useRef, useState } from 'react';
+import React, { ComponentProps, useContext, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import {
   Button,
   CoreFrame,
+  CoreFrameContext,
   IconButton,
   manualSectionIds,
   OptionTrack,
   renderManualSection,
   renderSections,
+  Section,
+  SectionEntry,
   SelectOne,
+  Tab,
+  Tabs,
   Map as WebMap,
 } from '../components';
 import { AppNavigation } from '../components/navigation';
@@ -43,8 +48,10 @@ export function RoadsVsTransit() {
   const [visibleSections, setVisibleSections] = useSectionsVisibility();
   const [searchParams] = useSearchParams();
   const editMode = searchParams.get('edit') === 'true';
+  const [view, setView] = useState<'list' | 'comparison'>('comparison');
 
   const render = renderManualSection.bind(null, visibleSections, 'roadsVsTransitScenarios');
+  const { isMobile } = useContext(CoreFrameContext);
 
   return (
     <CoreFrame
@@ -110,11 +117,422 @@ export function RoadsVsTransit() {
             </Button>
           );
         })(),
-        render(<Comparison key={0} title="Scenarios" mapView={mapView} />),
+
+        ...(isMobile
+          ? [
+              <Comparison title="Explore Scenarios" mapView={mapView} />,
+              <List title="All Scenarios" mapView={mapView} />,
+            ]
+          : [
+              render(
+                <div key={0} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Tabs style={{ padding: 0, border: 'none' }}>
+                    <Tab
+                      label="Explore"
+                      variant="line"
+                      isActive={view === 'comparison'}
+                      onClick={() => setView('comparison')}
+                    />
+                    <Tab
+                      label="All"
+                      variant="line"
+                      isActive={view === 'list'}
+                      onClick={() => setView('list')}
+                    />
+                  </Tabs>
+                  {view === 'comparison' ? (
+                    <Comparison title="Scenarios" mapView={mapView} />
+                  ) : (
+                    <List title="Scenarios" mapView={mapView} />
+                  )}
+                </div>
+              ),
+            ]),
       ])}
       disableSectionColumns
     />
   );
+}
+
+function List(props: { title: string; mapView: __esri.MapView | null }) {
+  const { scenarios: scenariosData } = useAppData();
+  const scenarios = scenariosData.data?.scenarios?.scenarios || [];
+  const scenariosByMiles = Object.entries(Object.groupBy(scenarios, (s) => s.pavementMiles)).sort(
+    (a, b) => a[0].localeCompare(b[0])
+  );
+
+  const { isMobile } = useContext(CoreFrameContext);
+
+  // build a mapping of line_id to layer id for the future route layers
+  // so that we can easily find the right layer to highlight for a given line_id
+  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
+  useEffect(() => {
+    props.mapView?.when(async () => {
+      const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
+        (layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson'
+      );
+      const futureRouteLayers = geoJsonLayers.filter((layer) =>
+        layer.id.startsWith('future_route__')
+      );
+
+      if (!futureRouteLayers || futureRouteLayers.length === 0) {
+        setLineIdToLayerIdMap(new Map());
+        return;
+      }
+
+      // prepare a mapping of line_id to layer id
+      const newLineIdToLayerIdMap = new Map<string, string>();
+
+      for await (const layer of futureRouteLayers) {
+        await layer
+          .queryFeatures()
+          .then((featureSet) => {
+            const lineIds = featureSet.features.map(
+              (feature) => feature.attributes.line_id as string
+            );
+
+            const uniqueLineIds = Array.from(new Set(lineIds));
+            if (uniqueLineIds.length > 1) {
+              console.warn(`Layer ${layer.id} has multiple line_ids:`, uniqueLineIds);
+            }
+
+            const firstLineId = uniqueLineIds[0];
+            if (!firstLineId) {
+              console.warn(`Layer ${layer.id} has no line_id.`);
+              return;
+            }
+
+            newLineIdToLayerIdMap.set(firstLineId, layer.id);
+          })
+          .catch((error) => {
+            console.error(`Error querying features for layer ${layer.id}:`, error);
+          });
+      }
+
+      // save the mapping to state
+      setLineIdToLayerIdMap(newLineIdToLayerIdMap);
+    });
+  }, [props.mapView]);
+
+  const handles = useHighlightHandles();
+
+  const cleanupFunctions = useRef<(() => void)[]>([]);
+  const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
+  async function showScenarioOnMap(scenario: (typeof scenarios)[number]) {
+    // clean up previous highlights and zooms
+    cleanupFunctions.current.forEach((fn) => fn());
+    cleanupFunctions.current = [];
+
+    // highlight and zoom to the new scenario
+    setActiveScenarioId(scenario.id);
+    showFeaturesOnMap(props.mapView, scenario.features, handles, lineIdToLayerIdMap, (fn) =>
+      cleanupFunctions.current.push(fn)
+    );
+  }
+  useEffect(() => {
+    return () => {
+      cleanupFunctions.current.forEach((fn) => fn());
+    };
+  }, []);
+
+  return (
+    <ListContainer>
+      {(() => {
+        return scenariosByMiles.map(([miles, scenarios]) => {
+          const title =
+            parseInt(miles) < 1
+              ? `For around $${(parseFloat(miles) * 1000000).toLocaleString()}`
+              : `For around $${miles} million`;
+
+          return (
+            <Section title={title}>
+              {scenarios?.map((scenario) => {
+                const scenarioCostUSD = scenario.features
+                  .map((feature) => feature.costUSD)
+                  .filter(notEmpty)
+                  .reduce((acc, curr) => acc + curr, 0);
+                const roundedCost =
+                  scenarioCostUSD < 1000000
+                    ? `$${Math.round(scenarioCostUSD / 10000) * 10},000`
+                    : `$${Math.round(scenarioCostUSD / 100000) / 10} million`;
+
+                const featureAffects = Array.from(
+                  new Set(scenario.features.map((feature) => feature.affects))
+                );
+
+                return (
+                  <SectionEntry
+                    key={scenario.pavementMiles + scenario.scenarioName}
+                    f={{ gridColumn: '1 / -1' }}
+                  >
+                    <section className="scenario">
+                      <h1>{scenario.scenarioName}</h1>
+                      <p className="caption">{roundedCost}</p>
+                      <ul>
+                        {scenario.features.map((feature) => {
+                          if (feature.affects === 'stops') {
+                            if (feature.type === 'infrastructure') {
+                              return (
+                                <li>
+                                  {feature.stopIds.length} new stop
+                                  {feature.stopIds.length === 1 ? '' : 's'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+
+                            if (feature.type === 'accessibility') {
+                              return (
+                                <li>
+                                  Accessibility improvements at {feature.stopIds.length} stop
+                                  {feature.stopIds.length === 1 ? '' : 's'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+                          }
+
+                          if (feature.affects === 'routes') {
+                            if (feature.type === 'frequency') {
+                              const oldRateMinutes = feature.before;
+                              const newRateMinutes = feature.after;
+                              const percentageChange =
+                                ((newRateMinutes - oldRateMinutes) / oldRateMinutes) * 100;
+                              const isFaster = percentageChange < 0;
+
+                              return (
+                                <li>
+                                  {isFaster ? 'Faster' : 'Slower'} service on{' '}
+                                  {feature.routeIds.length} route
+                                  {feature.routeIds.length === 1 ? '' : 's'} (
+                                  {parseFloat(Math.abs(percentageChange).toFixed(1))}%{' '}
+                                  {isFaster ? 'more frequent' : 'less frequent'}):
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+
+                            if (feature.type === 'addition') {
+                              return (
+                                <li>
+                                  {feature.routeIds.length} new route
+                                  {feature.routeIds.length === 1 ? '' : 's'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+                          }
+
+                          if (feature.affects === 'buses') {
+                            if (feature.type === 'purchase') {
+                              return (
+                                <li>
+                                  {feature.count} new bus{feature.count === 1 ? '' : 'es'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+                          }
+                        })}
+                      </ul>
+                      {isMobile ? null : featureAffects.includes('routes') ||
+                        featureAffects.includes('stops') ? (
+                        <Button
+                          onClick={() => showScenarioOnMap(scenario)}
+                          disabled={activeScenarioId === scenario.id}
+                          style={{ width: 156 }}
+                        >
+                          {activeScenarioId === scenario.id ? 'Highlighted' : 'Highlight on map'}
+                        </Button>
+                      ) : (
+                        <i style={{ color: 'var(--text-secondary)', fontSize: '0.825rem' }}>
+                          Highlighting is unavailable.
+                        </i>
+                      )}
+                    </section>
+                  </SectionEntry>
+                );
+              })}
+            </Section>
+          );
+        });
+      })()}
+    </ListContainer>
+  );
+}
+
+const ListContainer = styled.article`
+  section.scenario {
+    h1 {
+      font-size: 1rem;
+      font-weight: 500;
+      line-height: 1.1;
+      margin: 0.2rem 0 0.18rem 0;
+    }
+
+    .caption {
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+      letter-spacing: -0.34px;
+      font-weight: 400;
+      line-height: 1.1;
+      margin-top: 0.1rem;
+    }
+
+    padding: 1rem;
+    box-sizing: border-box;
+    border: 1px solid lightgray;
+    border-radius: var(--surface-radius);
+    font-size: 0.925rem;
+
+    ul {
+      padding-inline-start: 20px;
+    }
+  }
+`;
+
+/**
+ * Highlights features from a future scenario on the mao and zooms the union
+ * or the specified features to view.
+ */
+async function showFeaturesOnMap(
+  mapView: __esri.MapView | null,
+  features: Scenarios[number]['features'],
+  handles: ReturnType<typeof useHighlightHandles>,
+  lineIdToLayerIdMap: Map<string, string>,
+  registerCleanupFunction: (cb: () => void) => void
+) {
+  // use this controller to abort any in-progress highlighting when the function is cleaned up
+  const controller = new AbortController();
+
+  registerCleanupFunction(() => {
+    controller.abort(); // abort any in-progress highlighting
+    handles.removeAll(); // remove all active highlights
+  });
+
+  const zoomLayerPromises = features.map((feature) => {
+    if (!mapView) {
+      return;
+    }
+
+    // highlight routes
+    if (feature.affects === 'routes' && feature.routeIds && feature.routeIds.length > 0) {
+      if (feature.type === 'addition') {
+        const targetLayerIds = feature.routeIds
+          .map((lineId) => lineIdToLayerIdMap.get(lineId))
+          .filter((id): id is string => id !== undefined);
+
+        return mapUtils
+          .highlightFeatures(
+            mapView,
+            targetLayerIds.map((layerId) => ({
+              layerId,
+              options: { signal: controller.signal },
+            }))
+          )
+          .then(async (foundLayers) => {
+            // save the highlight handles so we can remove the highlights later
+            handles.add(foundLayers.map(({ handle }) => handle));
+
+            // request zoom to the highlighted features
+            return targetLayerIds.map((id) => ({ id, query: undefined }));
+          });
+      }
+
+      if (feature.type === 'frequency') {
+        return mapUtils
+          .highlightFeatures(mapView, [
+            {
+              layerId: (layers) => layers.find((layer) => layer.id.startsWith('routes__')),
+              target: feature.routeIds,
+              options: { signal: controller.signal },
+            },
+          ])
+          .then(async (foundLayers) => {
+            // save the highlight handles so we can remove the highlights later
+            handles.add(foundLayers.map(({ handle }) => handle));
+
+            // request zoom to the highlighted features
+            return foundLayers.map(({ layerView, targetQuery }) => ({
+              id: layerView.layer.id,
+              query: targetQuery,
+            }));
+          });
+      }
+    }
+
+    // highlight stops
+    if (feature.affects === 'stops' && feature.stopIds && feature.stopIds.length > 0) {
+      return mapUtils
+        .highlightFeatures(mapView, [
+          {
+            layerId: (layers) =>
+              layers.find(
+                (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
+              ),
+            target: feature.stopIds.map((id) => parseInt(id)),
+            options: { signal: controller.signal },
+          },
+        ])
+        .then(async (foundLayers) => {
+          // save the highlight handles so we can remove the highlights later
+          handles.add(foundLayers.map(({ handle }) => handle));
+
+          const busStopsLayers = Array.from(mapView?.map?.allLayers || []).filter(
+            (layer) => layer.id.startsWith('stops__') // current and future
+          );
+          const hiddenBusStopsLayerIds = busStopsLayers
+            .filter((layer) => !layer.visible)
+            .map((layer) => layer.id);
+
+          if (hiddenBusStopsLayerIds.length > 0) {
+            // if the bus stops layer is not visible, temporarily make it visible so the highlights are visible
+            busStopsLayers.forEach((layer) => (layer.visible = true));
+
+            // re-hide the bus stops layers that were previously hidden
+            // when the cleanup process runs
+            registerCleanupFunction(() => {
+              // re-hide the bus stops layers that were previously hidden
+              if (hiddenBusStopsLayerIds.length > 0) {
+                const busStopsLayersToHide = Array.from(mapView?.map?.allLayers || []).filter(
+                  (layer) => hiddenBusStopsLayerIds.includes(layer.id)
+                );
+                busStopsLayersToHide.forEach((layer) => (layer.visible = false));
+              }
+            });
+          }
+
+          // request zoom to the highlighted features
+          return foundLayers.map(({ layerView, targetQuery }) => ({
+            id: layerView.layer.id,
+            query: targetQuery,
+          }));
+        });
+    }
+  });
+
+  // zoom to the highlighted features (if any)
+  const zoomLayerSpecs = await Promise.all(zoomLayerPromises);
+  await mapUtils.zoomToLayers(mapView, zoomLayerSpecs.flat().filter(notEmpty)).then((geoUnion) => {
+    // if the zoom occurred, we will need to reset the zoom when this function re-runs
+    // or when the component unmounts
+    if (geoUnion) {
+      registerCleanupFunction(() => {
+        const futureLayerIDs = lineIdToLayerIdMap.values();
+        mapUtils.zoomToLayers(mapView, Array.from(futureLayerIDs));
+      });
+    }
+  });
 }
 
 function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
@@ -357,11 +775,13 @@ function ClickableBackground(props: ClickableBackgroundProps) {
   return <div ref={ref} className={props.className}></div>;
 }
 
+type Scenarios = NonNullable<
+  NonNullable<ReturnType<typeof useAppData>['scenarios']['data']>['scenarios']
+>['scenarios'];
+
 interface TrackButtonExpandedContentProps {
   optionLabel: string;
-  scenarios: NonNullable<
-    NonNullable<ReturnType<typeof useAppData>['scenarios']['data']>['scenarios']
-  >['scenarios'];
+  scenarios: Scenarios;
   transitioning: boolean;
   mapView: __esri.MapView | null;
 }
@@ -447,132 +867,27 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
 
   const handles = useHighlightHandles();
 
-  // --- Main highlighting useEffect  ---
+  const cleanupFunctions = useRef<(() => void)[]>([]);
+  async function showFeatureOnMap(feature: Scenarios[number]['features'][number]) {
+    // clean up previous highlights and zooms
+    cleanupFunctions.current.forEach((fn) => fn());
+    cleanupFunctions.current = [];
+
+    // highlight and zoom to the new scenario
+    showFeaturesOnMap(props.mapView, [feature], handles, lineIdToLayerIdMap, (fn) =>
+      cleanupFunctions.current.push(fn)
+    );
+  }
   useEffect(() => {
-    // since we need the map view to highlight features, do nothing if it's not available
-    if (!props.mapView) {
-      return;
-    }
-
-    // do not attempt to highlight if a scenario (and a feature from that scenario) is not selected
-    if (!feature) {
-      return;
-    }
-
-    // keep track of whether we need to reset the map presentation after removing highlights
-    let shouldResetZoom = false;
-    let busStopLayersToReHideIds: string[] = [];
-
-    // use this controller to abort any in-progress highlighting when the effect is cleaned up
-    const controller = new AbortController();
-
-    // --- Case 1: Highlighting Routes ---
-    if (feature.affects === 'routes' && feature.routeIds && feature.routeIds.length > 0) {
-      if (feature.type === 'addition') {
-        const targetLayerIds = feature.routeIds
-          .map((lineId) => lineIdToLayerIdMap.get(lineId))
-          .filter((id): id is string => id !== undefined);
-
-        mapUtils
-          .highlightFeatures(
-            props.mapView,
-            targetLayerIds.map((layerId) => ({ layerId, options: { signal: controller.signal } }))
-          )
-          .then(async (foundLayers) => {
-            // save the highlight handles so we can remove the highlights later
-            handles.add(foundLayers.map(({ handle }) => handle));
-
-            // zoom to the highlighted features
-            await mapUtils.zoomToLayers(props.mapView, targetLayerIds);
-            shouldResetZoom = true;
-          });
-      } else if (feature.type === 'frequency') {
-        mapUtils
-          .highlightFeatures(props.mapView, [
-            {
-              layerId: (layers) => layers.find((layer) => layer.id.startsWith('routes__')),
-              target: feature.routeIds,
-              options: { signal: controller.signal },
-            },
-          ])
-          .then(async (foundLayers) => {
-            // save the highlight handles so we can remove the highlights later
-            handles.add(foundLayers.map(({ handle }) => handle));
-
-            // zoom to the highlighted features
-            await mapUtils.zoomToLayers(
-              props.mapView,
-              // only zoom to the layers that were actually found and highlighted
-              foundLayers.map(({ layerView, targetQuery }) => ({
-                id: layerView.layer.id,
-                query: targetQuery,
-              }))
-            );
-            shouldResetZoom = true;
-          });
-      }
-    }
-    // --- Case 2: Highlighting Stops ---
-    else if (feature.affects === 'stops' && feature.stopIds && feature.stopIds.length > 0) {
-      mapUtils
-        .highlightFeatures(props.mapView, [
-          {
-            layerId: (layers) =>
-              layers.find(
-                (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
-              ),
-            target: feature.stopIds.map((id) => parseInt(id)),
-            options: { signal: controller.signal },
-          },
-        ])
-        .then(async (foundLayers) => {
-          // save the highlight handles so we can remove the highlights later
-          handles.add(foundLayers.map(({ handle }) => handle));
-
-          // zoom to the highlighted features
-          await mapUtils.zoomToLayers(
-            props.mapView,
-            // only zoom to the layers that were actually found and highlighted
-            foundLayers.map(({ layerView, targetQuery }) => ({
-              id: layerView.layer.id,
-              query: targetQuery,
-            }))
-          );
-          shouldResetZoom = true;
-
-          // if the bus stops layer is not visible, temporarily make it visible so the highlights are visible
-          const busStopsLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
-            (layer) => layer.id.startsWith('stops__') // current and future
-          );
-          const hiddenBusStopsLayerIds = busStopsLayers
-            .filter((layer) => !layer.visible)
-            .map((layer) => layer.id);
-          if (hiddenBusStopsLayerIds.length > 0) {
-            busStopLayersToReHideIds = hiddenBusStopsLayerIds;
-            busStopsLayers.forEach((layer) => (layer.visible = true));
-          }
-        });
+    if (feature) {
+      console.log(feature);
+      showFeatureOnMap(feature);
     }
 
     return () => {
-      controller.abort(); // abort any in-progress highlighting
-      handles.removeAll(); // remove all active highlights
-
-      // set zoom back to the default extent (the future route layers)
-      if (shouldResetZoom) {
-        const futureLayerIDs = lineIdToLayerIdMap.values();
-        mapUtils.zoomToLayers(props.mapView, Array.from(futureLayerIDs));
-      }
-
-      // re-hide the bus stops layers that were previously hidden
-      if (busStopLayersToReHideIds.length > 0) {
-        const busStopsLayersToHide = Array.from(props.mapView?.map?.allLayers || []).filter(
-          (layer) => busStopLayersToReHideIds.includes(layer.id)
-        );
-        busStopsLayersToHide.forEach((layer) => (layer.visible = false));
-      }
+      cleanupFunctions.current.forEach((fn) => fn());
     };
-  }, [props.mapView, feature, lineIdToLayerIdMap]);
+  }, [feature]);
 
   if (scenario && !props.transitioning) {
     if (!feature) {
