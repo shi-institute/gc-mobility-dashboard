@@ -1258,6 +1258,8 @@ const ButtonInterior = styled.article`
       left: -1.5em;
       top: 50%;
       transform: translateY(-50%);
+      background-color: hsla(var(--color-primary--parts), 0.5);
+      border-radius: 50%;
     }
 
     .rightButton {
@@ -1265,6 +1267,8 @@ const ButtonInterior = styled.article`
       right: -1.5em;
       top: 50%;
       transform: translateY(-50%);
+      background-color: hsla(var(--color-primary--parts), 0.5);
+      border-radius: 50%;
     }
 
     .number {
