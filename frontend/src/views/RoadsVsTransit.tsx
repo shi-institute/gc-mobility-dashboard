@@ -261,10 +261,7 @@ function List(props: { title: string; mapView: __esri.MapView | null }) {
                 );
 
                 return (
-                  <SectionEntry
-                    key={scenario.pavementMiles + scenario.scenarioName}
-                    f={{ gridColumn: '1 / -1' }}
-                  >
+                  <SectionEntry key={scenario.id} f={{ gridColumn: '1 / -1' }}>
                     <section className="scenario">
                       <h1>{scenario.scenarioName}</h1>
                       <p className="caption">{roundedCost}</p>
@@ -402,7 +399,7 @@ const ListContainer = styled.article`
 `;
 
 /**
- * Highlights features from a future scenario on the mao and zooms the union
+ * Highlights features from a future scenario on the map and zooms the union
  * or the specified features to view.
  */
 async function showFeaturesOnMap(
@@ -880,7 +877,6 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
   }
   useEffect(() => {
     if (feature) {
-      console.log(feature);
       showFeatureOnMap(feature);
     }
 
