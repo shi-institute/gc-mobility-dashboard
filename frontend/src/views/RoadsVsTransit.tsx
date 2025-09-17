@@ -944,6 +944,9 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
               </div>
             ) : null}
           </div>
+          <div className="page">
+            Part {selectedFeatureIndex + 1} of {scenario.features.length}
+          </div>
         </>
       );
     };
@@ -1241,6 +1244,15 @@ const ButtonInterior = styled.article`
     position: absolute;
     left: 50%;
     top: 1em;
+    transform: translateX(-50%);
+  }
+
+  .page {
+    font-size: 0.825em;
+    color: var(--text-secondary);
+    position: absolute;
+    left: 50%;
+    bottom: 1.5em;
     transform: translateX(-50%);
   }
 
