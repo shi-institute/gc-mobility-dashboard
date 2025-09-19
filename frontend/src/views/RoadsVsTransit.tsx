@@ -535,9 +535,12 @@ async function showFeaturesOnMap(
 function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
   const { scenarios: scenariosData } = useAppData();
   const scenarios = scenariosData.data?.scenarios?.scenarios || [];
-  const mileOptions = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map(
-    (m) => `${m} mile${m !== 1 ? 's' : ''}`
-  );
+  const options = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map((miles) => {
+    return {
+      value: `${miles} mile${miles !== 1 ? 's' : ''}`,
+      label: miles < 1 ? `$${(miles * 1000000).toLocaleString()}` : `$${miles.toFixed(1)} million`,
+    };
+  });
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
@@ -570,10 +573,10 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
   hideSmallButtons;
 
   const trackButtonProps = (index: number) => {
-    const optionLabel = mileOptions[index] || `Option ${index + 1}`;
+    const optionLabel = options[index]?.label || `Option ${index + 1}`;
 
     const buttonScenarios = scenarios.filter(
-      (s) => s.pavementMiles === parseFloat(mileOptions[index]?.split(' ')[0] ?? '-1')
+      (s) => s.pavementMiles === parseFloat(options[index]?.value?.split(' ')[0] ?? '-1')
     );
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -608,6 +611,7 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
               position: 'absolute',
               opacity: selectedIndex !== index ? 1 : 0,
               transition: 'var(--wui-control-faster-duration) opacity',
+              letterSpacing: '-0.44px',
             }}
           >
             {optionLabel}
@@ -625,7 +629,7 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
             }}
           >
             <TrackButtonExpandedContent
-              optionLabel={optionLabel}
+              optionLabel={optionLabel.replace('.0 million', ' million')}
               scenarios={buttonScenarios}
               transitioning={transitioning}
               mapView={props.mapView}
@@ -657,8 +661,8 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
         >
           <p>One mile of road costs around $1 million!</p>
           <p>
-            What if we invested that money in transit infrastructure instead? Click compare, select
-            a distance of paved road, and see how we can fund new transit projects.
+            What if we invested that money in transit infrastructure instead? Click <i>Explore</i>,
+            select an approximate dollar amount, and see how we can fund new transit projects.
           </p>
         </div>
 
@@ -716,13 +720,13 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
 
         <SelectOne
           className="selected-scenario"
-          options={mileOptions}
+          options={options}
           onChange={(value) => {
-            const index = mileOptions.indexOf(value);
+            const index = options.findIndex((o) => o.value === value);
             switchSelectedIndex(index);
           }}
-          value={selectedIndex !== null ? mileOptions[selectedIndex] || '' : ''}
-          placeholder="Compare"
+          value={selectedIndex !== null ? options[selectedIndex]?.value || '' : ''}
+          placeholder="Explore"
         ></SelectOne>
       </ComparisonComponent>
     </ComparisionContainer>
@@ -944,6 +948,9 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
               </div>
             ) : null}
           </div>
+          <div className="page">
+            Part {selectedFeatureIndex + 1} of {scenario.features.length}
+          </div>
         </>
       );
     };
@@ -1039,7 +1046,7 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
           opacity: 0.8,
         }}
       >
-        Select an option:
+        Pick what you can do for this amount:
       </p>
       <div className="buttons">
         {props.scenarios.map((scenario, index) => (
@@ -1116,7 +1123,7 @@ const ComparisonComponent = styled.div`
     text-align: center;
     border-radius: 0;
     box-shadow: none;
-    background-position-y: 21px;
+    background-position-y: 31px;
     z-index: 1;
     color: inherit !important;
 
@@ -1244,6 +1251,15 @@ const ButtonInterior = styled.article`
     transform: translateX(-50%);
   }
 
+  .page {
+    font-size: 0.825em;
+    color: var(--text-secondary);
+    position: absolute;
+    left: 50%;
+    bottom: 1.5em;
+    transform: translateX(-50%);
+  }
+
   & > .scenario-content {
     width: 80%;
     max-height: 80%;
@@ -1258,6 +1274,8 @@ const ButtonInterior = styled.article`
       left: -1.5em;
       top: 50%;
       transform: translateY(-50%);
+      background-color: hsla(var(--color-primary--parts), 0.5);
+      border-radius: 50%;
     }
 
     .rightButton {
@@ -1265,6 +1283,8 @@ const ButtonInterior = styled.article`
       right: -1.5em;
       top: 50%;
       transform: translateY(-50%);
+      background-color: hsla(var(--color-primary--parts), 0.5);
+      border-radius: 50%;
     }
 
     .number {
