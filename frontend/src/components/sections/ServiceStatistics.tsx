@@ -69,13 +69,24 @@ export function ServiceStatistics() {
           <Statistic.Number
             wrap
             label="Boardings"
-            description="Sum of passengers getting on a bus"
+            description={(() => {
+              if (data?.length === 1) {
+                const year = data[0]?.__year;
+                const quarter = data[0]?.__quarter;
+                if (year && quarter) {
+                  const season = `${quarter === 'Q2' ? 'January-June' : 'July-December'} ${year}`;
+                  return `Passengers getting on a bus ${season}`;
+                }
+              }
+
+              return 'Sum of passengers getting on a bus during the specified time period';
+            })()}
             data={data?.map((area) => {
               const boardings = area.ridership?.area.map((stop) => stop.boarding) || [];
               const boardingsTotal = boardings.reduce((sum, value) => sum + (value || 0), 0);
 
               return {
-                label: area.__label,
+                label: area.__label.replace('Q2', 'Jan-June').replace('Q4', 'July-Dec'),
                 value: boardingsTotal,
               };
             })}
@@ -85,13 +96,24 @@ export function ServiceStatistics() {
           <Statistic.Number
             wrap
             label="Alightings"
-            description="Sum of passengers getting off a bus"
+            description={(() => {
+              if (data?.length === 1) {
+                const year = data[0]?.__year;
+                const quarter = data[0]?.__quarter;
+                if (year && quarter) {
+                  const season = `${quarter === 'Q2' ? 'January-June' : 'July-December'} ${year}`;
+                  return `Passengers getting off a bus ${season}`;
+                }
+              }
+
+              return 'Sum of passengers getting off a bus during the specified time period';
+            })()}
             data={data?.map((area) => {
               const alightings = area.ridership?.area.map((stop) => stop.alighting) || [];
               const alightingsTotal = alightings.reduce((sum, value) => sum + (value || 0), 0);
 
               return {
-                label: area.__label,
+                label: area.__label.replace('Q2', 'Jan-June').replace('Q4', 'July-Dec'),
                 value: alightingsTotal,
               };
             })}
