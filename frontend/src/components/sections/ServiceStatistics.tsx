@@ -1,14 +1,18 @@
+import { useLocation } from 'react-router';
 import { flatSectionBundleIds } from '.';
 import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
-import { shouldRenderStatistic } from '../../utils';
-import { Section, Statistic } from '../common';
+import { notEmpty, shouldRenderStatistic } from '../../utils';
+import { Button, Section, SectionEntry, Statistic } from '../common';
+import { StatisticContainer } from '../common/Statistic/StatisticContainer';
+import { TAB_3_FRAGMENT } from '../navigation';
 
 export function ServiceStatistics() {
   const { data } = useAppData();
+  const { search } = useLocation();
 
   const ridershipDataExists = data?.some((area) => area.ridership) || false;
 
-  const [visibleSections] = useSectionsVisibility();
+  const [visibleSections, , visibleTabs] = useSectionsVisibility();
   const { editMode, handleClick } = useToggleSectionItemVisibility('ServiceStatistics');
   const shouldRender = shouldRenderStatistic.bind(
     null,
@@ -16,6 +20,20 @@ export function ServiceStatistics() {
     flatSectionBundleIds.ServiceStatistics,
     editMode
   );
+
+  const jobAccessSearch = (() => {
+    const currentSearchParams = new URLSearchParams(search);
+
+    const selectedAreas = currentSearchParams.get('areas')?.split(',').filter(notEmpty) || [];
+    const selectedSeasons = currentSearchParams.get('seasons')?.split(',').filter(notEmpty) || [];
+
+    const selectedSeasonAreas = selectedAreas.flatMap((area) => {
+      return selectedSeasons.map((season) => `${area}::${season}`);
+    });
+
+    currentSearchParams.set('jobAreas', selectedSeasonAreas.join(','));
+    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
+  })();
 
   return (
     <Section title="Service Statistics">
@@ -154,6 +172,23 @@ export function ServiceStatistics() {
         if={shouldRender('hhacc')}
         onClick={handleClick('hhacc')}
       />
+      {shouldRender('jadl') && (!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT)) ? (
+        <SectionEntry f={{ gridColumn: 'span 2' }}>
+          <StatisticContainer
+            onClick={handleClick('jadl')}
+            style={{ opacity: shouldRender('jadl') === 'partial' ? 0.5 : 1 }}
+          >
+            <div>
+              <div style={{ fontSize: '0.875rem' }}>
+                What jobs could be served by transit in this area if it had full coverage?
+              </div>
+              <Button href={'#/job-access' + jobAccessSearch}>
+                Explore industry/sector of employment
+              </Button>
+            </div>
+          </StatisticContainer>
+        </SectionEntry>
+      ) : null}
     </Section>
   );
 }

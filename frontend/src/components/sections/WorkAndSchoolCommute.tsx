@@ -1,17 +1,14 @@
-import { useLocation } from 'react-router';
 import { flatSectionBundleIds } from '.';
 import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
-import { notEmpty, shouldRenderStatistic } from '../../utils';
-import { Button, Section, SectionEntry, Statistic } from '../common';
+import { shouldRenderStatistic } from '../../utils';
+import { Section, SectionEntry, Statistic } from '../common';
 import { StatisticContainer } from '../common/Statistic/StatisticContainer';
-import { TAB_3_FRAGMENT } from '../navigation';
 import { SelectTravelMethod } from '../options';
 
 export function WorkAndSchoolCommute() {
   const { data, travelMethodList } = useAppData();
-  const { search } = useLocation();
 
-  const [visibleSections, , visibleTabs] = useSectionsVisibility();
+  const [visibleSections] = useSectionsVisibility();
   const { editMode, handleClick } = useToggleSectionItemVisibility('WorkAndSchoolCommute');
   const shouldRender = shouldRenderStatistic.bind(
     null,
@@ -19,20 +16,6 @@ export function WorkAndSchoolCommute() {
     flatSectionBundleIds.WorkAndSchoolCommute,
     editMode
   );
-
-  const jobAccessSearch = (() => {
-    const currentSearchParams = new URLSearchParams(search);
-
-    const selectedAreas = currentSearchParams.get('areas')?.split(',').filter(notEmpty) || [];
-    const selectedSeasons = currentSearchParams.get('seasons')?.split(',').filter(notEmpty) || [];
-
-    const selectedSeasonAreas = selectedAreas.flatMap((area) => {
-      return selectedSeasons.map((season) => `${area}::${season}`);
-    });
-
-    currentSearchParams.set('jobAreas', selectedSeasonAreas.join(','));
-    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
-  })();
 
   return (
     <Section title="Commutes to Work and School" shortTitle="Work & School">
@@ -126,19 +109,6 @@ export function WorkAndSchoolCommute() {
           return { label: area.__label, value: medianDuration.toFixed(2) };
         })}
       />
-      {!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT) ? (
-        <SectionEntry
-          s={{ gridColumn: '1 / 3' }}
-          m={{ gridColumn: '1 / 4' }}
-          l={{ gridColumn: '1 / 5' }}
-        >
-          <div>
-            <Button href={'#/job-access' + jobAccessSearch}>
-              Explore industry/sector of employment
-            </Button>
-          </div>
-        </SectionEntry>
-      ) : null}
     </Section>
   );
 }
