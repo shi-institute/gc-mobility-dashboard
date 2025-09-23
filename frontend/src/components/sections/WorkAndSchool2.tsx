@@ -1,15 +1,13 @@
-import { useLocation, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { flatSectionBundleIds } from '.';
 import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
 import { notEmpty, shouldRenderStatistic, toTidyNominal } from '../../utils';
-import { Button, Section, SectionEntry, Statistic } from '../common';
-import { TAB_3_FRAGMENT } from '../navigation';
+import { Section, Statistic } from '../common';
 import { useComparisonModeState } from '../options';
 
 export function WorkAndSchool2() {
   const { scenarios } = useAppData();
   const { data: scenariosData } = scenarios;
-  const { search } = useLocation();
 
   const [isComparing] = useComparisonModeState();
   const [searchParams] = useSearchParams();
@@ -21,7 +19,7 @@ export function WorkAndSchool2() {
     selectedRouteIds.includes(future.__routeId)
   );
 
-  const [visibleSections, , visibleTabs] = useSectionsVisibility();
+  const [visibleSections] = useSectionsVisibility();
   const { editMode, handleClick } = useToggleSectionItemVisibility('Future.WorkAndSchoolCommute');
   const shouldRender = shouldRenderStatistic.bind(
     null,
@@ -29,12 +27,6 @@ export function WorkAndSchool2() {
     flatSectionBundleIds['Future.WorkAndSchoolCommute'],
     editMode
   );
-
-  const jobAccessSearch = (() => {
-    const currentSearchParams = new URLSearchParams(search);
-    currentSearchParams.set('jobAreas', selectedRouteIds.map((id) => `${id}::future`).join(','));
-    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
-  })();
 
   return (
     <Section title="Work and School" key={1}>
@@ -86,19 +78,6 @@ export function WorkAndSchool2() {
           return { label: __routeId, value: medianDuration.toFixed(2) };
         })}
       />
-      {!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT) ? (
-        <SectionEntry
-          s={{ gridColumn: '1 / 3' }}
-          m={{ gridColumn: '1 / 4' }}
-          l={{ gridColumn: '1 / 5' }}
-        >
-          <div>
-            <Button href={'#/job-access' + jobAccessSearch}>
-              Explore industry/sector of employment
-            </Button>
-          </div>
-        </SectionEntry>
-      ) : null}
       <Statistic.Figure
         wrap={{ f: { gridColumn: '1 / -1' } }}
         label="Current commute travel modes"
