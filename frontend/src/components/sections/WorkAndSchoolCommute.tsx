@@ -27,15 +27,21 @@ export function WorkAndSchoolCommute() {
         >
           <StatisticContainer
             onClick={handleClick('bluelines')}
-            style={{ opacity: shouldRender('bluelines') === 'partial' ? 0.5 : 1 }}
+            style={{
+              opacity: shouldRender('bluelines') === 'partial' ? 0.5 : 1,
+              fontSize: '0.875rem',
+            }}
           >
-            <SelectTravelMethod
-              travelMethodList={travelMethodList}
-              label={
-                'Show trip density on the map for commutes in ' +
-                (data?.length === 1 ? 'this area' : 'the selected seasons and areas')
-              }
-            />
+            <div>
+              <div>
+                {'Show trip density on the map for commutes in ' +
+                  (data?.length === 1 ? 'this area.' : 'the selected seasons and areas.')}
+              </div>
+              <div style={{ color: 'var(--text-secondary)', letterSpacing: '-0.34px' }}>
+                The width of the blue lines indicates the trip density.
+              </div>
+              <SelectTravelMethod travelMethodList={travelMethodList} label={''} />
+            </div>
           </StatisticContainer>
         </SectionEntry>
       ) : null}
