@@ -1,6 +1,14 @@
 import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
-import React, { ComponentProps, useContext, useEffect, useRef, useState } from 'react';
+import React, {
+  ComponentProps,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useSearchParams } from 'react-router';
 import {
   Button,
@@ -21,7 +29,7 @@ import {
 import { AppNavigation } from '../components/navigation';
 import { useAppData, useHighlightHandles, useRect, useSectionsVisibility } from '../hooks';
 import { useFutureMapData, useMapData } from '../hooks/useMapData';
-import { mapUtils, notEmpty } from '../utils';
+import { mapUtils, notEmpty, strictParseString, tryParseInt } from '../utils';
 
 export function RoadsVsTransit() {
   const { data, loading, scenarios: scenariosData } = useAppData();
@@ -50,9 +58,17 @@ export function RoadsVsTransit() {
   );
 
   const [visibleSections, setVisibleSections] = useSectionsVisibility();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const editMode = searchParams.get('edit') === 'true';
-  const [view, setView] = useState<'list' | 'comparison'>('comparison');
+  const view = strictParseString(
+    searchParams.get('tab5View'),
+    ['list', 'comparison'],
+    'comparison'
+  );
+  function setView(newView: typeof view) {
+    searchParams.set('tab5View', newView);
+    setSearchParams(searchParams, { replace: false });
+  }
 
   const render = renderManualSection.bind(null, visibleSections, 'roadsVsTransitScenarios');
   const { isMobile } = useContext(CoreFrameContext);
@@ -555,6 +571,7 @@ async function showFeaturesOnMap(
 }
 
 function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { scenarios: scenariosData } = useAppData();
   const scenarios = scenariosData.data?.scenarios?.scenarios || [];
   const options = Array.from(new Set(scenarios.map((s) => s.pavementMiles))).map((miles) => {
@@ -564,24 +581,44 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
     };
   });
 
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
-  const transitioning = selectedIndex !== delayedSelectedIndex;
+  const selectedIndex = tryParseInt(searchParams.get('selectedBubbleIndex'));
+  const _setSelectedIndex = (index: number | null) => {
+    // clear any selected scenario or feature when changing the selected index
+    if (index !== selectedIndex) {
+      searchParams.delete('selectedBubbleScenarioIndex');
+      searchParams.delete('selectedBubbleFeatureIndex');
+    }
+
+    // store the selected index in the URL
+    if (index === null) {
+      searchParams.delete('selectedBubbleIndex');
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      searchParams.set('selectedBubbleIndex', index.toString());
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // delay to allow for transition effect
+  const [delayedSelectedIndex, setDelayedSelectedIndex] = useState(selectedIndex);
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => {
+        setDelayedSelectedIndex(selectedIndex);
+      },
+      prefersReducedMotion ? 0 : 300
+    );
+    return () => clearTimeout(timeout);
+  }, [selectedIndex]);
+
+  const transitioning = selectedIndex !== delayedSelectedIndex;
   function switchSelectedIndex(index: number | null) {
     if (transitioning) {
       return; // prevent switching while another transition is in progress
     }
-
-    setSelectedIndex(index);
-    setTimeout(
-      () => {
-        setDelayedSelectedIndex(index);
-      },
-      prefersReducedMotion ? 0 : 300
-    ); // delay to allow for transition effect
+    _setSelectedIndex(index);
   }
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -655,6 +692,8 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
               scenarios={buttonScenarios}
               transitioning={transitioning}
               mapView={props.mapView}
+              searchParams={searchParams}
+              setSearchParams={setSearchParams}
             />
           </ButtonInterior>
         </>
@@ -807,30 +846,38 @@ interface TrackButtonExpandedContentProps {
   scenarios: Scenarios;
   transitioning: boolean;
   mapView: __esri.MapView | null;
+  searchParams: ReturnType<typeof useSearchParams>[0];
+  setSearchParams: ReturnType<typeof useSearchParams>[1];
 }
 
 function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
-  // =========================================================================
-  // SECTION 1: useState Hooks
-  // =========================================================================
-  const [selectedScenarioIndex, _setSelectedScenarioIndex] = useState<number | null>(null);
-  const [selectedFeatureIndex, setSelectedFeatureIndex] = useState(0);
-  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
-
-  // =========================================================================
-  // SECTION 2: REGULAR FUNCTIONS & useCallback HOOKS
-  // =========================================================================
+  const selectedScenarioIndex = tryParseInt(props.searchParams.get('selectedBubbleScenarioIndex'));
   function setSelectedScenarioIndex(index: number | null) {
-    _setSelectedScenarioIndex(index);
+    if (index === null) {
+      props.searchParams.delete('selectedBubbleScenarioIndex');
+      props.setSearchParams(props.searchParams, { replace: false });
+    } else {
+      props.searchParams.set('selectedBubbleScenarioIndex', index.toString());
+      props.setSearchParams(props.searchParams, { replace: false });
+    }
     setSelectedFeatureIndex(0);
   }
 
-  // =========================================================================
-  // SECTION 3:useEffect HOOKS
-  // =========================================================================
+  const selectedFeatureIndex =
+    tryParseInt(props.searchParams.get('selectedBubbleFeatureIndex')) ?? 0;
+  function setSelectedFeatureIndex(index: number) {
+    if (index === 0) {
+      props.searchParams.delete('selectedBubbleFeatureIndex');
+      props.setSearchParams(props.searchParams, { replace: false });
+    } else {
+      props.searchParams.set('selectedBubbleFeatureIndex', index.toString());
+      props.setSearchParams(props.searchParams, { replace: false });
+    }
+  }
 
   // build a mapping of line_id to layer id for the future route layers
   // so that we can easily find the right layer to highlight for a given line_id
+  const [lineIdToLayerIdMap, setLineIdToLayerIdMap] = useState(new Map<string, string>());
   useEffect(() => {
     props.mapView?.when(async () => {
       const geoJsonLayers = Array.from(props.mapView?.map?.allLayers || []).filter(
@@ -878,10 +925,6 @@ function TrackButtonExpandedContent(props: TrackButtonExpandedContentProps) {
       setLineIdToLayerIdMap(newLineIdToLayerIdMap);
     });
   }, [props.mapView]);
-
-  // =========================================================================
-  // SECTION 4: NON-HOOK DERIVATIONS
-  // =========================================================================
 
   const scenario =
     selectedScenarioIndex != null ? props.scenarios[selectedScenarioIndex] : undefined;
