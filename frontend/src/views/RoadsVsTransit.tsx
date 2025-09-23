@@ -35,15 +35,19 @@ export function RoadsVsTransit() {
     cyclingServiceAreas,
     paratransitServiceAreas,
   } = useMapData(data);
+  const futureMapDataOptions = useMemo(() => ({ zoomTo: 'routes' as const }), []);
   const {
     futureRoutes,
     futureStops,
     futureWalkServiceAreas,
     futureCyclingServiceAreas,
     futureParatransitServiceAreas,
-  } = useFutureMapData(scenariosData.data?.futureRoutes || [], undefined, mapView, {
-    zoomTo: 'routes',
-  });
+  } = useFutureMapData(
+    scenariosData.data?.futureRoutes || [],
+    undefined,
+    mapView,
+    futureMapDataOptions
+  );
 
   const [visibleSections, setVisibleSections] = useSectionsVisibility();
   const [searchParams] = useSearchParams();
@@ -53,6 +57,41 @@ export function RoadsVsTransit() {
   const render = renderManualSection.bind(null, visibleSections, 'roadsVsTransitScenarios');
   const { isMobile } = useContext(CoreFrameContext);
 
+  const layers = useMemo(() => {
+    return [
+      walkServiceAreas,
+      ...futureWalkServiceAreas,
+      cyclingServiceAreas,
+      ...futureCyclingServiceAreas,
+      paratransitServiceAreas,
+      ...futureParatransitServiceAreas,
+      ...futureRoutes,
+      routes,
+      ...futureStops,
+      stops,
+      ...areaPolygons,
+    ].filter(notEmpty);
+  }, [
+    walkServiceAreas,
+    futureWalkServiceAreas,
+    cyclingServiceAreas,
+    futureCyclingServiceAreas,
+    paratransitServiceAreas,
+    futureParatransitServiceAreas,
+    futureRoutes,
+    routes,
+    futureStops,
+    stops,
+    areaPolygons,
+  ]);
+
+  const handleMapReady = useCallback(
+    (_: __esri.Map, view: __esri.MapView) => {
+      setMapView(view);
+    },
+    [setMapView]
+  );
+
   return (
     <CoreFrame
       outerStyle={{ height: '100%' }}
@@ -61,24 +100,7 @@ export function RoadsVsTransit() {
       map={
         render(
           <div style={{ height: '100%' }} title="Map">
-            <WebMap
-              layers={[
-                walkServiceAreas,
-                ...futureWalkServiceAreas,
-                cyclingServiceAreas,
-                ...futureCyclingServiceAreas,
-                paratransitServiceAreas,
-                ...futureParatransitServiceAreas,
-                ...futureRoutes,
-                routes,
-                ...futureStops,
-                stops,
-                ...areaPolygons,
-              ].filter(notEmpty)}
-              onMapReady={(_, view) => {
-                setMapView(view);
-              }}
-            />
+            <WebMap layers={layers} onMapReady={handleMapReady} />
           </div>
         ) ?? undefined
       }

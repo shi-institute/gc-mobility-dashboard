@@ -82,7 +82,10 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
     });
   }, [data]);
 
-  const onMapReadyFunctions: ((map: __esri.Map, view: __esri.MapView) => void)[] = [];
+  const onMapReadyFunctions: ((map: __esri.Map, view: __esri.MapView) => void)[] = useMemo(
+    () => [],
+    []
+  );
 
   const areaPolygons = useMemo(() => {
     const groupedByArea = Object.groupBy(data || [], (resolved) => resolved.__area);
