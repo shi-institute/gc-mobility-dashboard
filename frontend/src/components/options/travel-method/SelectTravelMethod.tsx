@@ -25,7 +25,7 @@ export function SelectTravelMethod({ travelMethodList, label }: SelectedAreaProp
 
   return (
     <label>
-      {label || 'Travel Method'}
+      {label ?? 'Travel Method'}
       <SelectOne options={displayOptions} value={selectedTravelMethod} onChange={handleChange} />
     </label>
   );
