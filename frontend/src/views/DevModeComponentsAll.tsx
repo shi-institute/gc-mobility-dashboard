@@ -349,6 +349,17 @@ export function DevModeComponentsAll() {
           ]}
           unit="people"
         />
+        <Statistic.Number
+          wrap
+          label="Number table with icon, unit, and caption"
+          icon={SampleIcon}
+          data={[
+            { label: 'row 1', value: 123456 },
+            { label: 'row 2', value: 12 },
+          ]}
+          unit="people"
+          description="Description"
+        />
       </Section>
       <Section title="Statistics.Percent">
         <Statistic.Percent wrap label="Percent" data={123456} />

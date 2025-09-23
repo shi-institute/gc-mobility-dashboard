@@ -62,12 +62,16 @@ export function Money(props: MoneyProps) {
 
   const content = (
     <StatisticContainer onClick={props.onClick} partial={props.if === 'partial'}>
-      {props.icon}
       <div className="content">
         <div className="label">
-          {props.label}
-          {props.perCapita && Array.isArray(data) ? <span> per person</span> : null}
-          {props.description ? <div className="caption">{props.description}</div> : null}
+          <div className="label">
+            {props.icon}
+            <div>
+              {props.label}
+              {props.perCapita && Array.isArray(data) ? <span> per person</span> : null}
+              {props.description ? <div className="caption">{props.description}</div> : null}
+            </div>
+          </div>
         </div>
         {Array.isArray(data) ? (
           <div className="table" role="table">

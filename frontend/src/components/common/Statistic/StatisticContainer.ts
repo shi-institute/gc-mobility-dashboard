@@ -14,12 +14,6 @@ export const StatisticContainer = styled.div<{ partial?: boolean }>`
 
   opacity: ${(props) => (props.partial ? 0.5 : 1)};
 
-  & > svg {
-    fill: currentColor;
-    block-size: 1.5rem;
-    inline-size: 1.5rem;
-  }
-
   & > .content {
     display: block;
     width: 100%;
@@ -33,6 +27,17 @@ export const StatisticContainer = styled.div<{ partial?: boolean }>`
       font-weight: 500;
       line-height: 1.1;
       margin: 0.2rem 0 0.18rem 0;
+
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      svg {
+        fill: currentColor;
+        block-size: 1.5rem;
+        inline-size: 1.5rem;
+        flex-shrink: 0;
+      }
     }
 
     .label .unit {
