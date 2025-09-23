@@ -15,7 +15,7 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
   /* span the entire grid width */
   grid-column: 1 / -1;
 
-  h2 {
+  h1 {
     margin: 0;
     color: var(--color-primary);
 

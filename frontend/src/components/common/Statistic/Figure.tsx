@@ -33,11 +33,13 @@ export function Figure(props: FigureProps) {
       onClick={props.onClick}
       partial={props.if === 'partial'}
     >
-      {props.icon}
       <div className="content">
         <div className="label">
-          {props.label}
-          {props.description ? <div className="caption">{props.description}</div> : null}
+          {props.icon}
+          <div>
+            {props.label}
+            {props.description ? <div className="caption">{props.description}</div> : null}
+          </div>
         </div>
 
         {Array.isArray(props.plot) ? (

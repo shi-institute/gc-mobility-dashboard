@@ -54,11 +54,13 @@ export function Percent(props: PercentProps) {
 
   const content = (
     <StatisticContainer onClick={props.onClick} partial={props.if === 'partial'}>
-      {props.icon}
       <div className="content">
         <div className="label">
-          {props.label}
-          {props.description ? <div className="caption">{props.description}</div> : null}
+          {props.icon}
+          <div>
+            {props.label}
+            {props.description ? <div className="caption">{props.description}</div> : null}
+          </div>
         </div>
         {Array.isArray(data) ? (
           <div className="table" role="table">
