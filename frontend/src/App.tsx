@@ -183,7 +183,7 @@ export default function App() {
   // add an event listener to trigger edit mode: Meta + Shift + E
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'E' && event.shiftKey && event.metaKey) {
+      if (event.key.toLowerCase() === 'e' && event.shiftKey && event.metaKey) {
         if (editMode) {
           searchParams.delete('edit');
         } else {
