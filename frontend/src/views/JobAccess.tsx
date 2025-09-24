@@ -15,6 +15,7 @@ import {
   TreeMap,
 } from '../components';
 import { DismissIcon } from '../components/common/IconButton/DismssIcon';
+import { TreeMapEntry } from '../components/common/TreeMap/TreeMap';
 import { AppNavigation } from '../components/navigation';
 import { SelectedJobAccessArea } from '../components/options';
 import { useAppData, useLocalStorage, useSectionsVisibility } from '../hooks';
@@ -110,8 +111,24 @@ function Sections() {
       );
     })(),
     ...jobDataByArea.map((areaData, index) => {
+      const sum = (function calculateSum(node: TreeMapEntry): number {
+        if ('value' in node && typeof node.value === 'number') {
+          return node.value;
+        }
+        if ('children' in node && Array.isArray(node.children)) {
+          return node.children.reduce((acc, child) => acc + calculateSum(child), 0);
+        }
+        return 0;
+      })(areaData);
+
       return render(
-        <Section title={areaData.name} noGrid flexParent key={index}>
+        <Section
+          title={areaData.name}
+          description={`${sum} sampled commutes`}
+          noGrid
+          flexParent
+          key={index}
+        >
           <TreeMap
             data={areaData}
             style={{ flexGrow: 1, flexShrink: 1 }}
@@ -200,7 +217,7 @@ function useJobData() {
           name: 'Agriculture',
           value: type_counts?.agriculture || 0,
         },
-      ],
+      ] as TreeMapEntry[],
     };
   }
 

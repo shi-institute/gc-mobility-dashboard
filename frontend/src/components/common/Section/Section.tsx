@@ -8,6 +8,8 @@ interface SectionProps {
   shortTitle?: string;
   /** The heading level to use for the title. Defaults to 2 (h2). */
   level?: number;
+  /** A short description for the section to provide additional clairity. */
+  description?: string;
   /**
    * The children to render inside the section.
    *
@@ -34,6 +36,7 @@ export function Section(props: SectionProps) {
       containerName={props.containerNameOverride || 'section'}
     >
       <TitleTag className="section-title">{props.title}</TitleTag>
+      {props.description ? <div className="caption">{props.description}</div> : null}
       <div className="section-content">{props.children}</div>
     </SectionComponent>
   );
@@ -83,5 +86,15 @@ const SectionComponent = styled.section<{
     line-height: 1.2;
     flex-grow: 0;
     flex-shrink: 0;
+  }
+
+  .caption {
+    font-size: 0.825rem;
+    color: var(--text-secondary);
+    letter-spacing: -0.34px;
+    font-weight: 400;
+    line-height: 1.1;
+    margin-top: -0.4rem;
+    margin-bottom: 0.5rem;
   }
 `;
