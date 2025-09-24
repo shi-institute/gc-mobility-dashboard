@@ -17,6 +17,10 @@ export function WorkAndSchoolCommute() {
     editMode
   );
 
+  // replica does not have public transit ridership data for Greenville County before 2023 Q4
+  const publicTransitReplicaRidershipDataExists =
+    data?.some((area) => area.statistics?.thursday_trip.methods.commute.public_transit) || false;
+
   return (
     <Section title="Commutes to Work and School" shortTitle="Work & School">
       {shouldRender('bluelines') ? (
@@ -45,28 +49,35 @@ export function WorkAndSchoolCommute() {
           </StatisticContainer>
         </SectionEntry>
       ) : null}
-      <Statistic.Percent
-        wrap
-        label="Any trip using public transit"
-        if={shouldRender('curr')}
-        onClick={handleClick('curr')}
-        data={data?.map((area) => {
-          const publicTransitTrips =
-            area.statistics?.thursday_trip.methods.commute.public_transit || 0;
-          const allTrips = Object.values(
-            area.statistics?.thursday_trip.methods.commute || {}
-          ).reduce((sum, value) => sum + (value || 0), 0);
+      {publicTransitReplicaRidershipDataExists ? (
+        <Statistic.Percent
+          wrap
+          label="Any trip using public transit"
+          if={shouldRender('curr')}
+          onClick={handleClick('curr')}
+          data={data?.map((area) => {
+            const publicTransitTrips =
+              area.statistics?.thursday_trip.methods.commute.public_transit || NaN;
 
-          return {
-            label: area.__label,
-            value: ((publicTransitTrips / allTrips) * 100).toFixed(2),
-          };
-        })}
-      />
+            const allTrips = Object.values(
+              area.statistics?.thursday_trip.methods.commute || {}
+            ).reduce((sum, value) => sum + (value || 0), 0);
+
+            return {
+              label: area.__label,
+              value: ((publicTransitTrips / allTrips) * 100).toFixed(2),
+            };
+          })}
+        />
+      ) : null}
       <Statistic.Percent
         wrap
         label="Any trip that could use public transit"
-        description="Excludes existing public transit trips"
+        description={
+          publicTransitReplicaRidershipDataExists
+            ? 'Excludes existing public transit trips'
+            : undefined
+        }
         if={shouldRender('poten')}
         onClick={handleClick('poten')}
         data={data?.map((area) => {
