@@ -505,6 +505,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         // only keep the first occurrence because it would be confusing to show grocery stores on top of each other over time
         .slice(0, 1)
         .map(({ grocery_store_locations, __quarter, __year }) => {
+          console.log('Grocery Store Properties:', grocery_store_locations.features[0]?.properties);
           return {
             title: `Grocery Stores (${__year} ${__quarter})`,
             id: `grocery-stores__${__year}_${__quarter}`,
@@ -538,14 +539,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
               content: [
                 new FieldsContent({
                   title: 'Grocery Store Details',
-                  fieldInfos: Object.keys(
-                    grocery_store_locations.features[0]?.properties || {}
-                  ).map((fieldName) => {
-                    return {
-                      fieldName,
-                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-                    };
-                  }),
+                  fieldInfos: [
+                    {
+                      fieldName: 'Company_Name',
+                      label: 'Company Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Address',
+                    },
+                    {
+                      fieldName: 'City',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'State',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                    {
+                      fieldName: 'Primary_NAICS_Description',
+                      label: 'Primary NAICS Description',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -553,7 +572,6 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         })[0]
     );
   }, [data]);
-
   const dentalCareFacilities = useMemo(() => {
     return (
       (data || [])
