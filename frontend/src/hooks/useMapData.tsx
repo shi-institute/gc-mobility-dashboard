@@ -800,24 +800,51 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Provider Name} (${__year} ${__quarter})`,
+              title: `{Facility Type} (${__year} ${__quarter})`,
               content: [
-                new FieldsContent({
-                  title: 'Child Care Center Details',
-                  fieldInfos: Object.keys(child_care_locations.features[0]?.properties || {}).map(
-                    (fieldName) => {
-                      return {
-                        fieldName,
-                        label: fieldName
-                          .replace(/_/g, ' ')
-                          .replace(/\b\w/g, (c) => c.toUpperCase()),
-                      };
+                new CustomContent({
+                  // Request all fields needed for display and the Google Maps link
+                  outFields: ['Facility_Type', 'Capacity', 'Address', 'City', 'State', 'ZIP'],
+                  creator: (event) => {
+                    const properties = event?.graphic?.attributes;
+
+                    if (!properties) {
+                      return '<div>No detailed information available for this center.</div>';
                     }
-                  ),
+
+                    const facilityType = properties['Facility_Type'];
+                    const capacity = properties['Capacity'];
+                    const address = properties['Address'];
+                    const city = properties['City'];
+                    const state = properties['State'];
+                    const zip = properties['ZIP'];
+
+                    // Construct the Google Maps URL
+                    const googleMapsQuery = encodeURIComponent(
+                      `${address}, ${city}, ${state} ${zip}`
+                    );
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${googleMapsQuery}`;
+
+                    return createPopupRoot(document.createElement('div')).render(
+                      <div>
+                        <p>
+                          <strong>Facility Type:</strong> {facilityType || 'N/A'}
+                        </p>
+                        <p>
+                          <strong>Capacity:</strong> {capacity || 'N/A'}
+                        </p>
+                        <p>
+                          <strong style={{ display: 'inline-block', width: '120px' }}>Link:</strong>
+                          <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                            View on Google Maps
+                          </a>
+                        </p>
+                      </div>
+                    );
+                  },
                 }),
               ],
             }),
-            // renderer: createInterestAreaRenderer(),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
