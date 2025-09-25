@@ -11,6 +11,8 @@ export { quadraticBezierToPolygon } from './quadraticBezierToPolygon';
 export { replaceLast } from './replaceLast';
 export { requireKey } from './requireKey';
 export { shouldRenderStatistic } from './shouldRenderStatistic';
+export { strictParseString } from './strictParseString';
 export { toSqlList } from './toSqlList';
 export { toTidyNominal } from './toTidyNominal';
+export { tryParseInt } from './tryParseInt';
 export { withOpacity } from './withOpacity';

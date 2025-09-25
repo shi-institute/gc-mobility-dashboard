@@ -1,14 +1,18 @@
+import { useLocation } from 'react-router';
 import { flatSectionBundleIds } from '.';
 import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
-import { shouldRenderStatistic } from '../../utils';
-import { Section, Statistic } from '../common';
+import { notEmpty, shouldRenderStatistic } from '../../utils';
+import { Button, Section, SectionEntry, Statistic } from '../common';
+import { StatisticContainer } from '../common/Statistic/StatisticContainer';
+import { TAB_3_FRAGMENT } from '../navigation';
 
 export function ServiceStatistics() {
   const { data } = useAppData();
+  const { search } = useLocation();
 
   const ridershipDataExists = data?.some((area) => area.ridership) || false;
 
-  const [visibleSections] = useSectionsVisibility();
+  const [visibleSections, , visibleTabs] = useSectionsVisibility();
   const { editMode, handleClick } = useToggleSectionItemVisibility('ServiceStatistics');
   const shouldRender = shouldRenderStatistic.bind(
     null,
@@ -16,6 +20,20 @@ export function ServiceStatistics() {
     flatSectionBundleIds.ServiceStatistics,
     editMode
   );
+
+  const jobAccessSearch = (() => {
+    const currentSearchParams = new URLSearchParams(search);
+
+    const selectedAreas = currentSearchParams.get('areas')?.split(',').filter(notEmpty) || [];
+    const selectedSeasons = currentSearchParams.get('seasons')?.split(',').filter(notEmpty) || [];
+
+    const selectedSeasonAreas = selectedAreas.flatMap((area) => {
+      return selectedSeasons.map((season) => `${area}::${season}`);
+    });
+
+    currentSearchParams.set('jobAreas', selectedSeasonAreas.join(','));
+    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
+  })();
 
   return (
     <Section title="Service Statistics">
@@ -69,13 +87,24 @@ export function ServiceStatistics() {
           <Statistic.Number
             wrap
             label="Boardings"
-            description="Sum of passengers getting on a bus"
+            description={(() => {
+              if (data?.length === 1) {
+                const year = data[0]?.__year;
+                const quarter = data[0]?.__quarter;
+                if (year && quarter) {
+                  const season = `${quarter === 'Q2' ? 'January-June' : 'July-December'} ${year}`;
+                  return `Passengers getting on a bus ${season}`;
+                }
+              }
+
+              return 'Sum of passengers getting on a bus during the specified time period';
+            })()}
             data={data?.map((area) => {
               const boardings = area.ridership?.area.map((stop) => stop.boarding) || [];
               const boardingsTotal = boardings.reduce((sum, value) => sum + (value || 0), 0);
 
               return {
-                label: area.__label,
+                label: area.__label.replace('Q2', 'Jan-June').replace('Q4', 'July-Dec'),
                 value: boardingsTotal,
               };
             })}
@@ -85,13 +114,24 @@ export function ServiceStatistics() {
           <Statistic.Number
             wrap
             label="Alightings"
-            description="Sum of passengers getting off a bus"
+            description={(() => {
+              if (data?.length === 1) {
+                const year = data[0]?.__year;
+                const quarter = data[0]?.__quarter;
+                if (year && quarter) {
+                  const season = `${quarter === 'Q2' ? 'January-June' : 'July-December'} ${year}`;
+                  return `Passengers getting off a bus ${season}`;
+                }
+              }
+
+              return 'Sum of passengers getting off a bus during the specified time period';
+            })()}
             data={data?.map((area) => {
               const alightings = area.ridership?.area.map((stop) => stop.alighting) || [];
               const alightingsTotal = alightings.reduce((sum, value) => sum + (value || 0), 0);
 
               return {
-                label: area.__label,
+                label: area.__label.replace('Q2', 'Jan-June').replace('Q4', 'July-Dec'),
                 value: alightingsTotal,
               };
             })}
@@ -132,6 +172,23 @@ export function ServiceStatistics() {
         if={shouldRender('hhacc')}
         onClick={handleClick('hhacc')}
       />
+      {shouldRender('jadl') && (!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT)) ? (
+        <SectionEntry f={{ gridColumn: 'span 2' }}>
+          <StatisticContainer
+            onClick={handleClick('jadl')}
+            style={{ opacity: shouldRender('jadl') === 'partial' ? 0.5 : 1 }}
+          >
+            <div>
+              <div style={{ fontSize: '0.875rem' }}>
+                What jobs could be served by transit in this area if it had full coverage?
+              </div>
+              <Button href={'#/job-access' + jobAccessSearch}>
+                Explore industry/sector of employment
+              </Button>
+            </div>
+          </StatisticContainer>
+        </SectionEntry>
+      ) : null}
     </Section>
   );
 }

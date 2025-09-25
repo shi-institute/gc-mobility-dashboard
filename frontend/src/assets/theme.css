@@ -61,7 +61,8 @@
   }
 }
 
-:host {
+:host,
+* {
   font-family: 'Poppins', sans-serif;
 }
 

@@ -82,7 +82,10 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
     });
   }, [data]);
 
-  const onMapReadyFunctions: ((map: __esri.Map, view: __esri.MapView) => void)[] = [];
+  const onMapReadyFunctions: ((map: __esri.Map, view: __esri.MapView) => void)[] = useMemo(
+    () => [],
+    []
+  );
 
   const areaPolygons = useMemo(() => {
     const groupedByArea = Object.groupBy(data || [], (resolved) => resolved.__area);
@@ -531,18 +534,46 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Company Name} (${__year} ${__quarter})`,
+              title: `Stores With Groceries (${__year} ${__quarter})`,
               content: [
-                new FieldsContent({
-                  title: 'Grocery Store Details',
-                  fieldInfos: Object.keys(
-                    grocery_store_locations.features[0]?.properties || {}
-                  ).map((fieldName) => {
-                    return {
-                      fieldName,
-                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-                    };
-                  }),
+                new CustomContent({
+                  outFields: [
+                    'Company_Name',
+                    'Primary_NAICS_Description',
+                    'Address',
+                    'City',
+                    'State',
+                    'ZIP',
+                  ],
+                  creator: (event) => {
+                    const attrs = event?.graphic?.attributes;
+
+                    if (!attrs) {
+                      return '<div>No detailed information available for this store.</div>';
+                    }
+
+                    // construct the Google Maps URL
+                    const googleMapsUrl = new URL(googleMapsQueryUrl);
+                    googleMapsUrl.searchParams.set(
+                      'query',
+                      `${attrs['Address']}, ${attrs['City']}, ${attrs['State']} ${attrs['ZIP']}`
+                    );
+
+                    return createPopupRoot(document.createElement('div')).render(
+                      <PopupAside>
+                        <h1>{attrs['Company_Name'] || 'Store details'}</h1>
+                        <div>
+                          <span className="label">NAICS category: </span>
+                          {attrs['Primary_NAICS_Description'] || 'N/A'}
+                        </div>
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <a href={googleMapsUrl.href} target="_blank" rel="noopener noreferrer">
+                            View on Google Maps
+                          </a>
+                        </div>
+                      </PopupAside>
+                    );
+                  },
                 }),
               ],
             }),
@@ -550,7 +581,6 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         })[0]
     );
   }, [data]);
-
   const dentalCareFacilities = useMemo(() => {
     return (
       (data || [])
@@ -797,24 +827,45 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Provider Name} (${__year} ${__quarter})`,
+              title: `Child Care Facility (${__year} ${__quarter})`,
               content: [
-                new FieldsContent({
-                  title: 'Child Care Center Details',
-                  fieldInfos: Object.keys(child_care_locations.features[0]?.properties || {}).map(
-                    (fieldName) => {
-                      return {
-                        fieldName,
-                        label: fieldName
-                          .replace(/_/g, ' ')
-                          .replace(/\b\w/g, (c) => c.toUpperCase()),
-                      };
+                new CustomContent({
+                  outFields: ['Facility_Type', 'Capacity', 'Address', 'City', 'State', 'ZIP'], // only the used fields
+                  creator: (event) => {
+                    const attrs = event?.graphic?.attributes;
+
+                    if (!attrs) {
+                      return '<div>No detailed information available for this center.</div>';
                     }
-                  ),
+
+                    // construct the Google Maps URL
+                    const googleMapsUrl = new URL(googleMapsQueryUrl);
+                    googleMapsUrl.searchParams.set(
+                      'query',
+                      `${attrs['Address']}, ${attrs['City']}, ${attrs['State']} ${attrs['ZIP']}`
+                    );
+
+                    return createPopupRoot(document.createElement('div')).render(
+                      <PopupAside>
+                        <div>
+                          <span className="label">Facility Type: </span>
+                          {attrs['Facility_Type'] || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="label">Capactity: </span>
+                          {attrs['Capacity'] || 'N/A'}
+                        </div>
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <a href={googleMapsUrl.href} target="_blank" rel="noopener noreferrer">
+                            View on Google Maps
+                          </a>
+                        </div>
+                      </PopupAside>
+                    );
+                  },
                 }),
               ],
             }),
-            // renderer: createInterestAreaRenderer(),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -1207,3 +1258,42 @@ const Credits = styled.aside`
     margin-top: 0;
   }
 `;
+
+const PopupAside = styled.aside`
+  h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .label {
+    font-weight: 600;
+  }
+
+  a {
+    appearance: none;
+    border: none;
+    background-color: transparent;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+
+    color: var(--color-primary) !important;
+    box-shadow: 0 1px 0 0 var(--color-primary);
+    transition: background-color 0.2s, box-shadow 0.1s, color 0.2s;
+    text-decoration: none;
+
+    &:hover {
+      box-shadow: 0 2px 0 0 var(--color-primary);
+      background-color: hsla(var(--color-primary--parts), 0.1);
+      color: var(--text-primary) !important;
+    }
+
+    &:active {
+      background-color: hsla(var(--color-primary--parts), 0.16);
+    }
+  }
+`;
+
+const googleMapsQueryUrl = 'https://www.google.com/maps/search/?api=1';

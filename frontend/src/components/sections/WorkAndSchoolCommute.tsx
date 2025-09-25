@@ -1,17 +1,14 @@
-import { useLocation } from 'react-router';
 import { flatSectionBundleIds } from '.';
 import { useAppData, useSectionsVisibility, useToggleSectionItemVisibility } from '../../hooks';
-import { notEmpty, shouldRenderStatistic } from '../../utils';
-import { Button, Section, SectionEntry, Statistic } from '../common';
+import { shouldRenderStatistic } from '../../utils';
+import { Section, SectionEntry, Statistic } from '../common';
 import { StatisticContainer } from '../common/Statistic/StatisticContainer';
-import { TAB_3_FRAGMENT } from '../navigation';
 import { SelectTravelMethod } from '../options';
 
 export function WorkAndSchoolCommute() {
   const { data, travelMethodList } = useAppData();
-  const { search } = useLocation();
 
-  const [visibleSections, , visibleTabs] = useSectionsVisibility();
+  const [visibleSections] = useSectionsVisibility();
   const { editMode, handleClick } = useToggleSectionItemVisibility('WorkAndSchoolCommute');
   const shouldRender = shouldRenderStatistic.bind(
     null,
@@ -20,19 +17,9 @@ export function WorkAndSchoolCommute() {
     editMode
   );
 
-  const jobAccessSearch = (() => {
-    const currentSearchParams = new URLSearchParams(search);
-
-    const selectedAreas = currentSearchParams.get('areas')?.split(',').filter(notEmpty) || [];
-    const selectedSeasons = currentSearchParams.get('seasons')?.split(',').filter(notEmpty) || [];
-
-    const selectedSeasonAreas = selectedAreas.flatMap((area) => {
-      return selectedSeasons.map((season) => `${area}::${season}`);
-    });
-
-    currentSearchParams.set('jobAreas', selectedSeasonAreas.join(','));
-    return currentSearchParams.toString() ? `?${currentSearchParams.toString()}` : '';
-  })();
+  // replica does not have public transit ridership data for Greenville County before 2023 Q4
+  const publicTransitReplicaRidershipDataExists =
+    data?.some((area) => area.statistics?.thursday_trip.methods.commute.public_transit) || false;
 
   return (
     <Section title="Commutes to Work and School" shortTitle="Work & School">
@@ -44,40 +31,53 @@ export function WorkAndSchoolCommute() {
         >
           <StatisticContainer
             onClick={handleClick('bluelines')}
-            style={{ opacity: shouldRender('bluelines') === 'partial' ? 0.5 : 1 }}
+            style={{
+              opacity: shouldRender('bluelines') === 'partial' ? 0.5 : 1,
+              fontSize: '0.875rem',
+            }}
           >
-            <SelectTravelMethod
-              travelMethodList={travelMethodList}
-              label={
-                'Show trip density on the map for commutes in ' +
-                (data?.length === 1 ? 'this area' : 'the selected seasons and areas')
-              }
-            />
+            <div>
+              <div>
+                {'Show trip density on the map for commutes in ' +
+                  (data?.length === 1 ? 'this area.' : 'the selected seasons and areas.')}
+              </div>
+              <div style={{ color: 'var(--text-secondary)', letterSpacing: '-0.34px' }}>
+                The width of the blue lines indicates the trip density.
+              </div>
+              <SelectTravelMethod travelMethodList={travelMethodList} label={''} />
+            </div>
           </StatisticContainer>
         </SectionEntry>
       ) : null}
-      <Statistic.Percent
-        wrap
-        label="Any trip using public transit"
-        if={shouldRender('curr')}
-        onClick={handleClick('curr')}
-        data={data?.map((area) => {
-          const publicTransitTrips =
-            area.statistics?.thursday_trip.methods.commute.public_transit || 0;
-          const allTrips = Object.values(
-            area.statistics?.thursday_trip.methods.commute || {}
-          ).reduce((sum, value) => sum + (value || 0), 0);
+      {publicTransitReplicaRidershipDataExists ? (
+        <Statistic.Percent
+          wrap
+          label="Any trip using public transit"
+          if={shouldRender('curr')}
+          onClick={handleClick('curr')}
+          data={data?.map((area) => {
+            const publicTransitTrips =
+              area.statistics?.thursday_trip.methods.commute.public_transit || NaN;
 
-          return {
-            label: area.__label,
-            value: ((publicTransitTrips / allTrips) * 100).toFixed(2),
-          };
-        })}
-      />
+            const allTrips = Object.values(
+              area.statistics?.thursday_trip.methods.commute || {}
+            ).reduce((sum, value) => sum + (value || 0), 0);
+
+            return {
+              label: area.__label,
+              value: ((publicTransitTrips / allTrips) * 100).toFixed(2),
+            };
+          })}
+        />
+      ) : null}
       <Statistic.Percent
         wrap
         label="Any trip that could use public transit"
-        description="Excludes existing public transit trips"
+        description={
+          publicTransitReplicaRidershipDataExists
+            ? 'Excludes existing public transit trips'
+            : undefined
+        }
         if={shouldRender('poten')}
         onClick={handleClick('poten')}
         data={data?.map((area) => {
@@ -126,19 +126,6 @@ export function WorkAndSchoolCommute() {
           return { label: area.__label, value: medianDuration.toFixed(2) };
         })}
       />
-      {!visibleTabs || visibleTabs.includes(TAB_3_FRAGMENT) ? (
-        <SectionEntry
-          s={{ gridColumn: '1 / 3' }}
-          m={{ gridColumn: '1 / 4' }}
-          l={{ gridColumn: '1 / 5' }}
-        >
-          <div>
-            <Button href={'#/job-access' + jobAccessSearch}>
-              Explore industry/sector of employment
-            </Button>
-          </div>
-        </SectionEntry>
-      ) : null}
     </Section>
   );
 }

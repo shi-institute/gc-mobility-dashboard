@@ -99,10 +99,10 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   // ensure an area is selected
   useEffect(() => {
     if (areas.length === 0 && areasList[0]) {
-      // prefer 'Greenville County' if it exists
-      const gvlCounty = areasList.findIndex((area) => area === 'Greenville County');
+      // prefer 'full_area' if it exists
+      const gvlCounty = areasList.findIndex((area) => area === 'full_area');
       if (gvlCounty !== -1) {
-        searchParams.set('areas', 'Greenville County');
+        searchParams.set('areas', 'full_area');
         setSearchParams(searchParams, { replace: true });
         return;
       }
@@ -760,11 +760,14 @@ function constructReplicaPaths(
         networkSegmentsSuffix += `__commute__${travelMethod}`;
       }
 
+      const displayArea = area === 'full_area' ? 'Greenville County' : area;
+
       return {
         __area: area,
+        __displayArea: displayArea,
         __year: year,
         __quarter: quarter,
-        __label: `${area}${seasons.length > 1 ? ` (${year} ${quarter})` : ''}`,
+        __label: `${displayArea}${seasons.length > 1 ? ` (${year} ${quarter})` : ''}`,
         polygon:
           __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/replica/${area}/polygon.geojson.deflate`,
         statistics:
@@ -792,13 +795,14 @@ function constructReplicaPaths(
  * @param replicaPaths - the returned value of `constructReplicaPaths`
  */
 function constructReplicaPromises(replicaPaths: ReturnType<typeof constructReplicaPaths>) {
-  return replicaPaths.map(({ __area, __year, __quarter, __label, ...paths }) => {
+  return replicaPaths.map(({ __area, __displayArea, __year, __quarter, __label, ...paths }) => {
     return {
       area: __area,
       year: __year,
       quarter: __quarter,
       promises: {
         __area: async () => __area,
+        __displayArea: async () => __displayArea,
         __year: async () => __year,
         __quarter: async () => __quarter,
         __label: async () => __label,
@@ -836,10 +840,6 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
               };
             })
             .catch(handleError('network_segments_style', true, true)),
-        population: (abortSignal?: AbortSignal) =>
-          fetchData<ReplicaSyntheticPeople>(paths.population, abortSignal).catch(
-            handleError('population')
-          ),
         operating_funds: (abortSignal?: AbortSignal) =>
           fetchData<OperatingFundInfo[]>(
             __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/operating_funds.json.deflate`,
@@ -893,10 +893,30 @@ function constructScenarioDataPromises(futureRoutesList: string[]) {
 
   return {
     scenarios: (abortSignal?: AbortSignal) =>
-      fetchData<{ scenarios: Scenario[] }>(
+      fetchData<{ scenarios: Scenario[]; features: ScenarioAnyFeature[] }>(
         __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/tab5_scenarios.json.deflate`,
         abortSignal
-      ).catch(handleError('tab5_scenarios')),
+      )
+        .catch(handleError('tab5_scenarios'))
+        .then((data) => {
+          if (!data) {
+            return null;
+          }
+
+          return {
+            scenarios: data.scenarios.map(({ featureIds, ...rest }) => {
+              const scenarioId = rest.scenarioName + '_' + featureIds.join('_');
+
+              return {
+                id: scenarioId,
+                ...rest,
+                features: featureIds
+                  .map((featureId) => data.features.find((feature) => feature.id === featureId))
+                  .filter(notEmpty),
+              };
+            }),
+          };
+        }),
     futureRoutes: futureRoutesPromises,
   };
 }

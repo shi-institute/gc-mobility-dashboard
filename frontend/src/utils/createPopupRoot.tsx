@@ -3,9 +3,6 @@ import { CacheProvider } from '@emotion/react';
 import { createRoot } from 'react-dom/client';
 
 /**
- * Similar to `ReactDOM.createRoot`, but creates a shadow DOM within the provided container
- * with reset styles and emotion styled components support.
- *
  * Use this when rendering react components into a popup managed by the ArcGIS SDK.
  */
 export function createPopupRoot(container: HTMLElement) {
@@ -14,10 +11,13 @@ export function createPopupRoot(container: HTMLElement) {
   const shadowElem = container.ownerDocument.createElement('div');
   container.appendChild(shadowElem);
 
-  const shadowRoot = shadowElem.attachShadow({ mode: 'open' });
-  const emotionCache = createCache({ key: 'gcmd-arcgis', container: shadowRoot });
+  // const shadowRoot = shadowElem.attachShadow({ mode: 'open' });
+  const emotionCache = createCache({
+    key: 'gcmd-arcgis',
+    container: shadowElem.ownerDocument.querySelector('#gcmd-root')?.shadowRoot ?? undefined,
+  });
 
-  const root = createRoot(shadowRoot);
+  const root = createRoot(shadowElem);
 
   return {
     render(children: React.ReactNode) {

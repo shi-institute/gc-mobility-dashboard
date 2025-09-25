@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Button, CoreFrameContext, createCoreFrameContextValue } from './components';
 import {
@@ -32,18 +32,30 @@ export default function App() {
     return searchParams.get('compare') === '1';
   }, [searchParams]);
 
-  const areas = useMemo(() => {
-    const areas =
+  // read the areas from the URL search params
+  // with state updates only when the value actually changes
+  const [areas, _setAreas] = useState<string[]>([]);
+  useEffect(() => {
+    const _areas =
       searchParams
         .get('areas')
         ?.split(',')
         .map((str) => str.trim()) ?? [];
 
     // only use the first area if comparison is not enabled
-    return comparisonEnabled ? areas : areas.slice(0, 1);
+    const finalAreas = comparisonEnabled ? _areas : _areas.slice(0, 1);
+
+    // only update state if areas have changed
+    if (JSON.stringify(finalAreas) !== JSON.stringify(areas)) {
+      _setAreas(finalAreas);
+    }
   }, [searchParams, comparisonEnabled]);
-  const seasons = useMemo(() => {
-    const seasons = (searchParams.get('seasons')?.split(',') || [])
+
+  // read the seasons from the URL search params
+  // with state updates only when the value actually changes
+  const [seasons, _setSeasons] = useState<['Q2' | 'Q4', number][]>([]);
+  useEffect(() => {
+    const _seasons = (searchParams.get('seasons')?.split(',') || [])
       .map((str) => {
         const parts = str
           .trim()
@@ -66,7 +78,12 @@ export default function App() {
       }) satisfies Parameters<typeof createAppDataContext>['1'];
 
     // only use the first season if comparison is not enabled
-    return comparisonEnabled ? seasons : seasons.slice(0, 1);
+    const finalSeasons = comparisonEnabled ? _seasons : _seasons.slice(0, 1);
+
+    // only update state if areas have changed
+    if (JSON.stringify(finalSeasons) !== JSON.stringify(seasons)) {
+      _setSeasons(finalSeasons);
+    }
   }, [searchParams, comparisonEnabled]);
 
   const [jobAccessAreasOverride, jobAccessSeasonsOverride] = useMemo(() => {
@@ -122,8 +139,11 @@ export default function App() {
     return [['Q4', 2024]];
   }, []);
 
-  const travelMethod = useMemo(() => {
-    const found = searchParams.get('travelMethod') ?? undefined;
+  // read the travel method from the URL search params
+  // with state updates only when the value actually changes
+  const [travelMethod, setTravelMethod] = useState<AppDataHookParameters['travelMethod']>();
+  useEffect(() => {
+    let found = searchParams.get('travelMethod') ?? undefined;
 
     const validMethods = [
       'biking',
@@ -136,19 +156,17 @@ export default function App() {
       'walking',
     ];
 
-    if (!found) {
-      return undefined;
-    }
-
-    if (!validMethods.includes(found)) {
+    if (found && !validMethods.includes(found)) {
       console.warn(
         `Invalid travel method: ${found}. Valid methods are: ${validMethods.join(', ')}`
       );
-      return undefined;
+      found = undefined;
     }
 
-    return found as AppDataHookParameters['travelMethod'];
-  }, [searchParams]);
+    if (found !== travelMethod) {
+      setTravelMethod(found as AppDataHookParameters['travelMethod'] | undefined);
+    }
+  });
 
   const isOnJobAccessPage = pathname === TAB_3_FRAGMENT;
   const isOnRoadsVsTransitPage = pathname === TAB_5_FRAGMENT;
@@ -165,7 +183,7 @@ export default function App() {
   // add an event listener to trigger edit mode: Meta + Shift + E
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'E' && event.shiftKey && event.metaKey) {
+      if (event.key.toLowerCase() === 'e' && event.shiftKey && event.metaKey) {
         if (editMode) {
           searchParams.delete('edit');
         } else {

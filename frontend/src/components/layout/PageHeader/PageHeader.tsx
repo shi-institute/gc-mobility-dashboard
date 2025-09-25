@@ -15,6 +15,7 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
   /* span the entire grid width */
   grid-column: 1 / -1;
 
+  h1,
   h2 {
     margin: 0;
     color: var(--color-primary);
@@ -101,6 +102,9 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
     h1 {
       margin: 0.25rem 0;
       font-weight: 500;
+
+      // do not render under the dismiss button
+      padding-right: 2.5rem;
 
       @container core (max-width: 899px) {
         font-size: 1rem;
