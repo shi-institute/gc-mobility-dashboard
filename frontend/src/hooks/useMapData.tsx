@@ -844,18 +844,16 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
 
                     return createPopupRoot(document.createElement('div')).render(
                       <div>
-                        <p>
-                          <strong>Facility Type:</strong> {facilityType || 'N/A'}
-                        </p>
-                        <p>
-                          <strong>Capacity:</strong> {capacity || 'N/A'}
-                        </p>
-                        <p>
-                          <strong style={{ display: 'inline-block', width: '120px' }}>Link:</strong>
-                          <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
-                            View on Google Maps
-                          </a>
-                        </p>
+                        <span style={{ fontWeight: 600 }}>Facility Type:</span>{' '}
+                        {facilityType || 'N/A'}
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600 }}>Capactity:</span> {capacity || 'N/A'}
+                      </div>
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                          View on Google Maps
+                        </Link>
                       </div>
                     );
                   },
@@ -1252,5 +1250,31 @@ const Credits = styled.aside`
 
   hr + p {
     margin-top: 0;
+  }
+`;
+
+const Link = styled.a`
+  appearance: none;
+  border: none;
+  background-color: transparent;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+
+  color: var(--color-primary);
+  box-shadow: 0 1px 0 0 var(--color-primary);
+  transition: background-color 0.2s, box-shadow 0.1s, color 0.2s;
+  text-decoration: none;
+
+  &:hover {
+    box-shadow: 0 2px 0 0 var(--color-primary);
+    background-color: hsla(var(--color-primary--parts), 0.1);
+    color: var(--text-primary);
+  }
+
+  &:active {
+    background-color: hsla(var(--color-primary--parts), 0.16);
   }
 `;

@@ -15,6 +15,22 @@ export function RiderDemographics() {
     editMode
   );
 
+  // replica does not have public transit ridership data for Greenville County before 2023 Q4
+  const publicTransitReplicaRidershipDataExists =
+    data?.some((area) => area.statistics?.thursday_trip.methods.commute.public_transit) || false;
+  const checkIfPublicTransitReplicaRidershipDataExists = (
+    area: NonNullable<typeof data>[number]
+  ) => {
+    return (
+      area.statistics?.thursday_trip.methods.commute.public_transit !== undefined &&
+      area.statistics?.thursday_trip.methods.commute.public_transit !== null
+    );
+  };
+
+  if (!publicTransitReplicaRidershipDataExists) {
+    return null;
+  }
+
   return (
     <Section title="Rider Demographics">
       <Statistic.Figure
@@ -39,18 +55,19 @@ export function RiderDemographics() {
           </svg>
         }
         legendBeforeTitle
-        if={shouldRender('race')}
+        if={shouldRender('race') && publicTransitReplicaRidershipDataExists}
         onClick={handleClick('race')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
             return {
               __label: area.__label,
+              __noData: !checkIfPublicTransitReplicaRidershipDataExists(area),
               ...area.statistics.thursday_trip__public_transit_synthetic_population_demographics
                 ?.race,
             };
           })
-          .map(({ __label, ...areaRaceData }) => {
+          .map(({ __label, __noData, ...areaRaceData }) => {
             const domainMap: Record<string, string> = {
               black_african_american: 'Black',
               white: 'White',
@@ -61,11 +78,12 @@ export function RiderDemographics() {
 
             return {
               __label,
+              __noData,
               domainY: Object.values(domainMap),
               plotData: toTidyNominal(domainMap)([areaRaceData]),
             };
           })
-          .map(({ __label, domainY, plotData }, index, array) => {
+          .map(({ __label, __noData, domainY, plotData }, index, array) => {
             return (_, d3, { presets, utils }) => {
               const allFacetsMaxX = utils.maxAcross(
                 array.flatMap(({ plotData }) => plotData),
@@ -91,9 +109,10 @@ export function RiderDemographics() {
                   ...preset.color,
                   legend: index === 0,
                 },
-                // require a sample size of at least 30 to display the figure
-                sampleSizeIsTooSmall:
-                  Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
+                sampleSizeIsTooSmall: __noData
+                  ? 'Data on rider demographics is not available for this season.'
+                  : // require a sample size of at least 30 to display the figure
+                    Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
               };
             };
           })}
@@ -121,18 +140,19 @@ export function RiderDemographics() {
           </svg>
         }
         legendBeforeTitle
-        if={shouldRender('eth')}
+        if={shouldRender('eth') && publicTransitReplicaRidershipDataExists}
         onClick={handleClick('eth')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
             return {
               __label: area.__label,
+              __noData: !checkIfPublicTransitReplicaRidershipDataExists(area),
               ...area.statistics.thursday_trip__public_transit_synthetic_population_demographics
                 ?.ethnicity,
             };
           })
-          .map(({ __label, ...areaRaceData }) => {
+          .map(({ __label, __noData, ...areaRaceData }) => {
             const domainMap: Record<string, string> = {
               hispanic_or_latino: 'Hispanic/Latino',
               not_hispanic_or_latino: 'Not Hispanic/Latino',
@@ -140,11 +160,12 @@ export function RiderDemographics() {
 
             return {
               __label,
+              __noData,
               domainY: Object.values(domainMap),
               plotData: toTidyNominal(domainMap)([areaRaceData]),
             };
           })
-          .map(({ __label, domainY, plotData }, index, array) => {
+          .map(({ __label, __noData, domainY, plotData }, index, array) => {
             return (_, d3, { presets, utils }) => {
               const allFacetsMaxX = utils.maxAcross(
                 array.flatMap(({ plotData }) => plotData),
@@ -170,9 +191,10 @@ export function RiderDemographics() {
                   ...preset.color,
                   legend: index === 0,
                 },
-                // require a sample size of at least 30 to display the figure
-                sampleSizeIsTooSmall:
-                  Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
+                sampleSizeIsTooSmall: __noData
+                  ? 'Data on rider demographics is not available for this season.'
+                  : // require a sample size of at least 30 to display the figure
+                    Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
               };
             };
           })}
@@ -200,18 +222,19 @@ export function RiderDemographics() {
             />
           </svg>
         }
-        if={shouldRender('edu')}
+        if={shouldRender('edu') && publicTransitReplicaRidershipDataExists}
         onClick={handleClick('edu')}
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
             return {
               __label: area.__label,
+              __noData: !checkIfPublicTransitReplicaRidershipDataExists(area),
               ...area.statistics.thursday_trip__public_transit_synthetic_population_demographics
                 ?.education,
             };
           })
-          .map(({ __label, ...areaRaceData }) => {
+          .map(({ __label, __noData, ...areaRaceData }) => {
             const domainMap: Record<string, string> = {
               advanced_degree: 'Advanced degree',
               bachelors_degree: 'Bachelor’s degree',
@@ -224,11 +247,12 @@ export function RiderDemographics() {
 
             return {
               __label,
+              __noData,
               domainY: Object.values(domainMap),
               plotData: toTidyNominal(domainMap)([areaRaceData]),
             };
           })
-          .map(({ __label, domainY, plotData }, index, array) => {
+          .map(({ __label, __noData, domainY, plotData }, index, array) => {
             return (_, d3, { presets, utils }) => {
               const allFacetsMaxX = utils.maxAcross(
                 array.flatMap(({ plotData }) => plotData),
@@ -254,9 +278,10 @@ export function RiderDemographics() {
                   ...preset.color,
                   legend: index === 0,
                 },
-                // require a sample size of at least 30 to display the figure
-                sampleSizeIsTooSmall:
-                  Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
+                sampleSizeIsTooSmall: __noData
+                  ? 'Data on rider demographics is not available for this season.'
+                  : // require a sample size of at least 30 to display the figure
+                    Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
               };
             };
           })}

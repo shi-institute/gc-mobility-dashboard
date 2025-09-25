@@ -13,8 +13,9 @@ interface PlotOptions extends Plot.PlotOptions {
    * When true, show the message that appears when the sample size is too small.
    * If undefined, the sample size will be calculated from the length of the
    * largest data array in the marks.
+   * If a string, the string will be shown instead of the default message.
    * */
-  sampleSizeIsTooSmall?: boolean;
+  sampleSizeIsTooSmall?: boolean | string;
 }
 
 export interface PlotFigureProps {
@@ -70,7 +71,10 @@ export function PlotContainer(props: PlotFigureProps) {
         ...options,
         marks: [],
         height: 0,
-        caption: html`<i>The data sample size is too small to display this figure.</i>`,
+        caption: html`<i
+          >${options.sampleSizeIsTooSmall ||
+          'The data sample size is too small to display this figure.'}</i
+        >`,
       });
     } else {
       plot = Plot.plot(options);

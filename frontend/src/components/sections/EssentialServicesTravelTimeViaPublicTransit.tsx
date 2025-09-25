@@ -17,6 +17,14 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
     editMode
   );
 
+  // replica does not have public transit ridership data for Greenville County before 2023 Q4
+  // which means there are no public transit commute times available
+  const publicTransitReplicaRidershipDataExists =
+    data?.some((area) => area.statistics?.thursday_trip.methods.commute.public_transit) || false;
+  if (!publicTransitReplicaRidershipDataExists) {
+    return null;
+  }
+
   return (
     <Section
       title="Recorded Average Travel Time to Essential Services via Public Transit"
