@@ -505,7 +505,6 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         // only keep the first occurrence because it would be confusing to show grocery stores on top of each other over time
         .slice(0, 1)
         .map(({ grocery_store_locations, __quarter, __year }) => {
-          console.log('Grocery Store Properties:', grocery_store_locations.features[0]?.properties);
           return {
             title: `Grocery Stores (${__year} ${__quarter})`,
             id: `grocery-stores__${__year}_${__quarter}`,
@@ -572,6 +571,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         })[0]
     );
   }, [data]);
+  //TODO: Refactor different types of health facilities popups to deal with repeated code. They share same fields (e.g., Address, CITY, etc.)
   const dentalCareFacilities = useMemo(() => {
     return (
       (data || [])
@@ -587,11 +587,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(dental_locations.features[0]?.properties || {}),
+                  title: 'Dental Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -615,13 +636,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(
-                    eye_care_locations.features[0]?.properties || {}
-                  ),
+                  title: 'Eyecare Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -645,13 +685,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(
-                    family_medicine_locations.features[0]?.properties || {}
-                  ),
+                  title: 'Family Medicine Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -675,13 +734,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(
-                    free_clinics_locations.features[0]?.properties || {}
-                  ),
+                  title: 'Free Clinic Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -705,13 +783,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(
-                    hospitals_locations.features[0]?.properties || {}
-                  ),
+                  title: 'Hospital Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -735,13 +832,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(
-                    internal_medicine_locations.features[0]?.properties || {}
-                  ),
+                  title: 'Internal Medicine Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -765,13 +881,32 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: healthAndDentalRenderer,
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{NAME} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Healthcare Facility Details',
-                  fieldInfos: popupFieldsFromObject(
-                    urgent_care_locations.features[0]?.properties || {}
-                  ),
+                  title: 'Urgent Care Facility Details',
+                  fieldInfos: [
+                    {
+                      fieldName: 'NAME',
+                      label: 'Facility Name',
+                    },
+                    {
+                      fieldName: 'Address',
+                      label: 'Street Address',
+                    },
+                    {
+                      fieldName: 'CITY',
+                      label: 'City',
+                    },
+                    {
+                      fieldName: 'STATE',
+                      label: 'State',
+                    },
+                    {
+                      fieldName: 'ZIP',
+                      label: 'Zip Code',
+                    },
+                  ],
                 }),
               ],
             }),
@@ -891,18 +1026,16 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Name} (${__year} ${__quarter})`,
+              title: `{ZONING} (${__year} ${__quarter})`,
               content: [
                 new FieldsContent({
-                  title: 'Commercial Zone Details',
-                  fieldInfos: Object.keys(
-                    commercial_zone_locations.features[0]?.properties || {}
-                  ).map((fieldName) => {
-                    return {
-                      fieldName,
-                      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-                    };
-                  }),
+                  title: 'Commercial Zone Information',
+                  fieldInfos: [
+                    {
+                      fieldName: 'ZONING',
+                      label: 'Zoning Code',
+                    },
+                  ],
                 }),
               ],
             }),
