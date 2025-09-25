@@ -800,24 +800,51 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{Provider Name} (${__year} ${__quarter})`,
+              title: `{Facility Type} (${__year} ${__quarter})`,
               content: [
-                new FieldsContent({
-                  title: 'Child Care Center Details',
-                  fieldInfos: Object.keys(child_care_locations.features[0]?.properties || {}).map(
-                    (fieldName) => {
-                      return {
-                        fieldName,
-                        label: fieldName
-                          .replace(/_/g, ' ')
-                          .replace(/\b\w/g, (c) => c.toUpperCase()),
-                      };
+                new CustomContent({
+                  // Request all fields needed for display and the Google Maps link
+                  outFields: ['Facility_Type', 'Capacity', 'Address', 'City', 'State', 'ZIP'],
+                  creator: (event) => {
+                    const properties = event?.graphic?.attributes;
+
+                    if (!properties) {
+                      return '<div>No detailed information available for this center.</div>';
                     }
-                  ),
+
+                    const facilityType = properties['Facility_Type'];
+                    const capacity = properties['Capacity'];
+                    const address = properties['Address'];
+                    const city = properties['City'];
+                    const state = properties['State'];
+                    const zip = properties['ZIP'];
+
+                    // Construct the Google Maps URL
+                    const googleMapsQuery = encodeURIComponent(
+                      `${address}, ${city}, ${state} ${zip}`
+                    );
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${googleMapsQuery}`;
+
+                    return createPopupRoot(document.createElement('div')).render(
+                      <div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>Facility Type:</span>{' '}
+                          {facilityType || 'N/A'}
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>Capactity:</span> {capacity || 'N/A'}
+                        </div>
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                            View on Google Maps
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  },
                 }),
               ],
             }),
-            // renderer: createInterestAreaRenderer(),
           } satisfies GeoJSONLayerInit;
         })[0]
     );
@@ -1208,5 +1235,31 @@ const Credits = styled.aside`
 
   hr + p {
     margin-top: 0;
+  }
+`;
+
+const Link = styled.a`
+  appearance: none;
+  border: none;
+  background-color: transparent;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+
+  color: var(--color-primary);
+  box-shadow: 0 1px 0 0 var(--color-primary);
+  transition: background-color 0.2s, box-shadow 0.1s, color 0.2s;
+  text-decoration: none;
+
+  &:hover {
+    box-shadow: 0 2px 0 0 var(--color-primary);
+    background-color: hsla(var(--color-primary--parts), 0.1);
+    color: var(--text-primary);
+  }
+
+  &:active {
+    background-color: hsla(var(--color-primary--parts), 0.16);
   }
 `;
