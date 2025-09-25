@@ -12,7 +12,9 @@ interface TreeMapProps {
   colorScheme?: readonly string[];
 }
 
-type TreeMapEntry = { name: string; value: number } | { name: string; children: TreeMapEntry[] };
+export type TreeMapEntry =
+  | { name: string; value: number }
+  | { name: string; children: TreeMapEntry[] };
 type TreeMapHierarchyNode = d3.HierarchyNode<TreeMapEntry>;
 
 const Section = ({ children }: { children: React.ReactNode }) => (

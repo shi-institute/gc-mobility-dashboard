@@ -624,7 +624,7 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
   }
 
   .esri-widget--button {
-    width: 160px;
+    width: 176px;
     position: relative;
     cursor: default;
     &:focus-within {

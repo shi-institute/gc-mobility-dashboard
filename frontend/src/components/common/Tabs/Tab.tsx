@@ -16,6 +16,8 @@ interface TabProps {
   iconRight?: React.ReactNode;
 
   variant?: 'standard' | 'line';
+
+  style?: React.CSSProperties;
 }
 
 /**
@@ -31,6 +33,7 @@ export function Tab(props: TabProps) {
         href={props.href}
         className={props.isActive ? 'active' : ''}
         onClick={props.onClick}
+        style={props.style}
       >
         {props.iconLeft}
         <span className="label">{props.label}</span>
@@ -40,7 +43,12 @@ export function Tab(props: TabProps) {
   }
 
   return (
-    <Component as="button" className={props.isActive ? 'active' : ''} onClick={props.onClick}>
+    <Component
+      as="button"
+      className={props.isActive ? 'active' : ''}
+      onClick={props.onClick}
+      style={props.style}
+    >
       {props.iconLeft}
       <span className="label">{props.label}</span>
       {props.iconRight}
