@@ -918,8 +918,9 @@ class ReplicaProcessETL:
 
                 area_population_path = self.output_folder / area_name / \
                     'population' / f'{region}_{year}_{quarter}_home.parquet'
-                area_trip_chunks_folder_path = self.output_folder / area_name / \
-                    f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
+                area_trip_chunks_folder_path = self.output_folder / 'full_area' / \
+                    f'{day}_trip' / '_chunks' / f'{region}_{year}_{quarter}_{day}_trip' if area_name == 'full_area' else self.output_folder / \
+                    area_name / f'{day}_trip' / f'{region}_{year}_{quarter}' / '_chunks'
                 area_trip_chunk_paths = list(area_trip_chunks_folder_path.glob('*.parquet'))
 
                 area_statistics: dict[str, Any] = {}

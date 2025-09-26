@@ -44,8 +44,6 @@ class EssentialServicesETL:
         self.areas = [path for path in self.replica_folder.iterdir() if path.is_dir()]
         if not self.include_full_area_in_areas:
             self.areas = [path for path in self.areas if path.name != 'full_area']
-        self.areas = [path for path in self.replica_folder.iterdir() if path.is_dir()
-                      and path.name != 'full_area']
 
         greenlink_gtfs_seasons: list[str] = []
         for gtfs_year_folder in self.greenlink_gtfs_folder.iterdir():
@@ -413,16 +411,14 @@ class EssentialServicesETL:
                 output_poi_folder = self.output_folder / season_year / season_quarter
                 output_poi_folder.mkdir(parents=True, exist_ok=True)
                 file_extension = os.path.splitext(poi_data_path.name)[1]
-                output_poi_path = output_poi_folder / \
-                    (output_name + '.geojson')
-                if not output_poi_path.exists():
-                    logger.debug(f'Copying POI data to {output_poi_path} for reference...')
-                    if file_extension == '.geojson':
-                        shutil.copy(poi_data_path, output_poi_path)
-                    else:
-                        # convert to geojson
-                        poi_gdf = geopandas.read_file(poi_data_path, where=data_where)
-                        poi_gdf.to_crs('EPSG:4326').to_file(output_poi_path, driver='GeoJSON')
+                output_poi_path = output_poi_folder / (output_name + '.geojson')
+                logger.debug(f'Copying POI data to {output_poi_path} for reference...')
+                if file_extension == '.geojson':
+                    shutil.copy(poi_data_path, output_poi_path)
+                else:
+                    # convert to geojson
+                    poi_gdf = geopandas.read_file(poi_data_path, where=data_where)
+                    poi_gdf.to_crs('EPSG:4326').to_file(output_poi_path, driver='GeoJSON')
 
             # read the POI geometry (we do not care about the other columns)
             poi_gdf = geopandas.read_file(poi_data_path, columns=[

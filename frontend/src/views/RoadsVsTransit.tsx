@@ -170,12 +170,14 @@ export function RoadsVsTransit() {
                       variant="line"
                       isActive={view === 'comparison'}
                       onClick={() => setView('comparison')}
+                      style={{ fontSize: '1.125 rem' }}
                     />
                     <Tab
                       label="All"
                       variant="line"
                       isActive={view === 'list'}
                       onClick={() => setView('list')}
+                      style={{ fontSize: '1.125 rem' }}
                     />
                   </Tabs>
                   {view === 'comparison' ? (
