@@ -90,11 +90,11 @@ def etl_runner(etls: Optional[list[str]] = None) -> None:
             continue
 
         # run the source runner
-        print(f"\nRunning ETL for {source_name}...")
+        print(f"\033[32m\nRunning ETL for {source_name}...\033[0m")
         try:
             with_restart_when_stalled(runner_func)()
         except Exception as e:
-            print(f"Error running ETL for {source_name}: {e}")
+            print(f"\033[31mError running ETL for {source_name}: {e}\033[0m")
             raise
 
 
@@ -113,6 +113,7 @@ def with_restart_when_stalled(func):
     import multiprocessing
     import threading
     import time
+    import traceback
     from pathlib import Path
 
     class ProcessManager:
@@ -123,18 +124,19 @@ def with_restart_when_stalled(func):
 
         def __init__(self):
             self.process = None
+            self.attempts = 0
 
         def is_alive(self):
             return self.process is not None and self.process.is_alive()
 
-        def terminate(self):
+        def terminate(self, indent: int = 0) -> None:
             if self.process is not None:
                 pid = self.process.pid
-                print(f'◘Terminating process with PID: {pid}')
+                print(f'{' ' * indent}◘Terminating process with PID: {pid}')
                 self.process.terminate()
                 self.process.join()
                 self.process = None
-                print(f'Process terminated (PID: ${pid}).')
+                print(f'{' ' * indent}Process terminated (PID: ${pid}).')
 
         def start(self):
             if self.process:
@@ -144,8 +146,41 @@ def with_restart_when_stalled(func):
             self.process.start()
 
         def join(self):
-            if self.process:
-                self.process.join()
+            """Starts the process and waits for it to finish. If the process
+            exits with a non-zero exit code, it is restarted (up to 5 times).
+
+            Raises:
+                RuntimeError: If the process exits with a non-zero exit code
+                after 5 attempts.
+            """
+            while self.attempts < 5:
+                if self.process:
+                    self.attempts += 1
+                    self.process.join()
+
+                    # if the process exited successfully, break the loop
+                    if self.process.exitcode == 0:
+                        break
+
+                    # the process failed with an error; try it again (up to 5 times)
+                    print(f'\033[31m\n\nProcess exited with code {self.process.exitcode}.\033[0m')
+                    if self.attempts < 5:
+                        print(f'\033[33m  Terminating...\033[0m')
+                        time.sleep(1)
+                        self.terminate(indent=4)
+                        print(
+                            f'\033[33m  Re-trying process (attempt {self.attempts + 1}/5)...\033[0m')
+                        print()
+                        time.sleep(1)
+                        self.start()
+                    else:
+                        print('\033[41m\033[37mMaximum attempts reached. Not restarting.\033[0m')
+                        raise RuntimeError(
+                            f'Process exited with non-zero exit code: {self.process.exitcode}.')
+
+                else:
+                    print('No process to join.')
+                    break
 
     def wrapper():
         log_dir = Path("./data/logs")
