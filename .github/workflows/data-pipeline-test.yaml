@@ -391,10 +391,16 @@ jobs:
             ,Period,Stop Point,Ridership - Boarding - APC,Ridership - Alighting - APC,extra column
             1,1/2/2025,1000,1354,1333,extra value
             2,1/3/2025,1000,1384,1306,"extra value with ""quotes"""
+          CSV3_ES_CONTENT: |
+            Company Name,Address,City,State,ZIP Code,ZIP Four,County,Metro Area,Neighborhood
+            7-Eleven,7 Eleven,Fountain Inn,SC,29644,,Greenville,"Greenville, SC",
+            7-Eleven,1703 Easley Bridge Rd,Greenville,SC,29611,5320,Greenville,"Greenville, SC",
+            7-Eleven,2617 Wade Hampton Blvd,Greenville,SC,29615,1149,Greenville,"Greenville, SC",
         run: |
           mkdir -p ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons
           mkdir -p ${{ github.workspace }}/pipeline-input/greenlink_ridership
           mkdir -p ${{ github.workspace }}/pipeline-input/passthrough_data
+          mkdir -p ${{ github.workspace }}/pipeline-input/to_geocode
 
           # write sample data for replica
           echo $AREA_GEOJSON > ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons/full_area.geojson
@@ -406,6 +412,11 @@ jobs:
           EOF
           cat <<EOF > "${{ github.workspace }}/pipeline-input/greenlink_ridership/file2.csv"
           ${{ env.CSV2_CONTENT }}
+          EOF
+
+          # write sample data for essential services
+          cat <<EOF > "${{ github.workspace }}/pipeline-input/to_geocode/grocery_stores__2025-07-18.csv"
+          ${{ env.CSV3_ES_CONTENT }}
           EOF
 
       - name: Run test
