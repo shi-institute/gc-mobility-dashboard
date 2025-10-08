@@ -394,6 +394,7 @@ jobs:
         run: |
           mkdir -p ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons
           mkdir -p ${{ github.workspace }}/pipeline-input/greenlink_ridership
+          mkdir -p ${{ github.workspace }}/pipeline-input/passthrough_data
 
           # write sample data for replica
           echo $AREA_GEOJSON > ${{ github.workspace }}/pipeline-input/replica_interest_area_polygons/full_area.geojson
