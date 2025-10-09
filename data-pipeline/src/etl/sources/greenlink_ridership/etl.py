@@ -74,7 +74,7 @@ class GreenlinkRidershipETL:
                 df['period'] = pandas.to_datetime(df['period'], errors='coerce')
                 invalid_dates = df['period'].isna()
                 if invalid_dates.any():
-                    print(f"⚠ ERROR. {file.name}: Dropped {invalid_dates.sum()} invalid dates.")
+                    print(f"⚠ WARNING. {file.name}: Dropped {invalid_dates.sum()} invalid dates.")
                     df = df[~invalid_dates]
                 df['period'] = df['period'].dt.strftime('%Y-%m-%d')
 

@@ -715,12 +715,13 @@ class ReplicaProcessETL:
 
                     # get destination building use for all trips
                     logger.debug('    Counting destination building uses...')
+                    area_gdf = geopandas.read_file(area_geojson_path).to_crs(epsg=4326)
                     statistics['destination_building_use'] = count_destination_building_use_in_service_area(
-                        trips_df, trips_crs, walk_gdf, bike_gdf)
+                        trips_df, trips_crs, area_gdf, walk_gdf, bike_gdf)
 
                     # get desintation building use by tour type for all trips
                     statistics['destination_building_use__by_tour_type'] = count_destination_building_use_in_service_area_by_tour_type(
-                        trips_df, trips_crs, walk_gdf, bike_gdf)
+                        trips_df, trips_crs, area_gdf, walk_gdf, bike_gdf)
 
                     # count the possible conversions in chunks (the geometry column is required, but it is huge)
                     logger.debug('    Counting possible conversions...')
@@ -1085,7 +1086,7 @@ def count_possible_conversions(trips_gdf: geopandas.GeoDataFrame, walk_gdf: geop
     return stats
 
 
-def count_destination_building_use_in_service_area(trips_df: pandas.DataFrame, trips_crs: CRS, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]:
+def count_destination_building_use_in_service_area(trips_df: pandas.DataFrame, trips_crs: CRS, area_gdf: geopandas.GeoDataFrame, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]:
     """Count the destination building uses for trips within the walking and biking service areas that currently use or could use public transit."""
 
     stats: dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]] = {
@@ -1094,6 +1095,11 @@ def count_destination_building_use_in_service_area(trips_df: pandas.DataFrame, t
     }
 
     end_points = as_points(trips_df, 'end_lng', 'end_lat', trips_crs)
+
+    # filter the end points to only those within the area
+    mask = end_points.within(area_gdf.geometry.union_all()).reindex(
+        trips_df.index, fill_value=False)
+    trips_df = trips_df[mask]
 
     # get the trips that end within the walking service area
     mask = end_points.within(walk_gdf.geometry.union_all()).reindex(
@@ -1128,7 +1134,7 @@ def count_destination_building_use_in_service_area(trips_df: pandas.DataFrame, t
     return stats
 
 
-def count_destination_building_use_in_service_area_by_tour_type(trips_df: pandas.DataFrame, trips_crs: CRS, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[str, dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]]:
+def count_destination_building_use_in_service_area_by_tour_type(trips_df: pandas.DataFrame, trips_crs: CRS, area_gdf: geopandas.GeoDataFrame, walk_gdf: geopandas.GeoDataFrame, bike_gdf: geopandas.GeoDataFrame) -> dict[str, dict[Literal['via_walk', 'via_bike'], dict[Literal['type_counts', 'subtype_counts'], dict[str, int]]]]:
     """Calls `count_destination_building_use_in_service_area` for each tour type and returns the results for each tour type in a dictionary."""
 
     tour_types = trips_df['tour_type'].dropna().str.lower().unique()
@@ -1143,6 +1149,7 @@ def count_destination_building_use_in_service_area_by_tour_type(trips_df: pandas
         stats[tour_type] = count_destination_building_use_in_service_area(
             trips_df[filter],
             trips_crs,
+            area_gdf,
             walk_gdf,
             bike_gdf,
         )
