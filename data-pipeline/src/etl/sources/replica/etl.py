@@ -306,6 +306,8 @@ class ReplicaETL:
             process = multiprocessing.Process(target=get_segments, args=(season.table_name,))
             process.start()
             process.join()  # wait for the process to finish
+            if process.exitcode != 0:
+                print(f'Process for {season.table_name} exited with code {process.exitcode}.')
             process.close()
             results_count += 1
 
@@ -558,6 +560,8 @@ class ReplicaETL:
             process = multiprocessing.Process(target=get_trips)
             process.start()
             process.join()  # wait for the process to finish
+            if process.exitcode != 0:
+                print(f'Process for {season.table_name} exited with code {process.exitcode}.')
             process.close()
             results_count += 1
 

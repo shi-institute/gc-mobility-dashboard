@@ -103,6 +103,9 @@ class ReplicaProcessETL:
             )
             process.start()
             process.join()
+            if process.exitcode != 0:
+                raise RuntimeError(
+                    f'Population processing failed with exit code {process.exitcode}.')
             process.close()
 
             statistics['synthetic_demographics'] = shared_stats.copy()
