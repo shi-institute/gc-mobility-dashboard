@@ -80,6 +80,10 @@ class FutureRoutesETL:
         self.data_geo_hash = hashlib.md5(full_area_geometry_to_hash).hexdigest()
 
     def run(self) -> Self:
+        # if the input folder does not exist, skip
+        if not self.input_folder.exists():
+            return self
+
         scenarios = self.validate_scenarios()
 
         for scenario_folder in scenarios:
