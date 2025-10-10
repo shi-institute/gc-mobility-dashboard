@@ -13,9 +13,16 @@ The data pipeline runs on Ubuntu 24 via Docker.
 
 To run the data pipeline, you must have Docker installed. You can download Docker from https://www.docker.com/get-started. If you are using Windows, you should run Docker inside of Windows Subsystem for Linux 2 (WSL2).
 
-Once Docker is installed, you can run the data pipeline with the following command:
+Once Docker is installed, you can run the data pipeline with the following commands:
 
 ```bash
+# create the input and data folders if they do not already exist
+mkdir -p ./input ./data
+
+# ensure the current user owns the input and data folders and their contents
+sudo chown -R $(id -u):$(id -g) ./input ./data
+
+# run the Docker container to execute the data pipeline
 docker run --rm -it --volume ./input:/input --volume ./data:/data --volume ./gbq-credentials:/credentials --user $(id -u):$(id -g) --env-file .env ghcr.io/shi-institute/gc-mobility-dashboard-data-pipeline:latest
 ```
 
@@ -267,10 +274,17 @@ This runner caches most of its steps on the file system. This ensures that subse
 
 Prior to using this runner, you must generate local credentials for accessing Replica's BigQuery datasets. To do this, follow the steps below:
 
-1. Run the following command in a terminal. Run this command in the same directory where you will run the data pipeline.
+1. Run the following commands in a terminal. Run these commands in the same directory where you will run the data pipeline.
 
     ```bash
-    docker run -it --volume ./gbq-credentials:/credentials --user $(id -u):$(id -g) ghcr.io/shi-institute/gc-mobility-dashboard-gbq-auth:latest
+    # create the credentials folder if it does not already exist
+    mkdir -p ./gbq-credentials
+    
+    # ensure the current user owns the credentials folder and its contents
+    sudo chown -R $(id -u):$(id -g) ./gbq-credentials
+
+    # run the Docker container to generate credentials
+    docker run -it -p 3000:3000 --volume ./gbq-credentials:/credentials --user $(id -u):$(id -g) ghcr.io/shi-institute/gc-mobility-dashboard-gbq-auth:latest
     ```
 
 2. Follow the link printed in the terminal output. This will open a Google sign-in page in your web browser.
