@@ -60,7 +60,8 @@ and or processing a specific dataset or fusion of datasets. The eight runners ar
 
 The following sections describe each step in more detail, including required inputs and generated outputs.
 
-### `census_acs_5year`
+<details>
+<summary><h3><code>census_acs_5year</code></h3></summary>
 
 This runner downloads and processes 5-year American Community Survey data from the US Census Bureau.
 
@@ -90,7 +91,9 @@ This runner performs the following steps:
 
 This runner stores all intermediate and final outputs in the `./data/census_acs_5year` folder. The final, combined output is `./data/census_acs_5year/time_series.json`.
 
-### `geocoder`
+</details>
+<details>
+<summary><h3><code>geocoder</code></h3></summary>
 
 A geocoder is a tool that converts addresses into geographic coordinates (latitude and longitude).
 
@@ -145,7 +148,9 @@ This runner stores all outputs in the `./data/geocoded` folder. For each input C
 - A GeoJSON file containing all successfully geocoded addresses. The file name is the same as the input file, but it is prepended with `geocoded_` and uses a `.geojson` extension. For example, `geocoded_grocery_stores__2025-01-31.geojson`.
 - A CSV file containing all addresses that could not be geocoded. The file name is the same as the input file, but it is prepended with `failed_`. For example, `failed_grocery_stores__2025-01-31.csv`. This file is only generated if at least one row was not geocoded.
 
-### `greenlink_gtfs`
+</details>
+<details>
+<summary><h3><code>greenlink_gtfs</code></h3></summary>
 
 This runner downloads and processes [Greenlink's GTFS feed](https://gtfs.greenlink.cadavl.com/GTA/GTFS/GTFS_GTA.zip). A [GTFS feed](https://gtfs.org/) is a standardized format for public transportation schedules and associated geographic information. It includes information about route and stop locations.
 
@@ -195,7 +200,9 @@ For each season, this runner outputs the routes, stops, and service areas to `./
 
 Service coverage statistics for each season and area combination are stored as an array of objects in `./data/greenlink_gtfs/service_coverage_stats.json`.
 
-### `passthrough`
+</details>
+<details>
+<summary><h3><code>passthrough</code></h3></summary>
 
 This runner copies static files from the `input/passthrough` folder to the `data/passthrough` folder.
 
@@ -216,7 +223,9 @@ All inputs should be placed in the `./input/passthrough` folder. The folder may 
 
 This runner stores all outputs in the `./data/passthrough` folder. The output folder will contain the same files and folder structure as the input folder.
 
-### `greenlink_ridership`
+</details>
+<details>
+<summary><h3><code>greenlink_ridership</code></h3></summary>
 
 This runner reads multiple ridership CSV files in the format provided by Greenlink and converts them into a wall-formatted JSON file for each season and a single, combined JSON file for all seasons.
 
@@ -258,7 +267,9 @@ The combined, unsorted output is stored in `./data/greenlink_ridership/all_rider
 
 Seasonal, unsorted outputs are stored in `./data/greenlink_ridership/<year>/<Q2 or Q4>/ridership.json`.
 
-### `replica`
+</details>
+<details>
+<summary><h3><code>replica</code></h3></summary>
 
 The `replica` runner is responsible for downloading and processing Replica's synthetic population and trip data for a set of specified areas. Processing steps include generating demographic summaries, trip summaries, and transit accessibility statistics. Vector tiles are also generated for visualizing the travel patterns of the synthetic population.
 
@@ -384,7 +395,9 @@ This runner is broken into two main phases: downloading data from Replica and pr
 
 This runner stores all outputs in the `./data/replica` folder. The outputs are organized by area and season. For example, `./data/replica/City of Travelers Rest/2023/Q4`.
 
-### `essential_services`
+</details>
+<details>
+<summary><h3><code>essential_services</code></h3></summary>
 
 This runner creates spatially-enabled datatsets of essential services and calculates their accessibility via public transit.
 
@@ -434,7 +447,9 @@ For each season-area combination, the access buffers, destination buffers, and a
 
 The access statistics across all years are stored in `./data/essential_services/essential_services_stats.json`.
 
-### `future_routes`
+</details>
+<details>
+<summary><h3><code>future_routes</code></h3></summary>
 
 The `future_routes` runner calculates demographics for the areas served by proposed future transit routes and estimates what percentage of trips in the route's service area could be served by the route. Many of the statistics calculated by this runner are equivalent to those calculated by the `replica` runner.
 
@@ -489,6 +504,36 @@ For each input future route, this runner stores all outputs in the `./data/futur
 - `walk_convertable_trips.geojson`: The non-public-transit trips from the latest season from the `replica` runner that wholly fall within the walking service area.
 - `bike_convertable_trips.geojson`: The non-public-transit trips from the latest season from the `replica` runner that wholly fall within the biking service area.
 - `stats.json`: Statistics about the future route. Open the generated file to see the exact statistics.
+
+</details>
+
+## Running a subset of the data pipeline (updating the output with new data)
+
+TODO: @jackbuehner
+- running a subset
+- updating data - review dependencies
+- special case: replica determines the seasons shown on the dashboard
+- Example: updating for new Replica data
+- Example: updating for new Greenlink rider data
+- Example: updating for new essential services data
+
+## Required passthrough data
+
+This section describes the input files for the `passthrough_data` runner. These files are used by the web application and must be structured in a specific way.
+Follow the instructions for updating data described in the following sections to ensure the web app does not break.
+
+### `operating_funds.json`
+
+TODO: @mwiniski
+- data source (with links)
+- structuring the JSON (include a short snippet in a code fence)
+
+### `tab5_scenarios.json`
+
+TODO: @mwiniski
+- relationship to `future_routes` ETL
+- data sources (Greenlink - costs; Census - demographics)
+- structure of then JSON: how scenarios and features fit together. Point to https://github.com/shi-institute/gc-mobility-dashboard/blob/3e48b186564f8e239dba75d83897b701ddec2839/frontend/src/data.d.ts#L584-L652?
 
 ## Developing
 
