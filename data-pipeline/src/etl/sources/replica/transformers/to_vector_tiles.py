@@ -53,7 +53,6 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, out
         '--force',
         '--name', name,
         '--projection', 'EPSG:3857',
-        '--no-tile-compression',
         # dynamically drop features at a zoom level if a tile at that zoom level is too large (> 500 KB)
         '--drop-densest-as-needed',
         '--json-progress',
@@ -150,6 +149,14 @@ def to_vector_tiles(gdf: geopandas.GeoDataFrame, name: str, layer_name: str, out
     if should_delete_temp_file and os.path.exists(input_geojson_path):
         os.remove(input_geojson_path)
 
+    # rename all pbf files to lowercase .pbf.gz extension
+    for root, _, files in os.walk(output_folder):
+        for filename in files:
+            if filename.endswith('.pbf'):
+                old_path = os.path.join(root, filename)
+                new_path = os.path.join(root, filename[:-4] + '.pbf.gz')
+                os.rename(old_path, new_path)
+
 
 def create_vector_tile_server_index(name: str) -> dict[str, Any]:
     return {
@@ -159,7 +166,7 @@ def create_vector_tile_server_index(name: str) -> dict[str, Any]:
         "type": "indexedFlat",
         "defaultStyles": "../resources/styles",
         "tiles": [
-            "../../{z}/{x}/{y}.pbf"
+            "../../{z}/{x}/{y}.pbf.gz"
         ],
         "exportTilesAllowed": False,
         "initialExtent": {
@@ -313,6 +320,12 @@ def create_vector_tile_server_index(name: str) -> dict[str, Any]:
                     "resolution": 0.018661383852976040625,
                     "scale": 70.5310735
                 }]
+        },
+        "resourceInfo": {
+            "styleVersion": 8,
+            # the ArcGIS SDK for JavaScript ignores this setting, instead expecting the
+            # browser to handle decompression based on the Content-Encoding header in the response
+            "tileCompression": "gzip"
         }
     }
 
