@@ -489,7 +489,7 @@ async function resolveObjectOfPromises<T extends DataPromises[number]>(
   return data as ResolvedData<T>;
 }
 
-function handleError(key: string, shouldThrow = true, supressIncorrectHeaderCheck = false) {
+function handleError(key: string, shouldThrow = true, supress404OrIncorrectHeaderCheck = false) {
   return (error: Error | string) => {
     const errorMessage = typeof error === 'string' ? error : error.message || 'Unknown error';
 
@@ -499,7 +499,11 @@ function handleError(key: string, shouldThrow = true, supressIncorrectHeaderChec
       return null;
     }
 
-    if (supressIncorrectHeaderCheck && errorMessage === 'incorrect header check') {
+    if (
+      (supress404OrIncorrectHeaderCheck && errorMessage === 'incorrect header check') ||
+      (supress404OrIncorrectHeaderCheck &&
+        errorMessage.startsWith('Network response was not ok. Status: 404'))
+    ) {
       console.debug(`Ignoring incorrect header check error for ${key}:`, error);
       return null;
     }
@@ -777,7 +781,7 @@ function constructReplicaPaths(
         network_segments_style:
           __GCMD_DATA_ORIGIN__ +
           __GCMD_DATA_PATH__ +
-          `/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}/VectorTileServer/resources/styles/root.json`,
+          `/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}.tar/VectorTileServer/resources/styles/root.json`,
         population:
           __GCMD_DATA_ORIGIN__ +
           __GCMD_DATA_PATH__ +

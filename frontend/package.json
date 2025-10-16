@@ -11,10 +11,14 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/",
-    "zipdata": "tar --create --use-compress-program=pigz --file data.tar.gz public"
+    "zipdata": "tar --create --use-compress-program=pigz --file data.tar.gz public",
+    "preinstall": "npm run install-cotar-core",
+    "install-cotar-core": "./install-cotar-core.sh"
   },
   "dependencies": {
     "@arcgis/map-components": "^4.33.2",
+    "@chunkd/source-http": "^11.1.0",
+    "@cotar/core": "file:cotar-core-6.0.1.tgz",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@observablehq/plot": "^0.6.17",
@@ -30,14 +34,12 @@
   "devDependencies": {
     "@emotion/babel-plugin": "^11.13.5",
     "@eslint/js": "^9.21.0",
-    "@types/adm-zip": "^0.5.7",
     "@types/d3": "^7.4.3",
     "@types/object-path": "^0.11.4",
     "@types/pako": "^2.0.3",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.4.1",
-    "adm-zip": "^0.5.16",
     "eslint": "^9.21.0",
     "eslint-plugin-react-dom": "^1.43.0",
     "eslint-plugin-react-hooks": "^5.1.0",

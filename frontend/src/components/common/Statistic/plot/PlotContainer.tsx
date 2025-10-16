@@ -72,8 +72,9 @@ export function PlotContainer(props: PlotFigureProps) {
         marks: [],
         height: 0,
         caption: html`<i
-          >${options.sampleSizeIsTooSmall ||
-          'The data sample size is too small to display this figure.'}</i
+          >${typeof options.sampleSizeIsTooSmall === 'string'
+            ? options.sampleSizeIsTooSmall
+            : 'The data sample size is too small to display this figure.'}</i
         >`,
       });
     } else {
