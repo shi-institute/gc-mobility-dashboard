@@ -18,7 +18,7 @@
   "dependencies": {
     "@arcgis/map-components": "^4.33.2",
     "@chunkd/source-http": "^11.1.0",
-    "@cotar/core": "file:cotar-core-6.0.1.tgz",
+    "@cotar/core": "file:@cotar/core@6.0.1+50eff77.tgz",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@observablehq/plot": "^0.6.17",

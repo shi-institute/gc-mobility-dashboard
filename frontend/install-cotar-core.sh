@@ -2,12 +2,15 @@
 set -e
 
 # clean from any previous runs
-rm -rf tmp_cotar cotar-core-*.tgz
+rm -rf @cotar cotar-core-*.tgz
 
 # clone and checkout desired revision
-git clone https://github.com/linz/cotar.git tmp_cotar
-cd tmp_cotar
-git checkout 50eff7712947be256a15079e195503e136df75b6
+commit=50eff7712947be256a15079e195503e136df75b6
+git init @cotar
+cd @cotar
+git config advice.detachedHead false
+git fetch --depth 1 https://github.com/linz/cotar.git $commit
+git checkout FETCH_HEAD
 
 # install and build
 npm i
@@ -15,13 +18,17 @@ npm run build
 
 # pack subpackage
 cd packages/core
+current_version=$(npm pkg get version --workspace @cotar/core | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+new_version="$current_version+$(git rev-parse --short HEAD)"
+npm version "$new_version" --no-git-tag-version --allow-same-version
 npm pack --pack-destination ../../
 
 # install tarball in main project
 cd ../../
 tgz=$(ls cotar-core-*.tgz | head -n 1)
-npm install "./$tgz"
+mv "$tgz" "core@$new_version.tgz"
+cd ../
+npm install "./@cotar/core@$new_version.tgz"
 
 # clean up
-cd ../
-rm -rf tmp_cotar "$tgz"
+rm -rf @cotar
