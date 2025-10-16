@@ -26,6 +26,10 @@ RUN cp tippecanoe/unit /usr/local/bin/unit
 RUN cp tippecanoe/tile-join /usr/local/bin/tile-join
 RUN rm -rf tippecanoe
 
+# install cotar
+RUN apt-get update && apt-get install -y nodejs npm && rm -rf /var/lib/apt/lists/*
+RUN npm install -g @cotar/cli
+
 # allow mounting volumes
 RUN mkdir -p /data && ln -s /data /home/pipeline/data
 RUN mkdir -p /input && ln -s /input /home/pipeline/input
@@ -45,6 +49,11 @@ RUN echo "ubuntu ALL=(ALL) NOPASSWD: /usr/sbin/groupadd, /usr/sbin/useradd, /bin
 
 # copy in the source code
 COPY src ./src/
+
+# install node modules for the cotar index-builidng script
+WORKDIR /home/pipeline/src/cotar
+RUN npm install
+WORKDIR /home/pipeline
 
 # start the application when the container starts
 ENTRYPOINT ["/entrypoint.sh"]
