@@ -3,6 +3,8 @@ import os
 import sys
 from typing import Optional
 
+from etl.finalize import finalize
+
 # get the absolute path to the directory containing the source runners
 sources_dir = os.path.join(os.path.dirname(__file__), 'sources')
 
@@ -62,6 +64,9 @@ def load_source_runners():
     # sort the source runners such that the ones with after declarations are run after their dependencies
     source_runners = dict(sorted(source_runners.items(), key=lambda item: (
         after_declarations.get(item[0], []), item[0])))
+
+    # add the finalize function as a special source runner that runs last
+    source_runners['finalize'] = finalize  # compress/package the data for deployment
 
     return source_runners
 

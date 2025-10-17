@@ -9,6 +9,7 @@ import math
 import multiprocessing
 import os
 import shutil
+import tarfile
 import tempfile
 import time
 from multiprocessing.managers import DictProxy, ValueProxy
@@ -873,12 +874,14 @@ class ReplicaProcessETL:
                             tile_bar.update(current_percent_complete - tile_bar.n)
                         tile_bar.close()
 
-                        # zip (no compression) the tiles folder
-                        zip_filename = f'{tile_folder_path}.vectortiles'
-                        if os.path.exists(zip_filename):
-                            os.remove(zip_filename)
-                        os.system(
-                            f'cd "{tile_folder_path}" && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
+                        # archive (no compression) the tiles folder
+                        tar_filename = f'{tile_folder_path}.vectortiles'
+                        if os.path.exists(tar_filename):
+                            os.remove(tar_filename)
+                        with tarfile.open(tar_filename, 'w') as tar:
+                            for name in os.listdir(tile_folder_path):
+                                path = os.path.join(tile_folder_path, name)
+                                tar.add(path, arcname=name)
 
                     except NoVectorDataError:
                         logger.warning(

@@ -2,8 +2,9 @@ import os
 import shutil
 import subprocess
 import tarfile
-import threading
+import tempfile
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from tqdm import tqdm
@@ -12,56 +13,43 @@ FILE_EXTENSIONS_TO_MOVE = ['.json', '.geojson', '.deflate', '.vectortiles']
 PIPELINE_DATA_DIR = './data'
 PUBLIC_DIR_NAME = '__public'
 
+data_dir = Path(PIPELINE_DATA_DIR).resolve()
+public_dir = data_dir / PUBLIC_DIR_NAME
+
 
 def finalize():
     """
     Grabs the data from the ETL process that will be used by the frontend,
     compresses it, and packages it into a zip file for each deployment.
     """
-    data_dir = Path(PIPELINE_DATA_DIR)
-    public_dir = data_dir / PUBLIC_DIR_NAME
+    print('\nPreparing to copy files for distribution...')
 
     # ensure the public directory exists and is empty
     shutil.rmtree(public_dir, ignore_errors=True)
     public_dir.mkdir(parents=True, exist_ok=True)
 
-    # copy approved files from the data directory to the public directory
-    def should_copy_file(source_path: Path) -> bool:
-        """Filter function to determine if a file should be copied."""
-        source_str = str(source_path)
-
-        # always copy directories
-        if source_path.is_dir():
-            return True
-
-        # only allow moving certain file types
-        is_approved_extension = any(source_str.endswith(ext) for ext in FILE_EXTENSIONS_TO_MOVE)
-        if not is_approved_extension:
-            return False
-
-        # only copy time series Census ACS 5-year data
-        if 'census_acs_5year' in source_str:
-            return source_str.endswith('time_series.json')
-
-        return True
+    # collect all approved files to copy from the data directory to the public directory
+    items_to_copy = []
+    total_bytes = 0
     for item in data_dir.rglob('*'):
         # skip anything inside __public
         if PUBLIC_DIR_NAME in item.parts:
             continue
 
         if should_copy_file(item):
-            # calculate relative path from data directory
-            relative_path = item.relative_to(data_dir)
-            destination = public_dir / relative_path
+            items_to_copy.append(item)
+            if item.is_file():
+                total_bytes += item.stat().st_size
+    print(f'  Found {len(items_to_copy)} files to link or copy ({total_bytes // 1000000} MiB).')
 
-            if item.is_dir():
-                destination.mkdir(parents=True, exist_ok=True)
-            else:
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(item, destination)
+    # copy with progress bar
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(tqdm(pool.map(link_or_copy, items_to_copy), total=len(
+            items_to_copy), desc="Linking or copying files"))
 
     # recursively delete empty directories in public/data
-    delete_empty_directories(data_dir)
+    print("Deleting empty directories...")
+    delete_empty_directories(public_dir)
 
     # compress JSON files in public/data
     deflate_json_files(public_dir)
@@ -75,34 +63,81 @@ def finalize():
         build_season_index(public_dir / 'replica' / area_names[0] / 'statistics')
 
     # buld an index of future routes
-    future_routes_dir = public_dir / 'future_routes'
-    if future_routes_dir.exists():
-        future_routes_index_path = future_routes_dir / 'future_routes_index.txt'
-        future_routes_index = '\n'.join(
-            [item.name for item in future_routes_dir.iterdir() if item.is_file() or item.is_dir()])
-        with open(future_routes_index_path, 'w') as f:
-            f.write(future_routes_index)
-        print(f"Future routes index written to: {future_routes_index_path}")
+    build_future_routes_index(public_dir / 'future_routes')
 
-    # # zip the public directory
-    # create_cloud_optimized_tar(public_dir)
+    # # put the public dir in an uncompressed tar file for easy transfer
+    # tar_path = data_dir / '__public.tar'
+    # print(f'Creating uncompressed tar file: {tar_path}')
+    # with tarfile.open(tar_path, 'w') as tar:
+    #     tar.add(public_dir, arcname=PUBLIC_DIR_NAME)
 
     print('Done copying and processing data')
     return
 
 
+def should_copy_file(source_path: Path) -> bool:
+    """Filter function to determine if a file should be copied."""
+    source_str = str(source_path)
+
+    # always copy directories
+    if source_path.is_dir():
+        return True
+
+    # only allow moving certain file types
+    is_approved_extension = any(source_str.endswith(ext) for ext in FILE_EXTENSIONS_TO_MOVE)
+    if not is_approved_extension:
+        return False
+
+    # only copy time series Census ACS 5-year data
+    if 'census_acs_5year' in source_str:
+        return source_str.endswith('time_series.json')
+
+    return True
+
+
+def link_or_copy(item: Path) -> None:
+    """
+    Create a symlink from item in data_dir to the corresponding location in public_dir.
+    If symlinking fails, copy the file instead.
+
+    This method is much faster because it avoids duplicating data on disk.
+
+    Args:
+        item (Path): The file or directory to link or copy.
+    """
+    relative = item.relative_to(data_dir)
+    dest = public_dir / relative
+    try:
+        if item.is_dir():
+            dest.mkdir(parents=True, exist_ok=True)
+        else:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            # create symlink if not exists
+            if not dest.exists():
+                os.symlink(os.path.abspath(item), dest)
+    except OSError as e:
+        tqdm.write(f"Symlink failed for {item}: {e} — copying instead.")
+        try:
+            shutil.copy(item, dest)
+        except Exception as e2:
+            tqdm.write(f"Fallback copy failed for {item}: {e2}")
+
+
 def delete_empty_directories(path: Path) -> None:
     """Recursively delete empty directories."""
-    if not path.is_dir():
-        return
+    for dirpath, dirnames, filenames in os.walk(path, topdown=False, followlinks=False):
+        directory_path = Path(dirpath)
 
-    # delete empty subdirectories first
-    for subpath in path.iterdir():
-        delete_empty_directories(subpath)
+        # skip symlinks
+        if directory_path.is_symlink():
+            continue
 
-    # if the directory is now empty, delete it
-    if not any(path.iterdir()):
-        path.rmdir()
+        try:
+            # delete the directory if empty
+            if not dirnames and not filenames:
+                directory_path.rmdir()
+        except OSError:
+            pass
 
 
 def deflate_json_files(directory: Path) -> None:
@@ -114,7 +149,12 @@ def deflate_json_files(directory: Path) -> None:
     geojson_files = list(directory.rglob('*.geojson'))
     all_json_files = json_files + geojson_files
 
-    for json_file in all_json_files:
+    count = len(all_json_files)
+    if count == 0:
+        print("No .json or .geojson files found to deflate")
+        return
+
+    for json_file in tqdm(all_json_files, desc="Deflating JSON files"):
         with open(json_file, 'rb') as f_in:
             compressed_data = zlib.compress(f_in.read())
             with open(f'{json_file}.deflate', 'wb') as f_out:
@@ -157,13 +197,74 @@ def unzip_vectortiles(directory: Path) -> None:
                 f"Error processing file {vectortiles_file.name} in directory {directory}: {error}")
 
 
+def _repackage_vectortiles(vectortiles_file: Path) -> None:
+    try:
+        tar_output = vectortiles_file.with_suffix('.tar')
+
+        if zipfile.is_zipfile(vectortiles_file):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # extract to a folder in a temp directory
+                with zipfile.ZipFile(vectortiles_file, 'r') as zip_ref:
+                    zip_ref.extractall(tmpdir)
+
+                # delete the original .vectortiles file
+                vectortiles_file.unlink()
+
+                # create unoptimized tar
+                result = subprocess.run(
+                    ['cotar', 'tar', tar_output.resolve().as_posix(), './'],
+                    check=True,
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True
+                )
+                if result.stderr:
+                    tqdm.write(result.stderr)
+
+        elif tarfile.is_tarfile(vectortiles_file):
+            shutil.move(vectortiles_file, tar_output)
+        else:
+            raise ValueError(f"{vectortiles_file} is not a valid zip or tar file")
+
+        # create index for the tar file using node.js
+        try:
+            npm_root = subprocess.run(
+                ["npm", "root", "-g"], capture_output=True, text=True, check=True
+            ).stdout.strip()
+            env = os.environ.copy()
+            env["NODE_PATH"] = npm_root
+
+            script_path = Path('./src/cotar/createCotarIndex.mjs').resolve()
+            result = subprocess.run(
+                ['node', script_path.name, '/' + tar_output.as_posix()],
+                check=True,
+                cwd=script_path.parent,
+                env=env,
+                capture_output=True,
+                text=True
+            )
+
+            if result.stderr:
+                tqdm.write(result.stderr)
+
+        except subprocess.CalledProcessError as e:
+            tqdm.write(f"Node.js failed:\nSTDOUT:\n{e.stdout}\nSTDERR:\n{e.stderr}")
+            raise
+
+        except Exception as index_error:
+            tqdm.write(f"Error creating index for {tar_output.name}: {index_error}")
+            raise
+
+    except Exception as error:
+        tqdm.write(f"Error repackaging {vectortiles_file.name}: {error}")
+
+
 def repackage_vectortiles(directory: Path) -> None:
     """
     Recursively look for .vectortiles files in a directory and its subdirectories.
 
     If found, repackage them into cloud-optimized tar files using cotar.
     """
-    # Find all .vectortiles directories
     vectortiles_files = list(directory.rglob('*.vectortiles'))
     total_files = len(vectortiles_files)
 
@@ -171,59 +272,13 @@ def repackage_vectortiles(directory: Path) -> None:
         print("No .vectortiles files found")
         return
 
-    print(f"Found {len(vectortiles_files)} .vectortiles files to repackage")
+    with ThreadPoolExecutor() as executor:
+        futures = {executor.submit(_repackage_vectortiles, vectortiles_file): vectortiles_file
+                   for vectortiles_file in vectortiles_files}
 
-    for vectortiles_file in tqdm(vectortiles_files, desc="Repackaging vector tiles"):
-        try:
-            # specify a tar file with same name as vectortiles_file but with .tar extension
-            tar_output = vectortiles_file.with_suffix('.tar')
-
-            # extract to a folder with the same name as the file (without .vectortiles)
-            unzip_path = vectortiles_file.with_suffix('')
-            with zipfile.ZipFile(vectortiles_file, 'r') as zip_ref:
-                zip_ref.extractall(unzip_path)
-
-            # delete the original .vectortiles file
-            vectortiles_file.unlink()
-
-            # create unoptimized tar
-            result = subprocess.run(['cotar', 'tar', '../' + tar_output.name, './'],
-                                    check=True, cwd=unzip_path, capture_output=True, text=True)
-            # tqdm.write(result.stdout)
-            if result.stderr:
-                tqdm.write(result.stderr)
-
-            # delete the unzipped directory
-            shutil.rmtree(unzip_path)
-
-            # create index for the tar file using node.js
-            try:
-                # determine the global npm root to set NODE_PATH to match globally installed packages
-                npm_root = subprocess.run(
-                    ["npm", "root", "-g"], capture_output=True, text=True, check=True
-                ).stdout.strip()
-                env = os.environ.copy()
-                env["NODE_PATH"] = npm_root
-
-                # run the node script
-                script_path = Path('./src/cotar/createCotarIndex.mjs').resolve()
-                result = subprocess.run(['node', script_path.name, '/' + tar_output.as_posix()],
-                                        check=True, cwd=script_path.parent, env=env,
-                                        capture_output=True, text=True)
-
-                if result.stderr:
-                    tqdm.write(result.stderr)
-
-            except subprocess.CalledProcessError as e:
-                tqdm.write(f"Node.js failed:\nSTDOUT:\n{e.stdout}\nSTDERR:\n{e.stderr}")
-                raise
-
-            except Exception as index_error:
-                tqdm.write(f"Error creating index for {tar_output.name}: {index_error}")
-                raise
-
-        except Exception as error:
-            print(f"Error repackaging {vectortiles_file.name}: {error}")
+        for _ in tqdm(as_completed(futures), total=total_files,
+                      desc="Repackaging vector tiles"):
+            pass
 
 
 def build_area_index(replica_directory: Path) -> list[str]:
@@ -236,7 +291,8 @@ def build_area_index(replica_directory: Path) -> list[str]:
     Returns:
         List of area names (directory names)
     """
-    print(f"Building area index from directory: {replica_directory}")
+    print(
+        f"Building area index from directory: {replica_directory.resolve().relative_to(data_dir).as_posix()}")
 
     area_names = []
     for item in replica_directory.iterdir():
@@ -248,7 +304,7 @@ def build_area_index(replica_directory: Path) -> list[str]:
     index_file_path = replica_directory / 'area_index.txt'
     with open(index_file_path, 'w') as f:
         f.write(area_index)
-    print(f"Area index written to: {index_file_path}")
+    print(f"  Area index written to: {index_file_path.resolve().relative_to(data_dir).as_posix()}")
 
     return area_names
 
@@ -260,7 +316,8 @@ def build_season_index(stats_directory: Path) -> None:
     Args:
         stats_directory: Path to the directory to scan for season files
     """
-    print(f"Building seasons index from directory: {stats_directory}")
+    print(
+        f"Building seasons index from directory: {stats_directory.resolve().relative_to(data_dir).as_posix()}")
 
     season_names = []
     for item in stats_directory.iterdir():
@@ -281,4 +338,25 @@ def build_season_index(stats_directory: Path) -> None:
     season_index_path = stats_directory / '../../season_index.txt'
     with open(season_index_path, 'w') as f:
         f.write(season_index)
-    print(f"Season index written to: {season_index_path}")
+    print(
+        f"  Season index written to: {season_index_path.resolve().relative_to(data_dir).as_posix()}")
+
+
+def build_future_routes_index(future_routes_directory: Path) -> None:
+    """
+    Builds an index of future routes from the given directory.
+
+    Args:
+        future_routes_directory: Path to the directory to scan for future routes
+    """
+    print(
+        f"Building future routes index from directory: {future_routes_directory.resolve().relative_to(data_dir).as_posix()}")
+
+    if future_routes_directory.exists():
+        future_routes_index_path = future_routes_directory / 'future_routes_index.txt'
+        future_routes_index = '\n'.join(
+            [item.name for item in future_routes_directory.iterdir() if item.is_file() or item.is_dir()])
+        with open(future_routes_index_path, 'w') as f:
+            f.write(future_routes_index)
+        print(
+            f"  Future routes index written to: {future_routes_index_path.resolve().relative_to(data_dir).as_posix()}")
