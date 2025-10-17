@@ -271,6 +271,13 @@ def build_area_index(replica_directory: Path) -> list[str]:
         if item.is_dir():
             area_names.append(item.name)
 
+    # sort alphabetically, but put 'full_area' first if it exists and may be included
+    area_names.sort()
+    if 'full_area' in area_names:
+        area_names.remove('full_area')
+        if os.getenv('INCLUDE_FULL_AREA_IN_AREAS', '0') == '1':
+            area_names.insert(0, 'full_area')
+
     # write the area names to a text file
     area_index = '\n'.join(area_names)
     index_file_path = replica_directory / 'area_index.txt'
