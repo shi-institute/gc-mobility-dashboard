@@ -336,8 +336,14 @@ def build_future_routes_index(future_routes_directory: Path) -> None:
 
     if future_routes_directory.exists():
         future_routes_index_path = future_routes_directory / 'future_routes_index.txt'
-        future_routes_index = '\n'.join(
-            [item.name for item in future_routes_directory.iterdir() if item.is_file() or item.is_dir()])
+        future_routes = [item for item in future_routes_directory.iterdir()
+                         if item.is_file() or item.is_dir()]
+
+        # sort alphabetically
+        future_routes.sort(key=lambda x: x.name.lower())
+
+        # write the future route names to a text file
+        future_routes_index = '\n'.join([item.name for item in future_routes])
         with open(future_routes_index_path, 'w') as f:
             f.write(future_routes_index)
         print(
