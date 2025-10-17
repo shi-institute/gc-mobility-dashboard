@@ -162,41 +162,6 @@ def deflate_json_files(directory: Path) -> None:
         json_file.unlink()  # remove the original .json file
 
 
-def unzip_vectortiles(directory: Path) -> None:
-    """
-    Recursively look for .vectortiles files in a directory and its subdirectories.
-
-    If found, unzip them (they are zip files) and move them to the same directory.
-    """
-    import zipfile
-
-    from tqdm import tqdm
-
-    # Count total files first
-    vectortiles_files = list(directory.rglob('*.vectortiles'))
-    total_files = len(vectortiles_files)
-
-    if total_files == 0:
-        print("No .vectortiles files found")
-        return
-
-    print(f"Found {total_files} .vectortiles files to extract")
-
-    for vectortiles_file in tqdm(vectortiles_files, desc="Extracting vector tiles"):
-        try:
-            # extract to a folder with the same name as the file (without .vectortiles)
-            unzip_path = vectortiles_file.with_suffix('')
-
-            with zipfile.ZipFile(vectortiles_file, 'r') as zip_ref:
-                zip_ref.extractall(unzip_path)
-
-            # delete the original .vectortiles file
-            vectortiles_file.unlink()
-        except Exception as error:
-            print(
-                f"Error processing file {vectortiles_file.name} in directory {directory}: {error}")
-
-
 def _repackage_vectortiles(vectortiles_file: Path) -> None:
     try:
         tar_output = vectortiles_file.with_suffix('.tar')
