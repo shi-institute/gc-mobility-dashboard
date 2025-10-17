@@ -187,7 +187,14 @@ def _repackage_vectortiles(vectortiles_file: Path) -> None:
                     tqdm.write(result.stderr)
 
         elif tarfile.is_tarfile(vectortiles_file):
-            shutil.move(vectortiles_file, tar_output)
+            # resolve the symlink to the actual/original file path
+            real_src = os.path.realpath(vectortiles_file)
+
+            # copy the tar file directly
+            shutil.copy2(real_src, tar_output)
+
+            # delete the symnlink (not the original file)
+            os.remove(vectortiles_file)
         else:
             raise ValueError(f"{vectortiles_file} is not a valid zip or tar file")
 
