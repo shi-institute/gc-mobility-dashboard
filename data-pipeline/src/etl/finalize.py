@@ -312,6 +312,9 @@ def build_season_index(stats_directory: Path) -> None:
 
     unique_season_names = list(set(season_names))
 
+    # sort newest to oldest
+    unique_season_names.sort(key=lambda x: (int(x.split(':')[1]), x.split(':')[0]), reverse=True)
+
     # write the season quarter-year pairs to a text file
     season_index = '\n'.join(unique_season_names)
     season_index_path = stats_directory / '../../season_index.txt'
