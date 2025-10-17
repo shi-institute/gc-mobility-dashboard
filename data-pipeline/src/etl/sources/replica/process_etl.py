@@ -878,7 +878,7 @@ class ReplicaProcessETL:
                         tar_filename = f'{tile_folder_path}.vectortiles'
                         if os.path.exists(tar_filename):
                             os.remove(tar_filename)
-                        with tarfile.open(tar_filename, 'w') as tar:
+                        with tarfile.open(tar_filename, 'w', format=tarfile.USTAR_FORMAT) as tar:
                             for name in os.listdir(tile_folder_path):
                                 path = os.path.join(tile_folder_path, name)
                                 tar.add(path, arcname=name)
