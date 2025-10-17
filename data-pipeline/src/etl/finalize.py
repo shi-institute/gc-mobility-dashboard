@@ -40,7 +40,7 @@ def finalize():
             items_to_copy.append(item)
             if item.is_file():
                 total_bytes += item.stat().st_size
-    print(f'  Found {len(items_to_copy)} files to link or copy ({total_bytes // 1000000} MiB).')
+    print(f'  Found {len(items_to_copy)} files to link or copy ({total_bytes // 1000000} MB).')
 
     # copy with progress bar
     with ThreadPoolExecutor(max_workers=8) as pool:
