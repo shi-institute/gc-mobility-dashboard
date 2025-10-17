@@ -125,7 +125,7 @@ def link_or_copy(item: Path) -> None:
 
 def delete_empty_directories(path: Path) -> None:
     """Recursively delete empty directories."""
-    for dirpath, dirnames, filenames in os.walk(path, topdown=False, followlinks=False):
+    for dirpath, _, __ in os.walk(path, topdown=False, followlinks=False):
         directory_path = Path(dirpath)
 
         # skip symlinks
@@ -134,7 +134,7 @@ def delete_empty_directories(path: Path) -> None:
 
         try:
             # delete the directory if empty
-            if not dirnames and not filenames:
+            if not any(directory_path.iterdir()):  # note that we must re-check since the children may have been deleted
                 directory_path.rmdir()
         except OSError:
             pass
