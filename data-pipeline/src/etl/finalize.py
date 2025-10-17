@@ -72,6 +72,14 @@ def finalize():
     #     tar.add(public_dir, arcname=PUBLIC_DIR_NAME)
 
     print('Done copying and processing data')
+
+    # count the total bytes in the final output
+    final_total_bytes = 0
+    for item in public_dir.rglob('*'):
+        if item.is_file():
+            final_total_bytes += item.stat().st_size
+    print(f'  Final output size: {final_total_bytes // 1000000} MB.')
+
     return
 
 
