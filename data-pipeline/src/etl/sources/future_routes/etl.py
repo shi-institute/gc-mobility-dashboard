@@ -47,7 +47,6 @@ class FutureRoutesETL:
     replica_output_folder = Path('./data/replica')
 
     season: Season
-    areas: list[tuple[Path, str]]
 
     data_geo_hash: str
 
@@ -80,6 +79,10 @@ class FutureRoutesETL:
         self.data_geo_hash = hashlib.md5(full_area_geometry_to_hash).hexdigest()
 
     def run(self) -> Self:
+        # if the input folder does not exist, skip
+        if not self.input_folder.exists():
+            return self
+
         scenarios = self.validate_scenarios()
 
         for scenario_folder in scenarios:
@@ -286,6 +289,8 @@ class FutureRoutesETL:
         bike_service_area_path = scenario_input_folder / self.required_scenario_files['bikeshed']
         season_str = f'{self.season['region']}_{self.season["year"]}_{self.season["quarter"]}'
 
+        full_area_gdf = geopandas.read_file(
+            './input/replica_interest_area_polygons/full_area.geojson', columns=['geometry']).dissolve()
         walk_gdf = geopandas.read_file(walk_service_area_path, columns=['geometry'])
         bike_gdf = geopandas.read_file(bike_service_area_path, columns=['geometry'])
 
@@ -322,11 +327,11 @@ class FutureRoutesETL:
         # get destination building uses for all trips
         logger.debug('    Counting destination building uses...')
         statistics['destination_building_use'] = count_destination_building_use_in_service_area(
-            trips_df, crs, walk_gdf, bike_gdf)
+            trips_df, crs, full_area_gdf, walk_gdf, bike_gdf)
 
         # get desintation building use by tour type for all trips
         statistics['destination_building_use__by_tour_type'] = count_destination_building_use_in_service_area_by_tour_type(
-            trips_df, crs, walk_gdf, bike_gdf)
+            trips_df, crs, full_area_gdf, walk_gdf, bike_gdf)
 
         return statistics
 
