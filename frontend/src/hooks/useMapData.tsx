@@ -617,102 +617,26 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
     });
   }, [data]);
 
+  // Family Medicine facilities using the helper
   const familyMedicineFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('family_medicine_locations'))
-        // only keep the first occurrence because it would be confusing to show family medicine facilities on top of each other over time
-        .slice(0, 1)
-        .map(({ family_medicine_locations, __quarter, __year }) => {
-          return {
-            title: `Family Medicine Locations (${__year} ${__quarter})`,
-            id: `family-medicine-locations${__year}_${__quarter}`,
-            data: family_medicine_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Family Medicine Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'family_medicine_locations',
+      layerTitle: 'Family Medicine Locations',
+      popupTitle: 'Family Medicine Facilities',
+      facilityType: 'Family Medicine Facility',
+      layerIdPrefix: 'family-medicine-locations',
+    });
   }, [data]);
 
+  // Family clinics facilities using the helper
   const freeClinicsFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('free_clinics_locations'))
-        // only keep the first occurrence because it would be confusing to show free clinics on top of each other over time
-        .slice(0, 1)
-        .map(({ free_clinics_locations, __quarter, __year }) => {
-          return {
-            title: `Free Clinics Locations (${__year} ${__quarter})`,
-            id: `free-clinics-locations${__year}_${__quarter}`,
-            data: free_clinics_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Free Clinic Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'free_clinics_locations',
+      layerTitle: 'Free Clinic Locations',
+      popupTitle: 'Free Clinic Facilities',
+      facilityType: 'Free Clinic Facility',
+      layerIdPrefix: 'free-clinics-locations',
+    });
   }, [data]);
 
   const hospitalsFacilities = useMemo(() => {
