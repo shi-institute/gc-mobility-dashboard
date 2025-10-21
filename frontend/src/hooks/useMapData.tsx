@@ -1,6 +1,6 @@
 import Color from '@arcgis/core/Color';
 import VectorTileLayer from '@arcgis/core/layers/VectorTileLayer.js';
-import { CustomContent, FieldsContent } from '@arcgis/core/popup/content';
+import { CustomContent } from '@arcgis/core/popup/content';
 import PopupTemplate from '@arcgis/core/PopupTemplate.js';
 import { SimpleRenderer } from '@arcgis/core/renderers';
 import SizeVariable from '@arcgis/core/renderers/visualVariables/SizeVariable';
@@ -639,151 +639,37 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
     });
   }, [data]);
 
+  //Hospital facilities using the helper
   const hospitalsFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('hospitals_locations'))
-        // only keep the first occurrence because it would be confusing to show hospitals on top of each other over time
-        .slice(0, 1)
-        .map(({ hospitals_locations, __quarter, __year }) => {
-          return {
-            title: `Hospitals Locations (${__year} ${__quarter})`,
-            id: `hospitals-locations${__year}_${__quarter}`,
-            data: hospitals_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Hospital Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'hospitals_locations',
+      layerTitle: 'Hospital Locations',
+      popupTitle: 'Hospital Facilities',
+      facilityType: 'Hospital Facility',
+      layerIdPrefix: 'hospitals-locations',
+    });
   }, [data]);
 
+  //Internal Medicine facilities using the helper
   const internalMedicineFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('internal_medicine_locations'))
-        // only keep the first occurrence because it would be confusing to show internal medicine facilities on top of each other over time
-        .slice(0, 1)
-        .map(({ internal_medicine_locations, __quarter, __year }) => {
-          return {
-            title: `Internal Medicine Locations (${__year} ${__quarter})`,
-            id: `internal-medicine-locations${__year}_${__quarter}`,
-            data: internal_medicine_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Internal Medicine Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'internal_medicine_locations',
+      layerTitle: 'Internal Medicine Locations',
+      popupTitle: 'Internal Medicine Facilities',
+      facilityType: 'Internal Medicine Facility',
+      layerIdPrefix: 'internal-medicine-locations',
+    });
   }, [data]);
 
+  //Urgent Care facilities using the helper
   const urgentCareFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('urgent_care_locations'))
-        // only keep the first occurrence because it would be confusing to show urgent care facilities on top of each other over time
-        .slice(0, 1)
-        .map(({ urgent_care_locations, __quarter, __year }) => {
-          return {
-            title: `Urgent Care Locations (${__year} ${__quarter})`,
-            id: `urgent-care-locations${__year}_${__quarter}`,
-            data: urgent_care_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Urgent Care Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'urgent_care_locations',
+      layerTitle: 'Urgent Care Locations',
+      popupTitle: 'Urgent Care Facilities',
+      facilityType: 'Urgent Care Facility',
+      layerIdPrefix: 'urgent-care-locations',
+    });
   }, [data]);
 
   const childCareCenters = useMemo(() => {
@@ -891,16 +777,27 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `{ZONING} (${__year} ${__quarter})`,
+              title: `Commercial Zones (${__year} ${__quarter})`,
               content: [
-                new FieldsContent({
-                  title: 'Commercial Zone Information',
-                  fieldInfos: [
-                    {
-                      fieldName: 'ZONING',
-                      label: 'Zoning Code',
-                    },
-                  ],
+                new CustomContent({
+                  outFields: ['ZONING'],
+                  creator: (event) => {
+                    const attrs = event?.graphic?.attributes;
+
+                    if (!attrs) {
+                      return '<div>No detailed information available for this zone.</div>';
+                    }
+
+                    return createPopupRoot(document.createElement('div')).render(
+                      <PopupAside>
+                        <h1>{attrs['ZONING'] || 'Commercial Zone'}</h1>
+                        <div>
+                          <span className="label">Zoning Code: </span>
+                          {attrs['ZONING'] || 'N/A'}
+                        </div>
+                      </PopupAside>
+                    );
+                  },
                 }),
               ],
             }),
