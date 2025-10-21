@@ -355,6 +355,13 @@ class ReplicaProcessETL:
                 'bike_service_area': self.input_files['bike_service_area'].format(region=region, year=year, quarter=quarter),
             }
 
+            def drop_duplicate_columns(df):
+                """
+                Sometimes, system-level columns are injected multiple times. Since those columns
+                are not needed and they can cause issues during concatination and saving, drop them.
+                """
+                return df.loc[:, ~df.columns.duplicated()]
+
             logger.info(f'Processing population data for {region} in {year} {quarter}')
             logger.info(f'  Opening season population data files...')
 
@@ -362,16 +369,19 @@ class ReplicaProcessETL:
             population_home_input_path = self.output_folder / input_files['population_home']
             logger.debug(f'Population home input path: {population_home_input_path}')
             population_home_gdf = geopandas.read_file(population_home_input_path)
+            population_home_gdf = drop_duplicate_columns(population_home_gdf)
 
             logger.info(f'    ...population data (school) [2/5]')
             publication_school_input_path = self.output_folder / input_files['population_school']
             logger.debug(f'Population school input path: {publication_school_input_path}')
             population_school_gdf = geopandas.read_file(publication_school_input_path)
+            population_school_gdf = drop_duplicate_columns(population_school_gdf)
 
             logger.info(f'    ...population data (work) [3/5]')
             population_work_input_path = self.output_folder / input_files['population_work']
             logger.debug(f'Population work input path: {population_work_input_path}')
             population_work_gdf = geopandas.read_file(population_work_input_path)
+            population_work_gdf = drop_duplicate_columns(population_work_gdf)
 
             logger.info(f'    ...walking service area [4/5]')
             walk_input_path = input_files['walk_service_area']
