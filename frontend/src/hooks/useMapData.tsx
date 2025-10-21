@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { useAppData } from '.';
 import { Section, Statistic } from '../components';
 import { GeoJSONLayerInit } from '../components/common/Map/types';
-import { createPopupRoot, mapUtils, notEmpty, requireKey } from '../utils';
+import { createPopupRoot, isGeoJsonLayerInitData, mapUtils, notEmpty, requireKey } from '../utils';
 import { createBusStopRenderer, createInterestAreaRenderer } from '../utils/renderers';
 
 type AppData = ReturnType<typeof useAppData>['data'];
@@ -1120,12 +1120,13 @@ const healthAndDentalRenderer = new SimpleRenderer({
   ],
 });
 
-//Mike's function for med facilities here.
-// Helper function for creating medical facility layers.
+/**
+ * Creates a GeoJSONLayerInit object for medical facility layers.
+ */
 const createMedicalFacilityLayer = (
-  data: any[] | null,
+  data: AppData,
   config: {
-    filterKey: string;
+    filterKey: keyof NonNullable<AppData>[number];
     layerTitle: string;
     popupTitle: string;
     facilityType: string;
@@ -1139,6 +1140,10 @@ const createMedicalFacilityLayer = (
       // only keep the first occurrence because it would be confusing to show facilities on top of each other over time
       .slice(0, 1)
       .map(({ [config.filterKey]: locations, __quarter, __year }) => {
+        if (!isGeoJsonLayerInitData(locations)) {
+          return null;
+        }
+
         return {
           title: `${config.layerTitle} (${__year} ${__quarter})`,
           id: `${config.layerIdPrefix}${__year}_${__quarter}`,
