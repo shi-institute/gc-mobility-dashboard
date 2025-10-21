@@ -498,6 +498,14 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
   }, [data]);
 
   const groceryStores = useMemo(() => {
+    // Helper function to fix truncated NAICS description
+    const fixNAICSDescription = (description: string): string => {
+      if (description === 'Supermarkets And Other Grocery Retailers (Except C') {
+        return 'Supermarkets and Other Grocery (except Convenience) Stores';
+      }
+      return description;
+    };
+
     return (
       (data || [])
         .filter(notEmpty)
@@ -559,12 +567,17 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                       `${attrs['Address']}, ${attrs['City']}, ${attrs['State']} ${attrs['ZIP']}`
                     );
 
+                    // Fix the NAICS description if it's truncated
+                    const naicsDescription = fixNAICSDescription(
+                      attrs['Primary_NAICS_Description'] || 'N/A'
+                    );
+
                     return createPopupRoot(document.createElement('div')).render(
                       <PopupAside>
                         <h1>{attrs['Company_Name'] || 'Store details'}</h1>
                         <div>
                           <span className="label">NAICS category: </span>
-                          {attrs['Primary_NAICS_Description'] || 'N/A'}
+                          {naicsDescription}
                         </div>
                         <div style={{ marginTop: '0.5rem' }}>
                           <a href={googleMapsUrl.href} target="_blank" rel="noopener noreferrer">
@@ -581,103 +594,27 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         })[0]
     );
   }, [data]);
-  //TODO: Refactor different types of health facilities popups to deal with repeated code. They share same fields (e.g., Address, CITY, etc.)
+
+  // Dental facilities using the helper
   const dentalCareFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('dental_locations'))
-        // only keep the first occurrence because it would be confusing to show dental care facilities on top of each other over time
-        .slice(0, 1)
-        .map(({ dental_locations, __quarter, __year }) => {
-          return {
-            title: `Dental Care Locations (${__year} ${__quarter})`,
-            id: `dental-locations${__year}_${__quarter}`,
-            data: dental_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Dental Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'dental_locations',
+      layerTitle: 'Dental Care Locations',
+      popupTitle: 'Dental Facilities',
+      facilityType: 'Dental Facility',
+      layerIdPrefix: 'dental-locations',
+    });
   }, [data]);
 
+  // Eyecare facilities using the helper
   const eyeCareFacilities = useMemo(() => {
-    return (
-      (data || [])
-        .filter(notEmpty)
-        .filter(requireKey('eye_care_locations'))
-        // only keep the first occurrence because it would be confusing to show eye care facilities on top of each other over time
-        .slice(0, 1)
-        .map(({ eye_care_locations, __quarter, __year }) => {
-          return {
-            title: `Eye Care Locations (${__year} ${__quarter})`,
-            id: `eye-care-locations${__year}_${__quarter}`,
-            data: eye_care_locations,
-            renderer: healthAndDentalRenderer,
-            popupEnabled: true,
-            popupTemplate: new PopupTemplate({
-              title: `{NAME} (${__year} ${__quarter})`,
-              content: [
-                new FieldsContent({
-                  title: 'Eyecare Facility Details',
-                  fieldInfos: [
-                    {
-                      fieldName: 'NAME',
-                      label: 'Facility Name',
-                    },
-                    {
-                      fieldName: 'Address',
-                      label: 'Street Address',
-                    },
-                    {
-                      fieldName: 'CITY',
-                      label: 'City',
-                    },
-                    {
-                      fieldName: 'STATE',
-                      label: 'State',
-                    },
-                    {
-                      fieldName: 'ZIP',
-                      label: 'Zip Code',
-                    },
-                  ],
-                }),
-              ],
-            }),
-          } satisfies GeoJSONLayerInit;
-        })[0]
-    );
+    return createMedicalFacilityLayer(data, {
+      filterKey: 'eye_care_locations',
+      layerTitle: 'Eye Care Locations',
+      popupTitle: 'Eye Care Facilities',
+      facilityType: 'Eye Care Facility',
+      layerIdPrefix: 'eye-care-locations',
+    });
   }, [data]);
 
   const familyMedicineFacilities = useMemo(() => {
@@ -988,7 +925,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                           {attrs['Facility_Type'] || 'N/A'}
                         </div>
                         <div>
-                          <span className="label">Capactity: </span>
+                          <span className="label">Capacity: </span>
                           {attrs['Capacity'] || 'N/A'}
                         </div>
                         <div style={{ marginTop: '0.5rem' }}>
@@ -1362,14 +1299,72 @@ const healthAndDentalRenderer = new SimpleRenderer({
   ],
 });
 
-function popupFieldsFromObject(obj: Record<string, any>) {
-  return Object.keys(obj).map((fieldName) => {
-    return {
-      fieldName,
-      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-    };
-  });
-}
+//Mike's function for med facilities here.
+// Helper function for creating medical facility layers.
+const createMedicalFacilityLayer = (
+  data: any[] | null,
+  config: {
+    filterKey: string;
+    layerTitle: string;
+    popupTitle: string;
+    facilityType: string;
+    layerIdPrefix: string;
+  }
+) => {
+  return (
+    (data || [])
+      .filter(notEmpty)
+      .filter(requireKey(config.filterKey))
+      // only keep the first occurrence because it would be confusing to show facilities on top of each other over time
+      .slice(0, 1)
+      .map(({ [config.filterKey]: locations, __quarter, __year }) => {
+        return {
+          title: `${config.layerTitle} (${__year} ${__quarter})`,
+          id: `${config.layerIdPrefix}${__year}_${__quarter}`,
+          data: locations,
+          renderer: healthAndDentalRenderer,
+          popupEnabled: true,
+          popupTemplate: new PopupTemplate({
+            title: `${config.popupTitle} (${__year} ${__quarter})`,
+            content: [
+              new CustomContent({
+                outFields: ['NAME', 'Address', 'CITY', 'STATE', 'ZIP'],
+                creator: (event) => {
+                  const attrs = event?.graphic?.attributes;
+
+                  if (!attrs) {
+                    return '<div>No detailed information available for this facility.</div>';
+                  }
+
+                  // construct the Google Maps URL
+                  const googleMapsUrl = new URL(googleMapsQueryUrl);
+                  googleMapsUrl.searchParams.set(
+                    'query',
+                    `${attrs['Address']}, ${attrs['CITY']}, ${attrs['STATE']} ${attrs['ZIP']}`
+                  );
+
+                  return createPopupRoot(document.createElement('div')).render(
+                    <PopupAside>
+                      <h1>{attrs['NAME'] || config.facilityType}</h1>
+                      <div>
+                        <span className="label">Type: </span>
+                        {config.facilityType}
+                      </div>
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <a href={googleMapsUrl.href} target="_blank" rel="noopener noreferrer">
+                          {attrs['Address']}, {attrs['CITY']}, {attrs['STATE']} {attrs['ZIP']}
+                        </a>
+                      </div>
+                    </PopupAside>
+                  );
+                },
+              }),
+            ],
+          }),
+        } satisfies GeoJSONLayerInit;
+      })[0]
+  );
+};
 
 const Credits = styled.aside`
   font-size: 0.825rem;
