@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import tarfile
@@ -6,6 +7,7 @@ import tempfile
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import TypedDict
 
 from tqdm import tqdm
 
@@ -51,19 +53,48 @@ def finalize():
     print("Deleting empty directories...")
     delete_empty_directories(public_dir)
 
+    # build an index of areas and seasons for the replica data
+    area_names = build_area_index(public_dir / 'replica')
+    if len(area_names) > 0:
+        seasons = build_season_index(public_dir / 'replica' / area_names[0] / 'statistics')
+    else:
+        seasons = []
+
+    # buld an index of future routes
+    build_future_routes_index(public_dir / 'future_routes')
+
+    # delete replica data for areas and seasons that are not in the area and season indexes
+    print("Omitting unindexed replica data...")
+    replica_dir = public_dir / 'replica'
+    valid_season_names = {
+        f"{season['year']}_{season['quarter']}" for season in seasons}  # e.g., '2021_Q2'
+    pattern = re.compile(r"\d{4}_Q[1-4]")  # matches season file names like '_2021_Q2'
+    for area_dir in replica_dir.iterdir():
+        if not area_dir.is_dir():
+            continue
+
+        # remove area directories not in the area index
+        if area_dir.name not in area_names:
+            shutil.rmtree(area_dir)
+            continue
+
+        # remove season files not in the season index
+        for file in area_dir.rglob("*"):
+            # check for a season string (YYYY_Q#) in the file stem
+            match = pattern.search(file.stem)
+            if not match:
+                continue
+
+            # check if the season is in the valid seasons list
+            season_name = match.group(0)
+            if season_name not in valid_season_names:
+                file.unlink()
+
     # compress JSON files in public/data
     deflate_json_files(public_dir)
 
     # repackage .vectortiles files in public/data as cloud-optimized tar files
-    repackage_vectortiles(public_dir)
-
-    # build an index of areas and seasons for the replica data
-    area_names = build_area_index(public_dir / 'replica')
-    if len(area_names) > 0:
-        build_season_index(public_dir / 'replica' / area_names[0] / 'statistics')
-
-    # buld an index of future routes
-    build_future_routes_index(public_dir / 'future_routes')
+    cloud_optimize_vectortiles(public_dir)
 
     # # put the public dir in an uncompressed tar file for easy transfer
     # tar_path = data_dir / '__public.tar'
@@ -170,7 +201,7 @@ def deflate_json_files(directory: Path) -> None:
         json_file.unlink()  # remove the original .json file
 
 
-def _repackage_vectortiles(vectortiles_file: Path) -> None:
+def _index_vectortiles(vectortiles_file: Path) -> None:
     try:
         tar_output = vectortiles_file.with_suffix('.tar')
 
@@ -239,7 +270,7 @@ def _repackage_vectortiles(vectortiles_file: Path) -> None:
         tqdm.write(f"Error repackaging {vectortiles_file.name}: {error}")
 
 
-def repackage_vectortiles(directory: Path) -> None:
+def cloud_optimize_vectortiles(directory: Path) -> None:
     """
     Recursively look for .vectortiles files in a directory and its subdirectories.
 
@@ -253,11 +284,11 @@ def repackage_vectortiles(directory: Path) -> None:
         return
 
     with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(_repackage_vectortiles, vectortiles_file): vectortiles_file
+        futures = {executor.submit(_index_vectortiles, vectortiles_file): vectortiles_file
                    for vectortiles_file in vectortiles_files}
 
         for _ in tqdm(as_completed(futures), total=total_files,
-                      desc="Repackaging vector tiles"):
+                      desc="Optimizing vector tiles"):
             pass
 
 
@@ -296,7 +327,12 @@ def build_area_index(replica_directory: Path) -> list[str]:
     return area_names
 
 
-def build_season_index(stats_directory: Path) -> None:
+class SeasonIndexEntry(TypedDict):
+    year: int
+    quarter: str
+
+
+def build_season_index(stats_directory: Path) -> list[SeasonIndexEntry]:
     """
     Builds an index of seasons from the first area in data/replica.
 
@@ -306,15 +342,16 @@ def build_season_index(stats_directory: Path) -> None:
     print(
         f"Building seasons index from directory: {stats_directory.resolve().relative_to(data_dir).as_posix()}")
 
-    season_names = []
+    season_names: list[str] = []
     for item in stats_directory.iterdir():
         if item.is_file() and (item.suffix == '.geojson' or item.suffix == '.json' or '.geojson.deflate' in item.name or '.json.deflate' in item.name):
             name = item.name
             name = name.replace('replica__', '')
             name = name.split('__')[0]
             name = name.replace('south_atlantic_', '')
-            name = name.replace('.geojson.deflate', '')
-            name = name.replace('.json.deflate', '')
+            name = name.replace('.geojson', '')
+            name = name.replace('.json', '')
+            name = name.replace('.deflate', '')
             season_name = ':'.join(reversed(name.split('_')))
             season_names.append(season_name)
 
@@ -330,6 +367,12 @@ def build_season_index(stats_directory: Path) -> None:
         f.write(season_index)
     print(
         f"  Season index written to: {season_index_path.resolve().relative_to(data_dir).as_posix()}")
+
+    result: list[SeasonIndexEntry] = [
+        {"year": int(year), "quarter": quarter}
+        for quarter, year in (name.split(":") for name in unique_season_names)
+    ]
+    return result
 
 
 def build_future_routes_index(future_routes_directory: Path) -> None:
