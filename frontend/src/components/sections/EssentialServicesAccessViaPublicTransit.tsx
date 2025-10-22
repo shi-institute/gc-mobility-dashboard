@@ -21,6 +21,7 @@ export function EssentialServicesAccessViaPublicTransit() {
     <Section
       title="Essential Services Access via Public Transit"
       shortTitle="Via Public Transit"
+      description="The percentage of the population that can reach the essential service via public transit."
       key={0}
     >
       <Statistic.Percent

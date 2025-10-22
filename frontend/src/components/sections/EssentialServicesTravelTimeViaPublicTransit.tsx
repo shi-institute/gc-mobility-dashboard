@@ -29,6 +29,7 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
     <Section
       title="Recorded Average Travel Time to Essential Services via Public Transit"
       shortTitle="Travel Time"
+      description="The average travel time of recorded trips to essential services via public transit."
       key={1}
     >
       <Statistic.Number
