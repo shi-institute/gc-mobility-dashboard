@@ -29,7 +29,17 @@ export function EssentialServicesTravelTimeViaPublicTransit() {
     <Section
       title="Recorded Average Travel Time to Essential Services via Public Transit"
       shortTitle="Travel Time"
-      description="The average travel time of recorded trips to essential services via public transit."
+      description={(() => {
+        if (data?.length === 1) {
+          const year = data[0]?.__year;
+          const quarter = data[0]?.__quarter;
+          if (year && quarter) {
+            const season = `${quarter === 'Q2' ? 'January-June' : 'July-December'} ${year}`;
+            return `The average travel time of recorded trips to essential services via public transit during ${season} in ${data[0]?.__label}.`;
+          }
+        }
+        return 'The average travel time of recorded trips to essential services via public transit during the specified season and in the speicifed area.';
+      })()}
       key={1}
     >
       <Statistic.Number

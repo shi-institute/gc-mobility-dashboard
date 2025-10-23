@@ -21,7 +21,18 @@ export function EssentialServicesAccessViaPublicTransit() {
     <Section
       title="Essential Services Access via Public Transit"
       shortTitle="Via Public Transit"
-      description="The percentage of the population that can reach the essential service via public transit."
+      description={(() => {
+        if (data?.length === 1) {
+          const year = data[0]?.__year;
+          const quarter = data[0]?.__quarter;
+          if (year && quarter) {
+            const season = `${quarter === 'Q2' ? 'January-June' : 'July-December'} ${year}`;
+            return `The percentage of the population in ${data[0]?.__label} for ${season} that can reach the essential service via public transit.`;
+          }
+        }
+
+        return 'The percentage of the population in the specified area and season that can reach the essential service via public transit.';
+      })()}
       key={0}
     >
       <Statistic.Percent
