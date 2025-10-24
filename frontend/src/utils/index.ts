@@ -4,6 +4,8 @@ export { flattenObject } from './flattenObject';
 export { generateHash } from './generateHash';
 export { hasKey } from './hasKey';
 export { inflateResponse } from './inflateResponse';
+export { isGeoJSON } from './isGeoJson';
+export { isGeoJsonLayerInitData } from './isGeoJsonLayerInitData';
 export { listOxford } from './listOxford';
 export * as mapUtils from './map';
 export { notEmpty } from './notEmpty';
