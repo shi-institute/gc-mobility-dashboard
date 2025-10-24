@@ -9,7 +9,6 @@ import pandas_gbq
 import pydata_google_auth
 from dotenv import load_dotenv
 
-from etl.finalize import finalize
 from etl.runner import etl_runner
 from TeeLogger import TeeLogger
 
@@ -119,7 +118,4 @@ if __name__ == "__main__":
 
     # run the ETL pipeline
     etl_runner(etls)
-
-    # compress/package the data for deployment
-    finalize()
     print('\nDONE')
