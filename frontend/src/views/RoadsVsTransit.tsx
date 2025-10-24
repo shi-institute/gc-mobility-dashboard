@@ -549,6 +549,25 @@ async function showFeaturesOnMap(
             });
           }
 
+          // also temporarily modify the min scale for the bus stops layers so that the bus stops are visible
+          const oldMinScales = busStopsLayers
+            .filter((layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson')
+            .map((layer) => {
+              const oldMinScale = layer.minScale;
+              layer.minScale = 0;
+
+              // return information about the old scale so we can restore it later
+              return { id: layer.id, oldMinScale };
+            });
+          registerCleanupFunction(() => {
+            oldMinScales.forEach(({ id, oldMinScale }) => {
+              const layer = mapView?.map?.findLayerById(id) as __esri.GeoJSONLayer | undefined;
+              if (layer) {
+                layer.minScale = oldMinScale;
+              }
+            });
+          });
+
           // request zoom to the highlighted features
           return foundLayers.map(({ layerView, targetQuery }) => ({
             id: layerView.layer.id,
