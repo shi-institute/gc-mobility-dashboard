@@ -708,14 +708,16 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
                   : '1000ms opacity',
             }}
           >
-            <TrackButtonExpandedContent
-              optionLabel={optionLabel.replace('.0 million', ' million')}
-              scenarios={buttonScenarios}
-              transitioning={transitioning}
-              mapView={props.mapView}
-              searchParams={searchParams}
-              setSearchParams={setSearchParams}
-            />
+            {selectedIndex === index ? (
+              <TrackButtonExpandedContent
+                optionLabel={optionLabel.replace('.0 million', ' million')}
+                scenarios={buttonScenarios}
+                transitioning={transitioning}
+                mapView={props.mapView}
+                searchParams={searchParams}
+                setSearchParams={setSearchParams}
+              />
+            ) : null}
           </ButtonInterior>
         </>
       ),
