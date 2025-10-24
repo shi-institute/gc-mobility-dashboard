@@ -380,6 +380,26 @@ function List(props: { title: string; mapView: __esri.MapView | null }) {
                               );
                             }
                           }
+
+                          if (feature.affects === 'on-demand') {
+                            if (feature.type === 'purchase') {
+                              return (
+                                <li>
+                                  {feature.count} new on-demand vehicle
+                                  {feature.count === 1 ? '' : 's'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+                          }
+
+                          return (
+                            <pre style={{ color: 'yellow', background: 'black' }}>
+                              UNEXPECETD FEATURE
+                            </pre>
+                          );
                         })}
                       </ul>
                       {isMobile ? null : featureAffects.includes('routes') ||
