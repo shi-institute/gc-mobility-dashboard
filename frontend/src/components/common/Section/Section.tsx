@@ -54,6 +54,15 @@ const SectionComponent = styled.section<{
   display: ${(props) => (props.flexParent ? 'flex' : 'block')};
   flex-direction: column;
 
+  @container core (max-width: 899px) {
+    padding: 0 0.5rem;
+    box-sizing: border-box;
+
+    &:last-child {
+      padding-bottom: 1rem;
+    }
+  }
+
   .section-content {
     display: ${(props) => (props.noGrid ? (props.flexParent ? 'flex' : 'block') : 'grid')};
     grid-template-columns: [left] repeat(4, 1fr) [right];
