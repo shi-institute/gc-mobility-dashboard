@@ -120,6 +120,11 @@ const CompactMapLegend = styled.aside`
     padding: 0.125rem 0.25rem;
     border-radius: var(--button-radius);
   }
+
+  @container core (max-width: 899px) {
+    padding: 0 0.25rem 0.25rem;
+    letter-spacing: -0.025rem;
+  }
 `;
 
 function SectionsHeader() {
