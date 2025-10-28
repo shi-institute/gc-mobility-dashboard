@@ -57,8 +57,8 @@ export function EssentialServicesAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ height: '100%' }} title="Map">
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} title="Map">
+          <div style={{ height: '100%' }}>
             <Map
               layers={[
                 ...networkSegments,
@@ -119,6 +119,11 @@ const CompactMapLegend = styled.aside`
   span {
     padding: 0.125rem 0.25rem;
     border-radius: var(--button-radius);
+  }
+
+  @container core (max-width: 899px) {
+    padding: 0 0.25rem 0.25rem;
+    letter-spacing: -0.025rem;
   }
 `;
 

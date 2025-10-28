@@ -32,6 +32,7 @@ export function Map(props: MapProps) {
 
   // track when the map is ready or is replaced
   const [map, setMap] = useState<__esri.Map | null>(null);
+  const [view, setView] = useState<__esri.MapView | null>(null);
   useEffect(() => {
     if (!mapElem.current) {
       return;
@@ -39,6 +40,7 @@ export function Map(props: MapProps) {
 
     mapElem.current.addEventListener('arcgisViewReadyChange', () => {
       setMap(mapElem.current?.map ?? null);
+      setView(mapElem.current?.view ?? null);
 
       if (mapElem.current?.map && mapElem.current?.view) {
         props.onMapReady?.(mapElem.current.map, mapElem.current.view);
@@ -117,6 +119,7 @@ export function Map(props: MapProps) {
           id: layer.id,
           visible: layer.visible ?? false,
           layer,
+          minScale: 'minScale' in layer ? layer.minScale : undefined,
         }))
         .toArray();
       setLayers(layerInfo);
@@ -128,7 +131,13 @@ export function Map(props: MapProps) {
     addedLayers.map((layer) => {
       const handle = reactiveUtils.watch(
         // each array element indicates a property to watch
-        () => [layer.title, layer.id, layer.visible],
+        () =>
+          [
+            layer.title,
+            layer.id,
+            layer.visible,
+            'minScale' in layer ? layer.minScale : undefined,
+          ].filter(notEmpty),
         () => {
           setLayerInfo();
         }
@@ -151,6 +160,32 @@ export function Map(props: MapProps) {
     };
   }, [map, props.layers]);
 
+  const [mapScale, setMapScale] = useState<number | null>(null);
+  useEffect(() => {
+    if (!view) {
+      return;
+    }
+
+    // set the initial map scale
+    setMapScale(view.scale);
+
+    // watch for changes to the map scale
+    const watchHandles: IHandle[] = [];
+    reactiveUtils.watch(
+      () => [view.scale],
+      (result) => {
+        if (result[0] !== undefined) {
+          setMapScale(result[0]);
+        }
+      }
+    );
+
+    return () => {
+      // remove all watch handles
+      watchHandles.forEach((handle) => handle.remove());
+    };
+  });
+
   // manage the reactive layer info
   const [layers, setLayers] = useState<
     ReadonlyArray<
@@ -163,6 +198,7 @@ export function Map(props: MapProps) {
           | __esri.WebTileLayer
           | __esri.VectorTileLayer
           | __esri.FeatureLayer;
+        minScale?: number;
       }>
     >
   >();
@@ -395,6 +431,21 @@ export function Map(props: MapProps) {
     }
   }, [showLayerList, mapHeight, mapWidth, symbols, setShowLayerList]);
 
+  /** Whether any bus stop layer is hidden due to its min scale being less than the current map scale (scale gets a bigger number as you zoom in) */
+  const busLayerHiddenByMinScale = useMemo(() => {
+    const busStopsLayers = quickToggleLayers.stops;
+    return busStopsLayers.every(
+      (layer) => layer.minScale && layer.minScale <= (mapScale ?? Number.POSITIVE_INFINITY)
+    );
+  }, [mapScale, quickToggleLayers.stops]);
+
+  const firstNetworkSegmentsLayer =
+    layers && layers.find((l) => l.id.startsWith('network-segments__'));
+
+  function removeSeasonParentheses(text: string) {
+    return text.replace(/\s*\([^)]*\d{4}\s*Q[24][^)]*\)/g, '');
+  }
+
   return (
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
@@ -449,6 +500,7 @@ export function Map(props: MapProps) {
               onClick={() => quickToggleLayer('stops')}
               active={quickToggleLayers.stops.every((layer) => layer.visible)}
               solidSurfaceColor="#fff"
+              disabled={busLayerHiddenByMinScale}
             >
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -492,10 +544,55 @@ export function Map(props: MapProps) {
                           className="symbol"
                           dangerouslySetInnerHTML={{ __html: layer.symbolHTML.outerHTML }}
                         />
-                        <h1>{layer.title}</h1>
+                        <h1>{removeSeasonParentheses(layer.title || '')}</h1>
                       </article>
                     );
                   })}
+                  {firstNetworkSegmentsLayer ? (
+                    <article key={'network-segments'}>
+                      <div className="symbol">
+                        <div>
+                          <svg
+                            focusable="false"
+                            height="6"
+                            role="img"
+                            width="50"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{ display: 'block' }}
+                          >
+                            <path
+                              d="M 1.3 2.6 L 7 2.6"
+                              fill="none"
+                              fill-rule="evenodd"
+                              stroke="rgb(0, 102, 255)"
+                              stroke-dasharray="none"
+                              stroke-linecap="round"
+                              stroke-width="2"
+                            ></path>
+                            <path
+                              d="M 7 2.6 L 16 2.6"
+                              fill="none"
+                              fill-rule="evenodd"
+                              stroke="rgb(0, 102, 255)"
+                              stroke-dasharray="none"
+                              stroke-linecap="round"
+                              stroke-width="2.6"
+                            ></path>
+                            <path
+                              d="M 16 2.6 L 24.3 2.6"
+                              fill="none"
+                              fill-rule="evenodd"
+                              stroke="rgb(0, 102, 255)"
+                              stroke-dasharray="none"
+                              stroke-linecap="round"
+                              stroke-width="3.9"
+                            ></path>
+                          </svg>
+                        </div>
+                      </div>
+                      <h1>{removeSeasonParentheses(firstNetworkSegmentsLayer.title || '')}</h1>
+                    </article>
+                  ) : null}
                 </section>
                 <div className="footer">
                   <arcgis-expand label="Layers">

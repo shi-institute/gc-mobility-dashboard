@@ -83,6 +83,12 @@ export const PageHeader = styled.div<{ isComparing?: boolean }>`
     border-radius: var(--surface-radius);
     text-align: left;
 
+    @container core (max-width: 899px) {
+      &:last-child {
+        margin-bottom: 0.5rem;
+      }
+    }
+
     ${_StyledIconButton} {
       position: absolute;
       top: 2px;

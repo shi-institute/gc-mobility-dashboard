@@ -13,20 +13,22 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
 
   const currentSelectedSeasons = searchParams.get('seasons')?.split(',').filter(notEmpty) || [];
 
-  const options = seasonsList.map((season) => {
-    const quarter = season.split(':')[0] as 'Q2' | 'Q4';
-    const year = season.split(':')[1];
-    const label = `${year} ${quarter}`;
+  const options = seasonsList
+    .map((season) => {
+      const quarter = season.split(':')[0] as 'Q2' | 'Q4';
+      const year = season.split(':')[1];
+      const label = `${year} ${quarter}`;
 
-    const monthRanges = {
-      Q2: 'April-June',
-      Q4: 'October-December',
-    };
+      const monthRanges = {
+        Q2: 'April-June',
+        Q4: 'October-December',
+      };
 
-    const subLabel = `${monthRanges[quarter]}, ${year}`;
+      const subLabel = `${monthRanges[quarter]}, ${year}`;
 
-    return { label, value: season, id: subLabel };
-  });
+      return { label, value: season, id: subLabel };
+    })
+    .sort((a, b) => a.value.localeCompare(b.value));
   const selectedOptions = currentSelectedSeasons
     .map((season) => {
       return options.find((option) => option.value === season);

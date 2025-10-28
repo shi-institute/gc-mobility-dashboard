@@ -380,6 +380,26 @@ function List(props: { title: string; mapView: __esri.MapView | null }) {
                               );
                             }
                           }
+
+                          if (feature.affects === 'on-demand') {
+                            if (feature.type === 'purchase') {
+                              return (
+                                <li>
+                                  {feature.count} new on-demand vehicle
+                                  {feature.count === 1 ? '' : 's'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+                          }
+
+                          return (
+                            <pre style={{ color: 'yellow', background: 'black' }}>
+                              UNEXPECETD FEATURE
+                            </pre>
+                          );
                         })}
                       </ul>
                       {isMobile ? null : featureAffects.includes('routes') ||
@@ -549,6 +569,25 @@ async function showFeaturesOnMap(
             });
           }
 
+          // also temporarily modify the min scale for the bus stops layers so that the bus stops are visible
+          const oldMinScales = busStopsLayers
+            .filter((layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson')
+            .map((layer) => {
+              const oldMinScale = layer.minScale;
+              layer.minScale = 0;
+
+              // return information about the old scale so we can restore it later
+              return { id: layer.id, oldMinScale };
+            });
+          registerCleanupFunction(() => {
+            oldMinScales.forEach(({ id, oldMinScale }) => {
+              const layer = mapView?.map?.findLayerById(id) as __esri.GeoJSONLayer | undefined;
+              if (layer) {
+                layer.minScale = oldMinScale;
+              }
+            });
+          });
+
           // request zoom to the highlighted features
           return foundLayers.map(({ layerView, targetQuery }) => ({
             id: layerView.layer.id,
@@ -689,14 +728,16 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
                   : '1000ms opacity',
             }}
           >
-            <TrackButtonExpandedContent
-              optionLabel={optionLabel.replace('.0 million', ' million')}
-              scenarios={buttonScenarios}
-              transitioning={transitioning}
-              mapView={props.mapView}
-              searchParams={searchParams}
-              setSearchParams={setSearchParams}
-            />
+            {selectedIndex === index ? (
+              <TrackButtonExpandedContent
+                optionLabel={optionLabel.replace('.0 million', ' million')}
+                scenarios={buttonScenarios}
+                transitioning={transitioning}
+                mapView={props.mapView}
+                searchParams={searchParams}
+                setSearchParams={setSearchParams}
+              />
+            ) : null}
           </ButtonInterior>
         </>
       ),
