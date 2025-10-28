@@ -439,6 +439,13 @@ export function Map(props: MapProps) {
     );
   }, [mapScale, quickToggleLayers.stops]);
 
+  const firstNetworkSegmentsLayer =
+    layers && layers.find((l) => l.id.startsWith('network-segments__'));
+
+  function removeSeasonParentheses(text: string) {
+    return text.replace(/\s*\([^)]*\d{4}\s*Q[24][^)]*\)/g, '');
+  }
+
   return (
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
@@ -537,10 +544,55 @@ export function Map(props: MapProps) {
                           className="symbol"
                           dangerouslySetInnerHTML={{ __html: layer.symbolHTML.outerHTML }}
                         />
-                        <h1>{layer.title}</h1>
+                        <h1>{removeSeasonParentheses(layer.title || '')}</h1>
                       </article>
                     );
                   })}
+                  {firstNetworkSegmentsLayer ? (
+                    <article key={'network-segments'}>
+                      <div className="symbol">
+                        <div>
+                          <svg
+                            focusable="false"
+                            height="6"
+                            role="img"
+                            width="50"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{ display: 'block' }}
+                          >
+                            <path
+                              d="M 1.3 2.6 L 7 2.6"
+                              fill="none"
+                              fill-rule="evenodd"
+                              stroke="rgb(0, 102, 255)"
+                              stroke-dasharray="none"
+                              stroke-linecap="round"
+                              stroke-width="2"
+                            ></path>
+                            <path
+                              d="M 7 2.6 L 16 2.6"
+                              fill="none"
+                              fill-rule="evenodd"
+                              stroke="rgb(0, 102, 255)"
+                              stroke-dasharray="none"
+                              stroke-linecap="round"
+                              stroke-width="2.6"
+                            ></path>
+                            <path
+                              d="M 16 2.6 L 24.3 2.6"
+                              fill="none"
+                              fill-rule="evenodd"
+                              stroke="rgb(0, 102, 255)"
+                              stroke-dasharray="none"
+                              stroke-linecap="round"
+                              stroke-width="3.9"
+                            ></path>
+                          </svg>
+                        </div>
+                      </div>
+                      <h1>{removeSeasonParentheses(firstNetworkSegmentsLayer.title || '')}</h1>
+                    </article>
+                  ) : null}
                 </section>
                 <div className="footer">
                   <arcgis-expand label="Layers">
