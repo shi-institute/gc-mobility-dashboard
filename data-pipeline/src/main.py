@@ -67,6 +67,7 @@ if __name__ == "__main__":
             logging.StreamHandler(sys.stderr),
         ]
     )
+    logging.addLevelName(logging.WARNING, "WARN")  # shorten WARNING to WARN
 
     # if etls argument is provided, split it into a list of strings
     etls: Optional[list[str]] = None

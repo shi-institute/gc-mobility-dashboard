@@ -786,7 +786,7 @@ class ReplicaProcessETL:
         # return the statistics for all areas in this season so that we can access them later
         return (processed_count, all_statistics)
 
-    def build_network_segments(self, days: list[Literal['saturday', 'thursday']]) -> None:
+    def build_network_segments(self, days: list[Literal['saturday', 'thursday']], overwrite: bool = False) -> None:
         # build network segments for each area
         season_areas_days = list(itertools.product(
             self.seasons, [area_name for _, area_name in self.areas], days))
@@ -823,6 +823,7 @@ class ReplicaProcessETL:
                 logger.info(f'  Building network segments...')
                 intermediate_chunks_folder = area_trips_chunks_path.parent / '_intermediate_segment_chunks'
                 os.makedirs(intermediate_chunks_folder, exist_ok=True)
+                has_exploded_and_hashed = False  # expoding and hashing is expensive, so we only want to do it once
                 for index, travel_mode in enumerate(travel_modes):
                     if travel_mode == '':
                         full_table_name = f'{region}_{year}_{quarter}__{day}'
@@ -830,6 +831,25 @@ class ReplicaProcessETL:
                     else:
                         full_table_name = f'{region}_{year}_{quarter}__{day}__commute__{travel_mode}'
                         bar_label = f'{area_name} ({quarter} {year}) (commute:{travel_mode})'
+
+                    tile_folder_path = tile_folder_path = self.output_folder / \
+                        area_name / 'network_segments' / full_table_name
+                    vectortiles_filename = f'{tile_folder_path}.vectortiles'
+                    vectortiles_empty_filename = f'{tile_folder_path}.vectortiles.null'
+                    if not overwrite:
+                        # skip if the vectortiles file already exists
+                        if os.path.exists(vectortiles_filename):
+                            logger.info(
+                                f'    Skipping {bar_label} since vectortiles file already exists.')
+                            bar.update(1)
+                            continue
+
+                        # skip if the vectortiles explicitly have no data
+                        if os.path.exists(vectortiles_empty_filename):
+                            logger.info(
+                                f'    Skipping {bar_label} since null vectortiles file exists.')
+                            bar.update(1)
+                            continue
 
                     os.makedirs('./data/tmp', exist_ok=True)
                     output_file_path = tempfile.NamedTemporaryFile(
@@ -858,7 +878,7 @@ class ReplicaProcessETL:
                         log_space='    ',
                         intermediate_chunks_folder=intermediate_chunks_folder.as_posix(),
                         step1_columns=['activity_id', 'tour_type', 'mode', 'geometry'],
-                        skip_step_1=skip_explode or (index > 0),
+                        skip_step_1=skip_explode or has_exploded_and_hashed,
                         step_2_filter=filter,
                         out_crs='EPSG:3857',
                         success_hash=self.data_geo_hash,
@@ -866,10 +886,10 @@ class ReplicaProcessETL:
                         frequency_bar.update(progress[0] - frequency_bar.n)
                         frequency_bar.total = progress[1]
                     frequency_bar.close()
+                    has_exploded_and_hashed = True  # it is not possible to get here without having exploded and hashed
 
                     # try to generate tiles for the network segments
                     logger.info(f'       ...generating tiles - {bar_label}')
-                    tile_folder_path = self.output_folder / area_name / 'network_segments' / full_table_name
                     os.makedirs(tile_folder_path, exist_ok=True)
                     try:
                         tile_bar = tqdm.tqdm(
@@ -885,17 +905,21 @@ class ReplicaProcessETL:
                         tile_bar.close()
 
                         # archive (no compression) the tiles folder
-                        tar_filename = f'{tile_folder_path}.vectortiles'
-                        if os.path.exists(tar_filename):
-                            os.remove(tar_filename)
-                        with tarfile.open(tar_filename, 'w', format=tarfile.USTAR_FORMAT) as tar:
+                        if os.path.exists(vectortiles_filename):
+                            os.remove(vectortiles_filename)
+                        with tarfile.open(vectortiles_filename, 'w', format=tarfile.USTAR_FORMAT) as tar:
                             for name in os.listdir(tile_folder_path):
                                 path = os.path.join(tile_folder_path, name)
                                 tar.add(path, arcname=name)
 
                     except NoVectorDataError:
                         logger.warning(
-                            f'No vector data found for {bar_label}. Skipping tile generation.')
+                            f'    No vector data found for {bar_label}. Skipping tile generation.')
+
+                        # write an empty file to indicate that there are no data
+                        with open(vectortiles_empty_filename, 'w') as f:
+                            f.write('')
+
                         continue
 
                     except Exception as ex:
