@@ -9,6 +9,7 @@ import math
 import multiprocessing
 import os
 import shutil
+import tarfile
 import tempfile
 import time
 from multiprocessing.managers import DictProxy, ValueProxy
@@ -354,6 +355,13 @@ class ReplicaProcessETL:
                 'bike_service_area': self.input_files['bike_service_area'].format(region=region, year=year, quarter=quarter),
             }
 
+            def drop_duplicate_columns(df):
+                """
+                Sometimes, system-level columns are injected multiple times. Since those columns
+                are not needed and they can cause issues during concatination and saving, drop them.
+                """
+                return df.loc[:, ~df.columns.duplicated()]
+
             logger.info(f'Processing population data for {region} in {year} {quarter}')
             logger.info(f'  Opening season population data files...')
 
@@ -361,16 +369,19 @@ class ReplicaProcessETL:
             population_home_input_path = self.output_folder / input_files['population_home']
             logger.debug(f'Population home input path: {population_home_input_path}')
             population_home_gdf = geopandas.read_file(population_home_input_path)
+            population_home_gdf = drop_duplicate_columns(population_home_gdf)
 
             logger.info(f'    ...population data (school) [2/5]')
             publication_school_input_path = self.output_folder / input_files['population_school']
             logger.debug(f'Population school input path: {publication_school_input_path}')
             population_school_gdf = geopandas.read_file(publication_school_input_path)
+            population_school_gdf = drop_duplicate_columns(population_school_gdf)
 
             logger.info(f'    ...population data (work) [3/5]')
             population_work_input_path = self.output_folder / input_files['population_work']
             logger.debug(f'Population work input path: {population_work_input_path}')
             population_work_gdf = geopandas.read_file(population_work_input_path)
+            population_work_gdf = drop_duplicate_columns(population_work_gdf)
 
             logger.info(f'    ...walking service area [4/5]')
             walk_input_path = input_files['walk_service_area']
@@ -775,7 +786,7 @@ class ReplicaProcessETL:
         # return the statistics for all areas in this season so that we can access them later
         return (processed_count, all_statistics)
 
-    def build_network_segments(self, days: list[Literal['saturday', 'thursday']]) -> None:
+    def build_network_segments(self, days: list[Literal['saturday', 'thursday']], overwrite: bool = False) -> None:
         # build network segments for each area
         season_areas_days = list(itertools.product(
             self.seasons, [area_name for _, area_name in self.areas], days))
@@ -812,6 +823,7 @@ class ReplicaProcessETL:
                 logger.info(f'  Building network segments...')
                 intermediate_chunks_folder = area_trips_chunks_path.parent / '_intermediate_segment_chunks'
                 os.makedirs(intermediate_chunks_folder, exist_ok=True)
+                has_exploded_and_hashed = False  # expoding and hashing is expensive, so we only want to do it once
                 for index, travel_mode in enumerate(travel_modes):
                     if travel_mode == '':
                         full_table_name = f'{region}_{year}_{quarter}__{day}'
@@ -819,6 +831,25 @@ class ReplicaProcessETL:
                     else:
                         full_table_name = f'{region}_{year}_{quarter}__{day}__commute__{travel_mode}'
                         bar_label = f'{area_name} ({quarter} {year}) (commute:{travel_mode})'
+
+                    tile_folder_path = tile_folder_path = self.output_folder / \
+                        area_name / 'network_segments' / full_table_name
+                    vectortiles_filename = f'{tile_folder_path}.vectortiles'
+                    vectortiles_empty_filename = f'{tile_folder_path}.vectortiles.null'
+                    if not overwrite:
+                        # skip if the vectortiles file already exists
+                        if os.path.exists(vectortiles_filename):
+                            logger.info(
+                                f'    Skipping {bar_label} since vectortiles file already exists.')
+                            bar.update(1)
+                            continue
+
+                        # skip if the vectortiles explicitly have no data
+                        if os.path.exists(vectortiles_empty_filename):
+                            logger.info(
+                                f'    Skipping {bar_label} since null vectortiles file exists.')
+                            bar.update(1)
+                            continue
 
                     os.makedirs('./data/tmp', exist_ok=True)
                     output_file_path = tempfile.NamedTemporaryFile(
@@ -847,7 +878,7 @@ class ReplicaProcessETL:
                         log_space='    ',
                         intermediate_chunks_folder=intermediate_chunks_folder.as_posix(),
                         step1_columns=['activity_id', 'tour_type', 'mode', 'geometry'],
-                        skip_step_1=skip_explode or (index > 0),
+                        skip_step_1=skip_explode or has_exploded_and_hashed,
                         step_2_filter=filter,
                         out_crs='EPSG:3857',
                         success_hash=self.data_geo_hash,
@@ -855,10 +886,10 @@ class ReplicaProcessETL:
                         frequency_bar.update(progress[0] - frequency_bar.n)
                         frequency_bar.total = progress[1]
                     frequency_bar.close()
+                    has_exploded_and_hashed = True  # it is not possible to get here without having exploded and hashed
 
                     # try to generate tiles for the network segments
                     logger.info(f'       ...generating tiles - {bar_label}')
-                    tile_folder_path = self.output_folder / area_name / 'network_segments' / full_table_name
                     os.makedirs(tile_folder_path, exist_ok=True)
                     try:
                         tile_bar = tqdm.tqdm(
@@ -873,16 +904,22 @@ class ReplicaProcessETL:
                             tile_bar.update(current_percent_complete - tile_bar.n)
                         tile_bar.close()
 
-                        # zip (no compression) the tiles folder
-                        zip_filename = f'{tile_folder_path}.vectortiles'
-                        if os.path.exists(zip_filename):
-                            os.remove(zip_filename)
-                        os.system(
-                            f'cd "{tile_folder_path}" && zip -0 -r {os.path.join('../', full_table_name + '.vectortiles')} . > /dev/null')
+                        # archive (no compression) the tiles folder
+                        if os.path.exists(vectortiles_filename):
+                            os.remove(vectortiles_filename)
+                        with tarfile.open(vectortiles_filename, 'w', format=tarfile.USTAR_FORMAT) as tar:
+                            for name in os.listdir(tile_folder_path):
+                                path = os.path.join(tile_folder_path, name)
+                                tar.add(path, arcname=name)
 
                     except NoVectorDataError:
                         logger.warning(
-                            f'No vector data found for {bar_label}. Skipping tile generation.')
+                            f'    No vector data found for {bar_label}. Skipping tile generation.')
+
+                        # write an empty file to indicate that there are no data
+                        with open(vectortiles_empty_filename, 'w') as f:
+                            f.write('')
+
                         continue
 
                     except Exception as ex:
