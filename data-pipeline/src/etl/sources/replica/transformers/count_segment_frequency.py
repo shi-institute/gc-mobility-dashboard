@@ -15,7 +15,7 @@ logger = logging.getLogger('count_segment_frequency')
 logger.setLevel(logging.DEBUG)
 
 
-def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf: Optional[geopandas.GeoDataFrame] = None) -> geopandas.GeoDataFrame:
+def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf: Optional[geopandas.GeoDataFrame] = None, *, log_space: str = '',) -> geopandas.GeoDataFrame:
     """
     Count the frequency of each segment in the trips GeoDataFrame.
 
@@ -32,16 +32,16 @@ def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf
     """
     # split each multilinestring into individual linestrings
     # and create a MultiIndex with activity_id and segment_index
-    logger.debug('Exploding trips GeoDataFrame to count segment frequencies...')
+    logger.debug(f'{log_space}Exploding trips GeoDataFrame to count segment frequencies...')
     exploded = trips_gdf.set_index('activity_id').explode(index_parts=True)  # create a multiindex
     exploded.index.rename(['activity_id', 'segment_index'], inplace=True)
 
     # count how many segments each activity has
-    logger.debug('Counting segments per activity...')
+    logger.debug(f'{log_space}Counting segments per activity...')
     activity_segment_counts = exploded.index.to_frame(index=False).groupby(
         'activity_id')['segment_index'].max() + 1
 
-    logger.debug('Building filter...')
+    logger.debug(f'{log_space}Building filter...')
 
     # get the segment indices and activity ids as numpy arrays
     segment_indices = exploded.index.get_level_values('segment_index')
@@ -58,7 +58,7 @@ def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf
     filtered_exploded = exploded[filter_condition]
 
     # count the frequency of each unique segment
-    logger.debug('Counting segment frequencies...')
+    logger.debug(f'{log_space}Counting segment frequencies...')
     segment_counts = (
         filtered_exploded.groupby([filtered_exploded.geometry])
         .size()
@@ -66,7 +66,7 @@ def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf
     )
 
     # assign each segment to bucket based on its frequency (0 = low frequency, 10 = highest frequency)
-    logger.debug('Assigning frequency buckets...')
+    logger.debug(f'{log_space}Assigning frequency buckets...')
     buckets_count = 10
     max_frequency = segment_counts['frequency'].max()
     segment_counts['frequency_bucket'] = numpy.minimum(
@@ -74,12 +74,12 @@ def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf
     )
 
     # convert to a GeoDataFrame
-    logger.debug('Converting segment counts to GeoDataFrame with fixed geometry...')
+    logger.debug(f'{log_space}Converting segment counts to GeoDataFrame with fixed geometry...')
     segments_gdf = fix_geometry(geopandas.GeoDataFrame(segment_counts))
 
     # if full_segments_gdf is available, rebase the frequency data on it
     if full_segments_gdf is not None:
-        logger.debug('Rebasing segment frequencies on full segments GeoDataFrame...')
+        logger.debug(f'{log_space}Rebasing segment frequencies on full segments GeoDataFrame...')
         full_segments_gdf = fix_geometry(full_segments_gdf)
         shared_segments_gdf = full_segments_gdf[full_segments_gdf.geometry.isin(
             segments_gdf.geometry)]
@@ -90,7 +90,7 @@ def count_segment_frequency(trips_gdf: geopandas.GeoDataFrame, full_segments_gdf
     return segments_gdf
 
 
-def explode_and_hash(gdf: geopandas.GeoDataFrame, multiindex_column: str = 'activity_id', index_start: int = 0) -> geopandas.GeoDataFrame:
+def explode_and_hash(gdf: geopandas.GeoDataFrame, multiindex_column: str = 'activity_id', index_start: int = 0, *, log_space: str = '',) -> geopandas.GeoDataFrame:
     """
     Explode a GeoDataFrame with MultiIndex and hash the index to create a unique identifier.
 
@@ -103,16 +103,16 @@ def explode_and_hash(gdf: geopandas.GeoDataFrame, multiindex_column: str = 'acti
     """
     # split each multilinestring into individual linestrings
     # and create a MultiIndex with activity_id and segment_index
-    logger.debug('Exploding trips GeoDataFrame to count segment frequencies...')
+    logger.debug(f'{log_space}Exploding trips GeoDataFrame to count segment frequencies...')
     exploded = gdf.set_index(multiindex_column).explode(index_parts=True)  # create a multiindex
     exploded.index.rename(['activity_id', 'segment_index'], inplace=True)
 
     # count how many segments each activity has
-    logger.debug('Counting segments per activity...')
+    logger.debug(f'{log_space}Counting segments per activity...')
     activity_segment_counts = exploded.index.to_frame(index=False).groupby(
         'activity_id')['segment_index'].max() + 1
 
-    logger.debug('Building filter...')
+    logger.debug(f'{log_space}Building filter...')
 
     # get the segment indices and activity ids as numpy arrays
     segment_indices = exploded.index.get_level_values('segment_index')
@@ -126,10 +126,12 @@ def explode_and_hash(gdf: geopandas.GeoDataFrame, multiindex_column: str = 'acti
     # short lines that indicate the start and end points of the activity
     # and do not represent actual network segments
     filter_condition = (segment_indices > 0) & (segment_indices < upper_bound)
-    filtered_exploded = exploded[filter_condition]
+    filtered_exploded = exploded[filter_condition].copy().sort_index()
+    del exploded
+    gc.collect()
 
     # create a hash for each segment's geometry
-    logger.debug('Hashing segment geometries...')
+    logger.debug(f'{log_space}Hashing segment geometries...')
     filtered_exploded.loc[:, 'geometry_hash'] = filtered_exploded.geometry.apply(
         lambda geom: hash(geom.wkb) if geom is not None else None
     )
@@ -141,7 +143,7 @@ def explode_and_hash(gdf: geopandas.GeoDataFrame, multiindex_column: str = 'acti
     return result
 
 
-def count_frequency(df: pandas.DataFrame, freq_column: str = 'geometry_hash') -> pandas.DataFrame:
+def count_frequency(df: pandas.DataFrame, freq_column: str = 'geometry_hash', *, log_space: str = '',) -> pandas.DataFrame:
     """
     Count the frequency of each unique value in a specified column of a DataFrame.
 
@@ -163,14 +165,14 @@ def count_frequency(df: pandas.DataFrame, freq_column: str = 'geometry_hash') ->
         pandas.DataFrame: A DataFrame with unique values and their frequencies.
     """
     # count frequency and get the first index for each unique segment
-    logger.debug('Counting segment frequencies...')
+    logger.debug(f'{log_space}Counting segment frequencies...')
     segment_counts = df.groupby(freq_column).agg(
         frequency=(freq_column, 'size'),
         first_occurrence_index=(freq_column, lambda x: x.index[0])
     ).reset_index()
 
     # assign each segment to bucket based on its frequency (0 = low frequency, 10 = highest frequency)
-    logger.debug('Assigning frequency buckets...')
+    logger.debug(f'{log_space}Assigning frequency buckets...')
     buckets_count = 10
     max_frequency = segment_counts['frequency'].max()
     segment_counts['frequency_bucket'] = numpy.minimum(
@@ -268,7 +270,8 @@ def count_segment_frequency_multi_input(
                 gdf = geopandas.read_file(file_path)
 
             logger.debug(f'{log_space}  Exploding and hashing...')
-            result = explode_and_hash(gdf, 'activity_id', last_max_row_index + 1)
+            result = explode_and_hash(
+                gdf, 'activity_id', last_max_row_index + 1, log_space=f'{log_space}    ')
             last_max_row_index = result.index.max()
 
             logger.debug(f'{log_space}  Saving chunk...')
@@ -300,7 +303,8 @@ def count_segment_frequency_multi_input(
         filters=[step_2_filter] if step_2_filter is not None else None,
     ).compute()
     logger.debug(f'{log_space}  Counting frequencies...')
-    segment_hash_frequencies = count_frequency(segment_hashes_df, 'geometry_hash')
+    segment_hash_frequencies = count_frequency(
+        segment_hashes_df, 'geometry_hash', log_space=f'{log_space}    ')
 
     yield (current_step, total_steps)
 
