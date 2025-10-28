@@ -57,8 +57,8 @@ export function EssentialServicesAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ height: '100%' }} title="Map">
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} title="Map">
+          <div style={{ height: '100%' }}>
             <Map
               layers={[
                 ...networkSegments,
