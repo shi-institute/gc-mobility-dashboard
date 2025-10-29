@@ -28,7 +28,20 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
 
       return { label, value: season, id: subLabel };
     })
-    .sort((a, b) => a.value.localeCompare(b.value));
+    .sort((a, b) => {
+      const [aYear, aQuarter] = a.value.split(':');
+      const [bYear, bQuarter] = b.value.split(':');
+
+      if (!aYear || !bYear || !aQuarter || !bQuarter) {
+        return 0;
+      }
+
+      if (aYear !== bYear) {
+        return parseInt(bYear) - parseInt(aYear);
+      }
+
+      return bQuarter.localeCompare(aQuarter);
+    });
   const selectedOptions = currentSelectedSeasons
     .map((season) => {
       return options.find((option) => option.value === season);
