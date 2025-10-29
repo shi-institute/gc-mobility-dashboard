@@ -35,6 +35,7 @@ export function Section(props: SectionProps) {
       flexParent={props.flexParent}
       containerName={props.containerNameOverride || 'section'}
     >
+      {/* @ts-expect-error This is not an ArcGIS Utility Network */}
       <TitleTag className="section-title">{props.title}</TitleTag>
       {props.description ? <div className="caption">{props.description}</div> : null}
       <div className="section-content">{props.children}</div>
