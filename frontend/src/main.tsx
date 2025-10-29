@@ -9,7 +9,7 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter as Router } from 'react-router';
 import App from './App.tsx';
 
-const mountElementId = document.currentScript?.getAttribute('mountid') || 'gcmd-root';
+const mountElementId = 'gcmd-root';
 const mountElement = document.getElementById(mountElementId);
 
 if (!mountElement) {

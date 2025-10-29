@@ -5,6 +5,8 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
+  const buildUUID = crypto.randomUUID();
+
   return {
     define: {
       __GCMD_DATA_ORIGIN__: JSON.stringify(env.GCMD_DATA_ORIGIN || '.'),
@@ -33,6 +35,16 @@ export default defineConfig(({ mode }) => {
     server: {
       watch: {
         ignored: ['**/node_modules/**', '**/public/data/**'],
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          // place all of the file for distribution in a unique folder for each build
+          entryFileNames: `${buildUUID}/[name].js`,
+          chunkFileNames: `${buildUUID}/assets/[name]-[hash].js`,
+          assetFileNames: `${buildUUID}/assets/[name]-[hash].[ext]`,
+        },
       },
     },
   };
