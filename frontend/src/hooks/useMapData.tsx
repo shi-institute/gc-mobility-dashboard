@@ -498,13 +498,17 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
   }, [data]);
 
   const groceryStores = useMemo(() => {
-    // Helper function to fix truncated NAICS description
-    const fixNAICSDescription = (description: string): string => {
+    /**
+     * Untruncates NAICS description strings.
+     *
+     * Some NAICS description strings are truncated in the data source.
+     */
+    function untruncateNAICSDescription(description: string): string {
       if (description === 'Supermarkets And Other Grocery Retailers (Except C') {
         return 'Supermarkets and Other Grocery (except Convenience) Stores';
       }
       return description;
-    };
+    }
 
     return (
       (data || [])
@@ -542,7 +546,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `Stores With Groceries (${__year} ${__quarter})`,
+              title: `{Company_Name} (Store With Groceries) (${__year} ${__quarter})`,
               content: [
                 new CustomContent({
                   outFields: [
@@ -567,14 +571,12 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                       `${attrs['Address']}, ${attrs['City']}, ${attrs['State']} ${attrs['ZIP']}`
                     );
 
-                    // Fix the NAICS description if it's truncated
-                    const naicsDescription = fixNAICSDescription(
+                    const naicsDescription = untruncateNAICSDescription(
                       attrs['Primary_NAICS_Description'] || 'N/A'
                     );
 
                     return createPopupRoot(document.createElement('div')).render(
                       <PopupAside>
-                        <h1>{attrs['Company_Name'] || 'Store details'}</h1>
                         <div>
                           <span className="label">NAICS category: </span>
                           {naicsDescription}
@@ -595,78 +597,64 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
     );
   }, [data]);
 
-  // Dental facilities using the helper
   const dentalCareFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'dental_locations',
       layerTitle: 'Dental Care Locations',
-      popupTitle: 'Dental Facilities',
       facilityType: 'Dental Facility',
       layerIdPrefix: 'dental-locations',
     });
   }, [data]);
 
-  // Eyecare facilities using the helper
   const eyeCareFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'eye_care_locations',
       layerTitle: 'Eye Care Locations',
-      popupTitle: 'Eye Care Facilities',
       facilityType: 'Eye Care Facility',
       layerIdPrefix: 'eye-care-locations',
     });
   }, [data]);
 
-  // Family Medicine facilities using the helper
   const familyMedicineFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'family_medicine_locations',
       layerTitle: 'Family Medicine Locations',
-      popupTitle: 'Family Medicine Facilities',
       facilityType: 'Family Medicine Facility',
       layerIdPrefix: 'family-medicine-locations',
     });
   }, [data]);
 
-  // Family clinics facilities using the helper
   const freeClinicsFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'free_clinics_locations',
       layerTitle: 'Free Clinic Locations',
-      popupTitle: 'Free Clinic Facilities',
       facilityType: 'Free Clinic Facility',
       layerIdPrefix: 'free-clinics-locations',
     });
   }, [data]);
 
-  //Hospital facilities using the helper
   const hospitalsFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'hospitals_locations',
       layerTitle: 'Hospital Locations',
-      popupTitle: 'Hospital Facilities',
       facilityType: 'Hospital Facility',
       layerIdPrefix: 'hospitals-locations',
     });
   }, [data]);
 
-  //Internal Medicine facilities using the helper
   const internalMedicineFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'internal_medicine_locations',
       layerTitle: 'Internal Medicine Locations',
-      popupTitle: 'Internal Medicine Facilities',
       facilityType: 'Internal Medicine Facility',
       layerIdPrefix: 'internal-medicine-locations',
     });
   }, [data]);
 
-  //Urgent Care facilities using the helper
   const urgentCareFacilities = useMemo(() => {
     return createMedicalFacilityLayer(data, {
       filterKey: 'urgent_care_locations',
       layerTitle: 'Urgent Care Locations',
-      popupTitle: 'Urgent Care Facilities',
       facilityType: 'Urgent Care Facility',
       layerIdPrefix: 'urgent-care-locations',
     });
@@ -777,7 +765,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             }),
             popupEnabled: true,
             popupTemplate: new PopupTemplate({
-              title: `Commercial Zones (${__year} ${__quarter})`,
+              title: `{ZONING} Commerical Zone (${__year} ${__quarter})`,
               content: [
                 new CustomContent({
                   outFields: ['ZONING'],
@@ -790,7 +778,6 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
 
                     return createPopupRoot(document.createElement('div')).render(
                       <PopupAside>
-                        <h1>{attrs['ZONING'] || 'Commercial Zone'}</h1>
                         <div>
                           <span className="label">Zoning Code: </span>
                           {attrs['ZONING'] || 'N/A'}
@@ -1128,7 +1115,6 @@ const createMedicalFacilityLayer = (
   config: {
     filterKey: keyof NonNullable<AppData>[number];
     layerTitle: string;
-    popupTitle: string;
     facilityType: string;
     layerIdPrefix: string;
   }
@@ -1151,7 +1137,7 @@ const createMedicalFacilityLayer = (
           renderer: healthAndDentalRenderer,
           popupEnabled: true,
           popupTemplate: new PopupTemplate({
-            title: `${config.popupTitle} (${__year} ${__quarter})`,
+            title: `{NAME} (${config.facilityType}) (${__year} ${__quarter})`,
             content: [
               new CustomContent({
                 outFields: ['NAME', 'Address', 'CITY', 'STATE', 'ZIP'],
@@ -1171,7 +1157,6 @@ const createMedicalFacilityLayer = (
 
                   return createPopupRoot(document.createElement('div')).render(
                     <PopupAside>
-                      <h1>{attrs['NAME'] || config.facilityType}</h1>
                       <div>
                         <span className="label">Type: </span>
                         {config.facilityType}
