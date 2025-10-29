@@ -15,6 +15,7 @@ import {
   Button,
   CoreFrame,
   CoreFrameContext,
+  ErrorBoundary,
   IconButton,
   manualSectionIds,
   OptionTrack,
@@ -116,9 +117,11 @@ export function RoadsVsTransit() {
       header={<AppNavigation />}
       map={
         render(
-          <div style={{ height: '100%' }} title="Map">
-            <WebMap layers={layers} onMapReady={handleMapReady} />
-          </div>
+          <ErrorBoundary fallback={<div>Map failed to load</div>} title="Map">
+            <div style={{ height: '100%' }}>
+              <WebMap layers={layers} onMapReady={handleMapReady} />
+            </div>
+          </ErrorBoundary>
         ) ?? undefined
       }
       sections={renderSections([
