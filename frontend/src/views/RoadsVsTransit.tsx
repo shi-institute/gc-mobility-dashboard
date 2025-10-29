@@ -10,6 +10,7 @@ import React, {
   useState,
 } from 'react';
 import { useSearchParams } from 'react-router';
+import busImageSrc from '../assets/images/bus.webp';
 import {
   Button,
   CoreFrame,
@@ -770,7 +771,7 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
           </p>
         </div>
 
-        <img src="./img/bus.webp" alt="" className="bus-container" />
+        <img src={busImageSrc} alt="" className="bus-container" />
         <OptionTrack.Track
           mode={mode}
           style={`${(() => {
