@@ -32,7 +32,7 @@ export function IconButton(props: IconButtonProps) {
         href={props.href}
         onClick={props.onClick}
         className={props.disabled ? 'disabled ' + props.className : props.className}
-        title={props.title}
+        data-tooltip={props.title}
         style={props.style}
         active={props.active}
         solidSurfaceColor={props.solidSurfaceColor}
@@ -47,7 +47,7 @@ export function IconButton(props: IconButtonProps) {
       onClick={props.onClick}
       disabled={props.disabled}
       className={props.disabled ? 'disabled ' + props.className : props.className}
-      title={props.title}
+      data-tooltip={props.title}
       style={props.style}
       active={props.active}
       solidSurfaceColor={props.solidSurfaceColor}
@@ -57,7 +57,11 @@ export function IconButton(props: IconButtonProps) {
   );
 }
 
-const StyledButton = styled.button<{ active?: boolean; solidSurfaceColor?: string }>`
+const StyledButton = styled.button<{
+  active?: boolean;
+  solidSurfaceColor?: string;
+  'data-tooltip'?: string;
+}>`
   font-size: 1rem;
   appearance: none;
   padding: 0;
@@ -78,7 +82,7 @@ const StyledButton = styled.button<{ active?: boolean; solidSurfaceColor?: strin
   flex-wrap: nowrap;
   transition: var(--wui-control-faster-duration);
   position: relative;
-  ${(props) => props.title && `cursor: help;`}
+  ${(props) => props['data-tooltip'] && `cursor: help;`}
 
   ${({ active }) => {
     if (!active) {
@@ -128,6 +132,32 @@ const StyledButton = styled.button<{ active?: boolean; solidSurfaceColor?: strin
       `;
     }
   }}
+
+  // tooltip
+  
+  &[data-tooltip]:after {
+    content: '';
+    opacity: 0;
+
+    position: absolute;
+    left: calc(100% + 0.5em);
+    white-space: nowrap;
+    background: white;
+    font-size: 0.75rem;
+    z-index: 10;
+    padding: 0.125em 0.25em;
+    border-radius: var(--button-radius);
+    box-shadow: 0px 4px 8px hsla(0, 0%, 0%, 14%);
+    pointer-events: none;
+    color: var(--text-primary);
+
+    transition: opacity 0.2s ease-in-out;
+  }
+  &:hover[data-tooltip]:after {
+    content: attr(data-tooltip);
+    opacity: 1;
+    transition-delay: 0.5s;
+  }
 `;
 
 const StyledAnchorButton = StyledButton.withComponent('a');
