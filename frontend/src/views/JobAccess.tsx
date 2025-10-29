@@ -42,7 +42,9 @@ export function JobAccess() {
           );
         if (jobAreas.length > 0) {
           searchParams.set('jobAreas', jobAreas.join(','));
-          setSearchParams(searchParams, { replace: true });
+          setTimeout(() => {
+            setSearchParams(searchParams, { replace: true });
+          }, 0);
         }
       }
     }
