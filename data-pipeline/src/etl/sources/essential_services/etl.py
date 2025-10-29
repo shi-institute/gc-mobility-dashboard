@@ -9,6 +9,8 @@ import geopandas
 import pandas
 import pyogrio
 from pyproj import CRS
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from etl.geodesic import geodesic_buffer_series
 
@@ -160,71 +162,77 @@ class EssentialServicesETL:
         self.zoning_data = zoning_data
 
     def run(self) -> Self:
-        self.calculate_childcare_access(day='thursday')
-        self.calculate_grocery_store_access(day='thursday')
-        self.calculate_commercial_zone_access(day='thursday')
-        self.calculate_dental_access(day='thursday')
-        self.calculate_eye_care_access(day='thursday')
-        self.calculate_family_medicine_access(day='thursday')
-        self.calculate_free_clinics_access(day='thursday')
-        self.calculate_hospitals_access(day='thursday')
-        self.calculate_internal_medicine_access(day='thursday')
-        self.calculate_urgent_care_access(day='thursday')
-
-        # flatten the stats dictionary to a list of dictionaries for easier processing
-        logger.info('Flattening stats dictionary for easier processing...')
-        flat_stats: list[dict[str, str | int | float | None]] = []
-        for area, data in self.stats.items():
-            for replica_table, seasons in data.items():
-                for season, stats in seasons.items():
-                    flat: dict[str, str | int | float | None] = {
-                        'area': area,
-                        'replica_table': replica_table,
-                        'season': season,
-                        'year': int(season.split('_')[0]),
-                        'quarter': season.split('_')[1],
-                    }
-                    for stat_name, value in stats.items():
-                        flat[stat_name] = value
-                    flat_stats.append(flat)
-
-        # convert the flat stats to a pandas DataFrame
-        logger.info('Converting flat stats to pandas DataFrame...')
-        stats_df = pandas.DataFrame(flat_stats)
-
-        # for each combination of year, season, and area, save a separate JSON file
-        for (year, quarter, area), group_df in stats_df.groupby(['year', 'quarter', 'area']):
-            stats_output_path = self.output_folder / \
-                str(year) / quarter / area / 'essential_services_stats.json'
-
-            # drop the redundant columns
-            group_df = group_df.drop(columns=['year', 'quarter'])
-
-            logger.info(
-                f'Saving stats DataFrame for {area} in {year} {quarter} to {stats_output_path}...')
-            stats_output_path.parent.mkdir(parents=True, exist_ok=True)
-            records = [
-                # remove None/null/NA values
-                {key: value for key, value in row.items() if pandas.notna(value)}
-                for row in group_df.to_dict(orient="records")
+        with logging_redirect_tqdm():
+            access_calculations = [
+                ('childcare', self.calculate_childcare_access),
+                ('grocery_store', self.calculate_grocery_store_access),
+                ('commercial_zone', self.calculate_commercial_zone_access),
+                ('dental', self.calculate_dental_access),
+                ('eye_care', self.calculate_eye_care_access),
+                ('family_medicine', self.calculate_family_medicine_access),
+                ('free_clinics', self.calculate_free_clinics_access),
+                ('hospitals', self.calculate_hospitals_access),
+                ('internal_medicine', self.calculate_internal_medicine_access),
+                ('urgent_care', self.calculate_urgent_care_access),
             ]
 
-            # save the stats dataframe to an array of objects in a JSON file
-            with open(stats_output_path, 'w') as f:
-                json.dump(records, f, indent=2)
+            for name, calculation_func in tqdm(access_calculations, desc="Calculating access metrics"):
+                calculation_func(day='thursday')
 
-        # collect all essential_services_stats.json files into a single file for easier consumption
-        all_stats_output_path = self.output_folder / 'essential_services_stats.json'
-        logger.info(f'Collecting all stats JSON files into {all_stats_output_path}...')
-        all_stats: list[dict[str, str | int | float | None]] = []
-        for stats_file in self.output_folder.glob('**/essential_services_stats.json'):
-            with open(stats_file, 'r') as f:
-                file_stats = json.load(f)
-                all_stats.extend(file_stats)
-        with open(all_stats_output_path, 'w') as f:
-            json.dump(all_stats, f, indent=2)
+            # flatten the stats dictionary to a list of dictionaries for easier processing
+            logger.info('Flattening stats dictionary for easier processing...')
+            flat_stats: list[dict[str, str | int | float | None]] = []
+            for area, data in self.stats.items():
+                for replica_table, seasons in data.items():
+                    for season, stats in seasons.items():
+                        flat: dict[str, str | int | float | None] = {
+                            'area': area,
+                            'replica_table': replica_table,
+                            'season': season,
+                            'year': int(season.split('_')[0]),
+                            'quarter': season.split('_')[1],
+                        }
+                        for stat_name, value in stats.items():
+                            flat[stat_name] = value
+                        flat_stats.append(flat)
 
-        return self
+            # convert the flat stats to a pandas DataFrame
+            logger.info('Converting flat stats to pandas DataFrame...')
+            stats_df = pandas.DataFrame(flat_stats)
+
+            # for each combination of year, season, and area, save a separate JSON file
+            for (year, quarter, area), group_df in stats_df.groupby(['year', 'quarter', 'area']):
+                stats_output_path = self.output_folder / \
+                    str(year) / quarter / area / 'essential_services_stats.json'
+
+                # drop the redundant columns
+                group_df = group_df.drop(columns=['year', 'quarter'])
+
+                logger.info(
+                    f'Saving stats DataFrame for {area} in {year} {quarter} to {stats_output_path}...')
+                stats_output_path.parent.mkdir(parents=True, exist_ok=True)
+                records = [
+                    # remove None/null/NA values
+                    {key: value for key, value in row.items() if pandas.notna(value)}
+                    for row in group_df.to_dict(orient="records")
+                ]
+
+                # save the stats dataframe to an array of objects in a JSON file
+                with open(stats_output_path, 'w') as f:
+                    json.dump(records, f, indent=2)
+
+            # collect all essential_services_stats.json files into a single file for easier consumption
+            all_stats_output_path = self.output_folder / 'essential_services_stats.json'
+            logger.info(f'Collecting all stats JSON files into {all_stats_output_path}...')
+            all_stats: list[dict[str, str | int | float | None]] = []
+            for stats_file in self.output_folder.glob('**/essential_services_stats.json'):
+                with open(stats_file, 'r') as f:
+                    file_stats = json.load(f)
+                    all_stats.extend(file_stats)
+            with open(all_stats_output_path, 'w') as f:
+                json.dump(all_stats, f, indent=2)
+
+            return self
 
     def get_trip_data(self, area: Path, day: Literal['saturday', 'thursday'] = 'thursday', *, season: str | None = None) -> Generator[tuple[str, Iterator[Path]], Any, None]:
         """
@@ -406,7 +414,7 @@ class EssentialServicesETL:
             logger.info(f'Processing POI data from season {poi_season}...')
 
             # copy the POI data path to the output folder for reference
-            for area, season in area_season_pairs:
+            for area, season in tqdm(area_season_pairs, desc=f"Copying {output_name} POI data for reference"):
                 season_year, season_quarter = season.split('_')
                 output_poi_folder = self.output_folder / season_year / season_quarter
                 output_poi_folder.mkdir(parents=True, exist_ok=True)
@@ -451,7 +459,7 @@ class EssentialServicesETL:
                 )]
 
             # calculate mean travel time to a POI in the area-season via public transit
-            for area, season in area_season_pairs:
+            for area, season in tqdm(area_season_pairs, desc=f"Calculating {output_name} travel time (public transit)"):
                 logger.info(
                     f'Calculating mean public transit travel time to POIs for area {area.name} in season {season}...')
                 trip_files = next(self.get_trip_data(area, day, season=season))[1]
@@ -476,6 +484,10 @@ class EssentialServicesETL:
                     # filter to trip desinations that are within the POI buffers
                     near_poi_destinations = geopandas.sjoin(
                         dest_gdf, destination_zones_for_area, how='inner', predicate='within')
+
+                    # skip if there are no measured desintation trips
+                    if near_poi_destinations.empty:
+                        continue
 
                     # count found destinations per zone and add to destination_zones_for_area
                     if not near_poi_destinations.empty:
@@ -507,7 +519,7 @@ class EssentialServicesETL:
                         else:
                             time_frequencies[duration] = frequency
 
-                logger.info(
+                logger.debug(
                     f'Saving POI destination geometry for area {area.name} in season {season}...')
                 area_season_year, area_season_quarter = season.split('_')
                 output_folder = self.output_folder / area_season_year / area_season_quarter / area.name
@@ -519,10 +531,10 @@ class EssentialServicesETL:
                 weighted_sum = sum(duration * frequency for duration,
                                    frequency in time_frequencies.items())
                 total_trips = sum(time_frequencies.values())
-                if total_trips > 0:
-                    mean_travel_time = weighted_sum / total_trips
-                else:
-                    mean_travel_time = None
+                if total_trips <= 0:
+                    # do not record mean travel time if there were no trips
+                    continue
+                mean_travel_time = weighted_sum / total_trips
 
                 self.stats.setdefault(area.name, {})
                 self.stats[area.name].setdefault(f'{day}_trip', {})
@@ -556,7 +568,7 @@ class EssentialServicesETL:
                 access_zones, walk_service_area_gdf, how='intersection')
 
             # calculate the proportion of the population with reasonable access to at least one POI
-            for area, season in area_season_pairs:
+            for area, season in tqdm(area_season_pairs, desc=f"Calculating {output_name} access"):
                 logger.info(
                     f'Calculating proportion of population with access to at least one POI for area {area.name} in season {season}...')
 
@@ -568,6 +580,10 @@ class EssentialServicesETL:
                     self.get_synthetic_population_data(area, 'home', season=season))[1]
                 population_home_locations = geopandas.read_file(
                     population_data_path, columns=['geometry']).to_crs('EPSG:4326').reset_index()
+
+                # if there are no population home locations, skip this area-season pair
+                if population_home_locations.empty:
+                    continue
 
                 logger.debug(
                     f'Filtering population home locations to those within the POI access zones for area {area.name} in season {season}...')
@@ -590,7 +606,7 @@ class EssentialServicesETL:
                         access_zones_for_area.loc[idx, 'found_count'] = int(
                             str(current_count)) + count
 
-                logger.info(
+                logger.debug(
                     f'Saving POI access geometry for area {area.name} in season {season}...')
                 area_season_year, area_season_quarter = season.split('_')
                 output_folder = self.output_folder / area_season_year / area_season_quarter / area.name
