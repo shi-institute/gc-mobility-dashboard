@@ -295,7 +295,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
         };
       })
       .filter(notEmpty);
-  }, [areas, seasons]);
+  }, [areas, seasons, travelMethod]);
 
   // manage the state of the fetch data, showing a loading state while the data is being fetched
   const [data, setData] = useState<ResolvedData<(typeof dataPromises)[number]>[] | null>(null);
