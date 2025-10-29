@@ -64,31 +64,32 @@ def finalize():
     build_future_routes_index(public_dir / 'future_routes')
 
     # delete replica data for areas and seasons that are not in the area and season indexes
-    print("Omitting unindexed replica data...")
     replica_dir = public_dir / 'replica'
-    valid_season_names = {
-        f"{season['year']}_{season['quarter']}" for season in seasons}  # e.g., '2021_Q2'
-    pattern = re.compile(r"\d{4}_Q[1-4]")  # matches season file names like '_2021_Q2'
-    for area_dir in replica_dir.iterdir():
-        if not area_dir.is_dir():
-            continue
-
-        # remove area directories not in the area index
-        if area_dir.name not in area_names:
-            shutil.rmtree(area_dir)
-            continue
-
-        # remove season files not in the season index
-        for file in area_dir.rglob("*"):
-            # check for a season string (YYYY_Q#) in the file stem
-            match = pattern.search(file.stem)
-            if not match:
+    if replica_dir.exists():
+        print("Omitting unindexed replica data...")
+        valid_season_names = {
+            f"{season['year']}_{season['quarter']}" for season in seasons}  # e.g., '2021_Q2'
+        pattern = re.compile(r"\d{4}_Q[1-4]")  # matches season file names like '_2021_Q2'
+        for area_dir in replica_dir.iterdir():
+            if not area_dir.is_dir():
                 continue
 
-            # check if the season is in the valid seasons list
-            season_name = match.group(0)
-            if season_name not in valid_season_names:
-                file.unlink()
+            # remove area directories not in the area index
+            if area_dir.name not in area_names:
+                shutil.rmtree(area_dir)
+                continue
+
+            # remove season files not in the season index
+            for file in area_dir.rglob("*"):
+                # check for a season string (YYYY_Q#) in the file stem
+                match = pattern.search(file.stem)
+                if not match:
+                    continue
+
+                # check if the season is in the valid seasons list
+                season_name = match.group(0)
+                if season_name not in valid_season_names:
+                    file.unlink()
 
     # compress JSON files in public/data
     deflate_json_files(public_dir)
@@ -302,6 +303,9 @@ def build_area_index(replica_directory: Path) -> list[str]:
     Returns:
         List of area names (directory names)
     """
+    if not replica_directory.exists():
+        return []
+
     print(
         f"Building area index from directory: {replica_directory.resolve().relative_to(data_dir).as_posix()}")
 
@@ -339,6 +343,9 @@ def build_season_index(stats_directory: Path) -> list[SeasonIndexEntry]:
     Args:
         stats_directory: Path to the directory to scan for season files
     """
+    if not stats_directory.exists():
+        return []
+
     print(
         f"Building seasons index from directory: {stats_directory.resolve().relative_to(data_dir).as_posix()}")
 
