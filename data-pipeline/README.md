@@ -359,6 +359,10 @@ This runner is broken into two main phases: downloading data from Replica and pr
    4. For each partition, assign geometry by finding each segment ID in the network segments (from step 4) and constructing a complet [MultiLineString](https://shapely.readthedocs.io/en/stable/reference/shapely.MultiLineString.html) from the ordered combination of segment geometries.
    5. Save each partition (with geometry assigned) as a GeoParquet file.
 
+> [!NOTE]
+> Phase 1 will only download data that has not already been downloaded. If you re-run this runner, it will either skip this phase entirely (if all data has already been downloaded) or only download missing data.
+> To re-download all data, you must delete the contents of the trip data download cache located at `./data/replica/full_area/download` and each .parquet file in the population and network_semgnets folders prior to re-running this runner.
+
 **Phase 2. Process**
 
 1. Read the list of downloaded datasets from phase 1.
@@ -390,6 +394,13 @@ This runner is broken into two main phases: downloading data from Replica and pr
    4. Save the combined statistics to the processing cache.
 7. Save the trip and population statistics to the output folder, separated by area and season.
 8. For each season and area combination, generate vector tiles for each travel method (walking, biking, public transit, carpool, etc.) that visualize the density of trips for each network segment.
+
+> [!NOTE]
+> Phase 2 will attempt to restore cached statistics. If you re-run this runner in the exact same configuration of years and quarters, it will skip many processing steps by restoring cached results.
+> To re-process all data, you must delete the cache files in `./data/replica` prior to re-running this runner.
+
+> [!NOTE]
+> Phase 2 will only generate vector tiles for network segments that have not already be generated or skipped. Delete the contents of `./data/replica/<area>/network_segments` prior to re-running this runner to re-generate all vector tiles.
 
 #### Outputs
 

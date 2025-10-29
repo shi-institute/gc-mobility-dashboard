@@ -40,7 +40,7 @@ export function SelectedJobAccessArea({ areasList, forceCompare }: SelectedJobAc
         return [label, subLabel];
       })();
 
-      const label = `${area} (${seasonLabel[0]})`;
+      const label = `${area === 'full_area' ? 'Greenville County' : area} (${seasonLabel[0]})`;
       const subLabel = seasonLabel[1] || '‾‾supressId';
 
       return { label, value, id: subLabel };

@@ -9,7 +9,6 @@ import pandas_gbq
 import pydata_google_auth
 from dotenv import load_dotenv
 
-from etl.finalize import finalize
 from etl.runner import etl_runner
 from TeeLogger import TeeLogger
 
@@ -68,6 +67,7 @@ if __name__ == "__main__":
             logging.StreamHandler(sys.stderr),
         ]
     )
+    logging.addLevelName(logging.WARNING, "WARN")  # shorten WARNING to WARN
 
     # if etls argument is provided, split it into a list of strings
     etls: Optional[list[str]] = None
@@ -119,7 +119,4 @@ if __name__ == "__main__":
 
     # run the ETL pipeline
     etl_runner(etls)
-
-    # compress/package the data for deployment
-    finalize()
     print('\nDONE')

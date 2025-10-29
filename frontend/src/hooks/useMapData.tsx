@@ -75,7 +75,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
       };
 
       return new VectorTileLayer({
-        title: `Network Segments (${data.__area} ${data.__year} ${data.__quarter})`,
+        title: `Trip Density (${data.__area} ${data.__year} ${data.__quarter})`,
         id: `network-segments__${data.__area}_${data.__year}_${data.__quarter}`,
         style: modifiedStyle,
       });

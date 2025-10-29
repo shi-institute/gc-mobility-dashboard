@@ -10,10 +10,12 @@ import React, {
   useState,
 } from 'react';
 import { useSearchParams } from 'react-router';
+import busImageSrc from '../assets/images/bus.webp';
 import {
   Button,
   CoreFrame,
   CoreFrameContext,
+  ErrorBoundary,
   IconButton,
   manualSectionIds,
   OptionTrack,
@@ -115,9 +117,11 @@ export function RoadsVsTransit() {
       header={<AppNavigation />}
       map={
         render(
-          <div style={{ height: '100%' }} title="Map">
-            <WebMap layers={layers} onMapReady={handleMapReady} />
-          </div>
+          <ErrorBoundary fallback={<div>Map failed to load</div>} title="Map">
+            <div style={{ height: '100%' }}>
+              <WebMap layers={layers} onMapReady={handleMapReady} />
+            </div>
+          </ErrorBoundary>
         ) ?? undefined
       }
       sections={renderSections([
@@ -380,6 +384,26 @@ function List(props: { title: string; mapView: __esri.MapView | null }) {
                               );
                             }
                           }
+
+                          if (feature.affects === 'on-demand') {
+                            if (feature.type === 'purchase') {
+                              return (
+                                <li>
+                                  {feature.count} new on-demand vehicle
+                                  {feature.count === 1 ? '' : 's'}:
+                                  <ul>
+                                    <li>{feature.description}</li>
+                                  </ul>
+                                </li>
+                              );
+                            }
+                          }
+
+                          return (
+                            <pre style={{ color: 'yellow', background: 'black' }}>
+                              UNEXPECETD FEATURE
+                            </pre>
+                          );
                         })}
                       </ul>
                       {isMobile ? null : featureAffects.includes('routes') ||
@@ -549,6 +573,25 @@ async function showFeaturesOnMap(
             });
           }
 
+          // also temporarily modify the min scale for the bus stops layers so that the bus stops are visible
+          const oldMinScales = busStopsLayers
+            .filter((layer): layer is __esri.GeoJSONLayer => layer.type === 'geojson')
+            .map((layer) => {
+              const oldMinScale = layer.minScale;
+              layer.minScale = 0;
+
+              // return information about the old scale so we can restore it later
+              return { id: layer.id, oldMinScale };
+            });
+          registerCleanupFunction(() => {
+            oldMinScales.forEach(({ id, oldMinScale }) => {
+              const layer = mapView?.map?.findLayerById(id) as __esri.GeoJSONLayer | undefined;
+              if (layer) {
+                layer.minScale = oldMinScale;
+              }
+            });
+          });
+
           // request zoom to the highlighted features
           return foundLayers.map(({ layerView, targetQuery }) => ({
             id: layerView.layer.id,
@@ -689,14 +732,16 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
                   : '1000ms opacity',
             }}
           >
-            <TrackButtonExpandedContent
-              optionLabel={optionLabel.replace('.0 million', ' million')}
-              scenarios={buttonScenarios}
-              transitioning={transitioning}
-              mapView={props.mapView}
-              searchParams={searchParams}
-              setSearchParams={setSearchParams}
-            />
+            {selectedIndex === index ? (
+              <TrackButtonExpandedContent
+                optionLabel={optionLabel.replace('.0 million', ' million')}
+                scenarios={buttonScenarios}
+                transitioning={transitioning}
+                mapView={props.mapView}
+                searchParams={searchParams}
+                setSearchParams={setSearchParams}
+              />
+            ) : null}
           </ButtonInterior>
         </>
       ),
@@ -729,7 +774,7 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
           </p>
         </div>
 
-        <img src="./img/bus.webp" alt="" className="bus-container" />
+        <img src={busImageSrc} alt="" className="bus-container" />
         <OptionTrack.Track
           mode={mode}
           style={`${(() => {
@@ -1219,7 +1264,15 @@ const ComparisonComponent = styled.div`
 
     p {
       text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
-      background-color: var(--blue-background--solid);
+      background-color: color-mix(in srgb, var(--blue-background--solid) 50%, transparent);
+
+      backdrop-filter: blur(12px);
+      padding: 0.75rem;
+      margin-left: -0.75rem;
+      margin-right: -0.75rem;
+      margin-top: calc(1em - 0.75rem);
+      margin-bottom: calc(1em - 0.75rem);
+      border-radius: var(--surface-radius);
     }
 
     p:last-of-type {

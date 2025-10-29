@@ -42,7 +42,9 @@ export function JobAccess() {
           );
         if (jobAreas.length > 0) {
           searchParams.set('jobAreas', jobAreas.join(','));
-          setSearchParams(searchParams, { replace: true });
+          setTimeout(() => {
+            setSearchParams(searchParams, { replace: true });
+          }, 0);
         }
       }
     }
@@ -221,7 +223,24 @@ function useJobData() {
     };
   }
 
+  const jobAreas = searchParams.get('jobAreas')?.split(',').filter(notEmpty) || [];
+  const regularSeasonAreas = Array.from(
+    new Set(
+      jobAreas
+        .filter((jobArea) => !jobArea.toLowerCase().includes('future'))
+        .map((area) => area.split('::'))
+        .filter((parts): parts is [string, string] => parts.length === 2)
+        .map(([area, season]) => [area, ...season.split(':')])
+        .filter((parts): parts is [string, string, string] => parts.length === 3)
+    )
+  );
   const jobDataByArea = (data || [])
+    .filter(({ __area, __quarter, __year }) => {
+      // check if this area and season is in the selected regularSeasonAreas
+      return regularSeasonAreas.some(([area, season, year]) => {
+        return __area === area && __quarter === season && __year === parseInt(year);
+      });
+    })
     .map(({ __area, __quarter, __year, __label, statistics }) => {
       return [
         { __area, __quarter, __year, __label },

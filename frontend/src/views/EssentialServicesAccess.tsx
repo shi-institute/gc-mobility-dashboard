@@ -5,6 +5,7 @@ import {
   Button,
   CoreFrame,
   CoreFrameContext,
+  ErrorBoundary,
   IconButton,
   Map,
   PageHeader,
@@ -57,40 +58,42 @@ export function EssentialServicesAccess() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ height: '100%' }} title="Map">
-            <Map
-              layers={[
-                ...networkSegments,
-                walkServiceAreas,
-                commercialZones,
-                routes,
-                stops,
-                groceryStores,
-                dentalCareFacilities,
-                eyeCareFacilities,
-                familyMedicineFacilities,
-                freeClinicsFacilities,
-                hospitalsFacilities,
-                internalMedicineFacilities,
-                urgentCareFacilities,
-                childCareCenters,
-                ...areaPolygons,
-              ].filter(notEmpty)}
-              onMapReady={(_, view) => {
-                setMapView(view);
-              }}
-              neverShowExpandedLayersListOnLoad
-            />
+        <ErrorBoundary fallback={<div>Map failed to load</div>} title="Map">
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ height: '100%' }}>
+              <Map
+                layers={[
+                  ...networkSegments,
+                  walkServiceAreas,
+                  commercialZones,
+                  routes,
+                  stops,
+                  groceryStores,
+                  dentalCareFacilities,
+                  eyeCareFacilities,
+                  familyMedicineFacilities,
+                  freeClinicsFacilities,
+                  hospitalsFacilities,
+                  internalMedicineFacilities,
+                  urgentCareFacilities,
+                  childCareCenters,
+                  ...areaPolygons,
+                ].filter(notEmpty)}
+                onMapReady={(_, view) => {
+                  setMapView(view);
+                }}
+                neverShowExpandedLayersListOnLoad
+              />
+            </div>
+            <CompactMapLegend>
+              <span>Color Code:</span>
+              <span style={{ background: '#fed7ff' }}>Commercial</span>
+              <span style={{ background: '#64f3ab' }}>Grocery</span>
+              <span style={{ background: '#f1e32b' }}>Medical/Dental</span>
+              <span style={{ background: '#7b47f5', color: '#fff' }}>Child Care</span>
+            </CompactMapLegend>
           </div>
-          <CompactMapLegend>
-            <span>Color Code:</span>
-            <span style={{ background: '#fed7ff' }}>Commercial</span>
-            <span style={{ background: '#64f3ab' }}>Grocery</span>
-            <span style={{ background: '#f1e32b' }}>Medical/Dental</span>
-            <span style={{ background: '#7b47f5', color: '#fff' }}>Child Care</span>
-          </CompactMapLegend>
-        </div>
+        </ErrorBoundary>
       }
       sections={renderSections([
         render('EssentialServices.AccessViaPublicTransit', 'Via Public Transit'),
@@ -119,6 +122,11 @@ const CompactMapLegend = styled.aside`
   span {
     padding: 0.125rem 0.25rem;
     border-radius: var(--button-radius);
+  }
+
+  @container core (max-width: 899px) {
+    padding: 0 0.25rem 0.25rem;
+    letter-spacing: -0.025rem;
   }
 `;
 

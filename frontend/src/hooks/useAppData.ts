@@ -28,6 +28,14 @@ export function _useAppDataContext() {
   return useContext(AppDataContext);
 }
 
+function getDataOriginAndPath() {
+  const rootElement = document.getElementById('gcmd-root');
+
+  const dataOrigin = rootElement?.getAttribute('data-origin') || __GCMD_DATA_ORIGIN__;
+  const dataPath = rootElement?.getAttribute('data-path') || __GCMD_DATA_PATH__;
+  return { dataOrigin, dataPath };
+}
+
 export interface AppDataHookParameters {
   areas: string[];
   seasons: ['Q2' | 'Q4', number][];
@@ -42,10 +50,11 @@ export interface AppDataHookParameters {
 
 function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
 
   const [areasList, setAreasList] = useState<string[]>([]);
   useEffect(() => {
-    fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/replica/area_index.txt')
+    fetch(dataOrigin + dataPath + '/replica/area_index.txt')
       .then((res) => res.text())
       .then((text) => {
         const areaList = text
@@ -58,7 +67,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
 
   const [seasonsList, setSeasonsList] = useState<string[]>([]);
   useEffect(() => {
-    fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/replica/season_index.txt')
+    fetch(dataOrigin + dataPath + '/replica/season_index.txt')
       .then((res) => res.text())
       .then((text) => {
         const seasonsList = text
@@ -71,7 +80,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
 
   const [scenariosList, setScenariosList] = useState<string[]>([]);
   useEffect(() => {
-    fetch(__GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/future_routes_index.txt')
+    fetch(dataOrigin + dataPath + '/future_routes/future_routes_index.txt')
       .then((res) => res.text())
       .then((text) => {
         const scenariosList = text
@@ -286,7 +295,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
         };
       })
       .filter(notEmpty);
-  }, [areas, seasons]);
+  }, [areas, seasons, travelMethod]);
 
   // manage the state of the fetch data, showing a loading state while the data is being fetched
   const [data, setData] = useState<ResolvedData<(typeof dataPromises)[number]>[] | null>(null);
@@ -532,23 +541,15 @@ function handleError(key: string, shouldThrow = true, supress404OrIncorrectHeade
  * Fetches the core census data that is used across all areas and seasons.
  */
 function getCensusData() {
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
+
   const paths = {
-    households:
-      __GCMD_DATA_ORIGIN__ +
-      __GCMD_DATA_PATH__ +
-      `/census_acs_5year/B08201/time_series.json.deflate`,
-    race_ethnicity:
-      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/census_acs_5year/DP05/time_series.json.deflate`,
-    population_total:
-      __GCMD_DATA_ORIGIN__ +
-      __GCMD_DATA_PATH__ +
-      `/census_acs_5year/S0101/time_series.json.deflate`,
+    households: dataOrigin + dataPath + `/census_acs_5year/B08201/time_series.json.deflate`,
+    race_ethnicity: dataOrigin + dataPath + `/census_acs_5year/DP05/time_series.json.deflate`,
+    population_total: dataOrigin + dataPath + `/census_acs_5year/S0101/time_series.json.deflate`,
     educational_attainment:
-      __GCMD_DATA_ORIGIN__ +
-      __GCMD_DATA_PATH__ +
-      `/census_acs_5year/S1501/time_series.json.deflate`,
-    combined:
-      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/census_acs_5year/time_series.json.deflate`,
+      dataOrigin + dataPath + `/census_acs_5year/S1501/time_series.json.deflate`,
+    combined: dataOrigin + dataPath + `/census_acs_5year/time_series.json.deflate`,
   };
 
   const households = fetchData<CensusHouseholdsTimeSeries>(
@@ -589,11 +590,11 @@ function getCensusData() {
  * Provides promises that fetch the data related to Greenlink service.
  */
 function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
+
   const allPromises = seasons.map(([__quarter, __year]) => {
-    const gtfsFolder =
-      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/greenlink_gtfs/${__year}/${__quarter}`;
-    const ridershipFolder =
-      __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/greenlink_ridership/${__year}/${__quarter}`;
+    const gtfsFolder = dataOrigin + dataPath + `/greenlink_gtfs/${__year}/${__quarter}`;
+    const ridershipFolder = dataOrigin + dataPath + `/greenlink_ridership/${__year}/${__quarter}`;
 
     return {
       year: __year,
@@ -601,9 +602,7 @@ function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
       promises: {
         coverage: (abortSignal?: AbortSignal) =>
           fetchData<ServiceCoverage[]>(
-            __GCMD_DATA_ORIGIN__ +
-              __GCMD_DATA_PATH__ +
-              `/greenlink_gtfs/service_coverage_stats.json.deflate`,
+            dataOrigin + dataPath + `/greenlink_gtfs/service_coverage_stats.json.deflate`,
             abortSignal,
             false,
             true
@@ -653,10 +652,12 @@ function getEssentialServicesPromises(
   areas: AppDataHookParameters['areas'],
   seasons: AppDataHookParameters['seasons']
 ) {
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
+
   const allPromises = seasons.flatMap(([__quarter, __year]) => {
     return areas.map((__area) => {
       const essentialServicesFolder =
-        __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/essential_services/${__year}/${__quarter}`;
+        dataOrigin + dataPath + `/essential_services/${__year}/${__quarter}`;
 
       return {
         area: __area,
@@ -665,9 +666,7 @@ function getEssentialServicesPromises(
         promises: {
           essential_services_access_stats: (abortSignal?: AbortSignal) =>
             fetchData<EssentialServicesAccessStats[]>(
-              __GCMD_DATA_ORIGIN__ +
-                __GCMD_DATA_PATH__ +
-                `/essential_services/essential_services_stats.json.deflate`,
+              dataOrigin + dataPath + `/essential_services/essential_services_stats.json.deflate`,
               abortSignal,
               false,
               true
@@ -757,6 +756,8 @@ function constructReplicaPaths(
   seasons: AppDataHookParameters['seasons'],
   travelMethod?: AppDataHookParameters['travelMethod']
 ) {
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
+
   return areas.flatMap((area) => {
     return seasons.map(([quarter, year]) => {
       let networkSegmentsSuffix = `_${year}_${quarter}__thursday`;
@@ -772,19 +773,18 @@ function constructReplicaPaths(
         __year: year,
         __quarter: quarter,
         __label: `${displayArea}${seasons.length > 1 ? ` (${year} ${quarter})` : ''}`,
-        polygon:
-          __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/replica/${area}/polygon.geojson.deflate`,
+        polygon: dataOrigin + dataPath + `/replica/${area}/polygon.geojson.deflate`,
         statistics:
-          __GCMD_DATA_ORIGIN__ +
-          __GCMD_DATA_PATH__ +
+          dataOrigin +
+          dataPath +
           `/replica/${area}/statistics/replica__south_atlantic_${year}_${quarter}.json.deflate`,
         network_segments_style:
-          __GCMD_DATA_ORIGIN__ +
-          __GCMD_DATA_PATH__ +
+          dataOrigin +
+          dataPath +
           `/replica/${area}/network_segments/south_atlantic${networkSegmentsSuffix}.tar/VectorTileServer/resources/styles/root.json`,
         population:
-          __GCMD_DATA_ORIGIN__ +
-          __GCMD_DATA_PATH__ +
+          dataOrigin +
+          dataPath +
           `/replica/${area}/population/south_atlantic_${year}_${quarter}.json.deflate`,
       };
     });
@@ -799,6 +799,8 @@ function constructReplicaPaths(
  * @param replicaPaths - the returned value of `constructReplicaPaths`
  */
 function constructReplicaPromises(replicaPaths: ReturnType<typeof constructReplicaPaths>) {
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
+
   return replicaPaths.map(({ __area, __displayArea, __year, __quarter, __label, ...paths }) => {
     return {
       area: __area,
@@ -832,9 +834,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
                     // resolve the relative URL to a complete path
                     url: new URL(
                       paths.network_segments_style + '/../' + style.sources.esri?.url,
-                      (__GCMD_DATA_ORIGIN__ === '.'
-                        ? window.location.origin
-                        : __GCMD_DATA_ORIGIN__) + __GCMD_DATA_PATH__
+                      (dataOrigin === '.' ? window.location.origin : dataOrigin) + dataPath
                     ).href,
                   },
                 },
@@ -846,7 +846,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
             .catch(handleError('network_segments_style', true, true)),
         operating_funds: (abortSignal?: AbortSignal) =>
           fetchData<OperatingFundInfo[]>(
-            __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/operating_funds.json.deflate`,
+            dataOrigin + dataPath + `/operating_funds.json.deflate`,
             abortSignal,
             undefined,
             true
@@ -857,8 +857,10 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
 }
 
 function constructScenarioDataPromises(futureRoutesList: string[]) {
+  const { dataOrigin, dataPath } = getDataOriginAndPath();
+
   const futureRoutesPromises = futureRoutesList.map((routeId) => {
-    const folderPath = __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + '/future_routes/' + routeId;
+    const folderPath = dataOrigin + dataPath + '/future_routes/' + routeId;
 
     return {
       __routeId: () => new Promise<string>((resolve) => resolve(routeId)),
@@ -898,7 +900,7 @@ function constructScenarioDataPromises(futureRoutesList: string[]) {
   return {
     scenarios: (abortSignal?: AbortSignal) =>
       fetchData<{ scenarios: Scenario[]; features: ScenarioAnyFeature[] }>(
-        __GCMD_DATA_ORIGIN__ + __GCMD_DATA_PATH__ + `/tab5_scenarios.json.deflate`,
+        dataOrigin + dataPath + `/tab5_scenarios.json.deflate`,
         abortSignal
       )
         .catch(handleError('tab5_scenarios'))

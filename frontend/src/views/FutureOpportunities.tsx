@@ -5,6 +5,7 @@ import {
   Button,
   CoreFrame,
   CoreFrameContext,
+  ErrorBoundary,
   IconButton,
   Map,
   PageHeader,
@@ -63,26 +64,28 @@ export function FutureOpportunities() {
       sectionsHeader={<SectionsHeader />}
       sidebar={<Sidebar />}
       map={
-        <div style={{ height: '100%' }} title="Map">
-          <Map
-            layers={[
-              walkServiceAreas,
-              ...futureWalkServiceAreas,
-              cyclingServiceAreas,
-              ...futureCyclingServiceAreas,
-              paratransitServiceAreas,
-              ...futureParatransitServiceAreas,
-              ...futureRoutes,
-              routes,
-              ...futureStops,
-              stops,
-              ...areaPolygons,
-            ].filter(notEmpty)}
-            onMapReady={(_, view) => {
-              setMapView(view);
-            }}
-          />
-        </div>
+        <ErrorBoundary fallback={<div>Map failed to load</div>} title="Map">
+          <div style={{ height: '100%' }}>
+            <Map
+              layers={[
+                walkServiceAreas,
+                ...futureWalkServiceAreas,
+                cyclingServiceAreas,
+                ...futureCyclingServiceAreas,
+                paratransitServiceAreas,
+                ...futureParatransitServiceAreas,
+                ...futureRoutes,
+                routes,
+                ...futureStops,
+                stops,
+                ...areaPolygons,
+              ].filter(notEmpty)}
+              onMapReady={(_, view) => {
+                setMapView(view);
+              }}
+            />
+          </div>
+        </ErrorBoundary>
       }
       sections={renderSections(
         [
