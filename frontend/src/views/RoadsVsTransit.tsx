@@ -1264,7 +1264,15 @@ const ComparisonComponent = styled.div`
 
     p {
       text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
-      background-color: var(--blue-background--solid);
+      background-color: color-mix(in srgb, var(--blue-background--solid) 50%, transparent);
+
+      backdrop-filter: blur(12px);
+      padding: 0.75rem;
+      margin-left: -0.75rem;
+      margin-right: -0.75rem;
+      margin-top: calc(1em - 0.75rem);
+      margin-bottom: calc(1em - 0.75rem);
+      border-radius: var(--surface-radius);
     }
 
     p:last-of-type {
