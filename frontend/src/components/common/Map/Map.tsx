@@ -7,9 +7,10 @@ import * as symbolUtils from '@arcgis/core/symbols/support/symbolUtils.js';
 import '@arcgis/map-components/components/arcgis-expand';
 import '@arcgis/map-components/components/arcgis-layer-list';
 import '@arcgis/map-components/components/arcgis-legend';
+import '@arcgis/map-components/components/arcgis-map';
 import '@arcgis/map-components/components/arcgis-placement';
+import '@arcgis/map-components/components/arcgis-popup';
 import '@arcgis/map-components/components/arcgis-scale-range-slider';
-import '@arcgis/map-components/dist/components/arcgis-map';
 import styled from '@emotion/styled';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRect } from '../../../hooks';
@@ -450,10 +451,23 @@ export function Map(props: MapProps) {
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
       <arcgis-map basemap="topo-vector" zoom={12} center="-82.4, 34.85" ref={mapElem}>
-        <arcgis-placement position="top-left">
+        <arcgis-popup
+          slot="popup"
+          hideCollapseButton
+          hideActionBar
+          dockOptions={{
+            buttonEnabled: false,
+            breakpoint: {
+              width: 200,
+              height: 600,
+            },
+          }}
+          className="custom-popup"
+        ></arcgis-popup>
+        <arcgis-placement slot="top-left">
           <SegmentedControlContainer>
             {serviceAreaLayers.walk.length ? (
-              <arcgis-placement position="top-left">
+              <arcgis-placement slot="top-left">
                 <IconButton
                   title="Show walk service area"
                   onClick={() => toggleServiceAreaLayer('walk')}
@@ -464,7 +478,7 @@ export function Map(props: MapProps) {
               </arcgis-placement>
             ) : null}
             {serviceAreaLayers.bike.length ? (
-              <arcgis-placement position="top-left">
+              <arcgis-placement slot="top-left">
                 <IconButton
                   title="Show bike service area"
                   onClick={() => toggleServiceAreaLayer('bike')}
@@ -480,7 +494,7 @@ export function Map(props: MapProps) {
               </arcgis-placement>
             ) : null}
             {serviceAreaLayers.paratransit.length ? (
-              <arcgis-placement position="top-left">
+              <arcgis-placement slot="top-left">
                 <IconButton
                   title="Show paratransit service area"
                   onClick={() => toggleServiceAreaLayer('paratransit')}
@@ -494,7 +508,7 @@ export function Map(props: MapProps) {
         </arcgis-placement>
 
         {quickToggleLayers.stops.length ? (
-          <arcgis-placement position="top-left">
+          <arcgis-placement slot="top-left">
             <IconButton
               title="Toggle bus stop visibility"
               onClick={() => quickToggleLayer('stops')}
@@ -516,7 +530,7 @@ export function Map(props: MapProps) {
           </arcgis-placement>
         ) : null}
 
-        <arcgis-placement position="bottom-left">
+        <arcgis-placement slot="bottom-left">
           <div>
             {showLayerList ? (
               <LayerListContainer mapHeight={mapHeight}>
@@ -597,7 +611,7 @@ export function Map(props: MapProps) {
                 <div className="footer">
                   <arcgis-expand label="Layers">
                     <arcgis-layer-list
-                      position="manual"
+                      slot="manual"
                       drag-enabled
                       show-errors
                       show-filter

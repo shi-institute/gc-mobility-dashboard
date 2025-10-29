@@ -16,7 +16,7 @@
     "install-cotar-core": "./install-cotar-core.sh"
   },
   "dependencies": {
-    "@arcgis/map-components": "^4.33.2",
+    "@arcgis/map-components": "^4.34.6",
     "@chunkd/source-http": "^11.1.0",
     "@cotar/core": "file:@cotar/core@6.0.1+50eff77.tgz",
     "@emotion/react": "^11.14.0",
