@@ -22,7 +22,7 @@ The frontend operates entirely within a single HTML shadow root, which allows it
 <script type="module" src="path/to/frontend/dist/index.js"></script>
 ```
 
-Replace `path/to/frontend/dist/index.js` with the actual path to the built frontend JavaScript entrypoint file. The file is located inside the `dist/<UUID>` directory created during the build process.
+Replace `path/to/frontend/dist/index.js` with the actual path to the built frontend JavaScript entrypoint file. The file is located inside the `dist` directory created during the build process.
 
 ## Environment variables
 

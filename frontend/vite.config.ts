@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           // place all of the file for distribution in a unique folder for each build
-          entryFileNames: `${buildUUID}/[name].js`,
+          entryFileNames: `[name].js`,
           chunkFileNames: `${buildUUID}/assets/[name]-[hash].js`,
           assetFileNames: `${buildUUID}/assets/[name]-[hash].[ext]`,
         },
