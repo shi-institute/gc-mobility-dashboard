@@ -133,9 +133,9 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   // ensure a season is selected
   useEffect(() => {
     if (seasons.length === 0 && seasonsList.length > 0) {
-      const lastSeason = seasonsList[seasonsList.length - 1];
-      if (lastSeason) {
-        searchParams.set('seasons', lastSeason);
+      const latestSeason = seasonsList[0];
+      if (latestSeason) {
+        searchParams.set('seasons', latestSeason);
         setSearchParams(searchParams, { replace: true });
       }
     }
