@@ -1,7 +1,3 @@
-@import 'https://js.arcgis.com/calcite-components/3.2.1/calcite.css';
-@import 'https://js.arcgis.com/4.34/@arcgis/core/assets/esri/themes/light/main.css';
-@import 'https://js.arcgis.com/4.34/map-components/main.css';
-
 :host {
   --color-gray: #2e393c;
   --color-green1: #67a24e;
@@ -64,6 +60,7 @@
 :host,
 * {
   font-family: 'Poppins', sans-serif;
+  color-scheme: light;
 }
 
 :host .esri-expand {

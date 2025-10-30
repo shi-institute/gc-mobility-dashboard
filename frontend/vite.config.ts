@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, PluginOption } from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       __GCMD_DATA_PATH__: JSON.stringify(env.GCMD_DATA_PATH ?? '/data'),
     },
     plugins: [
+      removeCalciteFontFamilyCss(),
       react({
         jsxImportSource: '@emotion/react',
         babel: {
@@ -49,3 +50,26 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
+
+/**
+ * Removes the font-family CSS declarations from the calcite.css file.
+ *
+ * This is necessary so that the calcite CSS does not affect the broader app's font styles.
+ */
+function removeCalciteFontFamilyCss() {
+  return {
+    name: 'remove-calcite-font-family-css',
+    transform(code, id) {
+      // check if the file is the specific calcite.css
+      if (id.includes('calcite-components/dist/calcite/calcite.css')) {
+        // remove global font-family definitions
+        const newCode = code.replace(/font-family:\s*var\(--calcite-font-family\);?/g, '');
+        return {
+          code: newCode,
+          map: null,
+        };
+      }
+      return null;
+    },
+  } satisfies PluginOption;
+}
