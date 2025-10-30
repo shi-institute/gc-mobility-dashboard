@@ -12,6 +12,7 @@ import '@arcgis/map-components/components/arcgis-placement';
 import '@arcgis/map-components/components/arcgis-popup';
 import '@arcgis/map-components/components/arcgis-scale-range-slider';
 import styled from '@emotion/styled';
+import '@esri/calcite-components/components/calcite-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRect } from '../../../hooks';
 import { debounce, notEmpty } from '../../../utils';
@@ -19,6 +20,7 @@ import { Button } from '../Button/Button';
 import { IconButton } from '../IconButton/IconButton';
 import { ParatransitIcon } from '../IconButton/ParatransitIcon';
 import { WalkshedIcon } from '../IconButton/WalkshedIcon';
+import { SidebarContent } from '../SidebarContent/SidebarContent';
 import type { GeoJSONLayerInit } from './types';
 
 interface MapProps {
@@ -447,6 +449,8 @@ export function Map(props: MapProps) {
     return text.replace(/\s*\([^)]*\d{4}\s*Q[24][^)]*\)/g, '');
   }
 
+  const layersSheetElem = useRef<HTMLCalciteSheetElement>(null);
+
   return (
     <div style={{ height: '100%' }}>
       {/* start centered on Greenville at a zoom level that shows most of the city */}
@@ -609,16 +613,56 @@ export function Map(props: MapProps) {
                   ) : null}
                 </section>
                 <div className="footer">
-                  <arcgis-expand label="Layers">
-                    <arcgis-layer-list
-                      slot="manual"
-                      drag-enabled
-                      show-errors
-                      show-filter
-                      show-temporary-layer-indicators
-                      visibility-appearance="checkbox"
-                    />
-                  </arcgis-expand>
+                  <Button
+                    onClick={() => {
+                      if (layersSheetElem.current) {
+                        layersSheetElem.current.open = true;
+                      }
+                    }}
+                  >
+                    Manage map layers
+                  </Button>
+                  <calcite-sheet
+                    ref={layersSheetElem}
+                    label="Map layers"
+                    displayMode="float"
+                    style={{ position: 'relative' }}
+                    focusTrapOptions={{ allowOutsideClick: true }}
+                  >
+                    <IconButton
+                      className="close-button"
+                      onClick={() => {
+                        if (layersSheetElem.current) {
+                          layersSheetElem.current.open = false;
+                        }
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="m4.397 4.554.073-.084a.75.75 0 0 1 .976-.073l.084.073L12 10.939l6.47-6.47a.75.75 0 1 1 1.06 1.061L13.061 12l6.47 6.47a.75.75 0 0 1 .072.976l-.073.084a.75.75 0 0 1-.976.073l-.084-.073L12 13.061l-6.47 6.47a.75.75 0 0 1-1.06-1.061L10.939 12l-6.47-6.47a.75.75 0 0 1-.072-.976l.073-.084-.073.084Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </IconButton>
+                    <SidebarContent className="map-layers-manager">
+                      <h1>Map layers</h1>
+                      <p>Enable, disable, and rearrange the layers on the map.</p>
+
+                      <arcgis-layer-list
+                        drag-enabled
+                        show-errors
+                        show-filter
+                        show-temporary-layer-indicators
+                        visibility-appearance="checkbox"
+                      />
+                    </SidebarContent>
+                  </calcite-sheet>
                 </div>
               </LayerListContainer>
             ) : (
@@ -734,54 +778,19 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
     border-top: 1px solid lightgray;
   }
 
-  .esri-widget--button {
-    width: 176px;
-    position: relative;
-    cursor: default;
-    &:focus-within {
-      outline: Highlight auto 1px;
-      outline: -webkit-focus-ring-color auto 1px;
-      outline-offset: 2px;
-    }
-    .esri-collapse__icon {
-      display: none;
-    }
-    &::after {
-      content: 'Manage map layers';
-      position: absolute;
-      inset: 0;
+  .close-button {
+    position: absolute;
+    z-index: 1;
+    top: 2px;
+    right: 2px;
 
-      appearance: none;
-      font-family: inherit;
-      font-weight: 500;
-      font-size: 0.875rem;
-      display: inline-flex;
-      flex-direction: row;
-      justify-content: center;
-      align-items: center;
-      padding: 0 1rem;
-      height: 32px;
-      box-sizing: border-box;
-      border: none;
-      box-shadow: inset 0 0 0 1px var(--control-stroke-default),
-        inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
-      border-radius: var(--button-radius);
-      text-decoration: none;
-      color: var(--text-primary);
-      user-select: none;
-      background-color: #fff;
-      flex-wrap: nowrap;
-      transition: var(--wui-control-faster-duration);
+    &:not(:hover):not(:active) {
+      box-shadow: none;
+      background: none;
     }
 
-    &:hover:not(.disabled)::after {
-      background-color: var(--subtle-fill-secondary);
-    }
-
-    &:active:not(.disabled)::after {
-      background-color: var(--subtle-fill-tertiary);
-      color: var(--text-secondary);
-      box-shadow: inset 0 0 0 1px var(--control-stroke-default);
+    svg {
+      inline-size: 1rem;
     }
   }
 `;

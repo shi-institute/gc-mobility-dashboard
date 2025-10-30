@@ -21,6 +21,7 @@ interface MyButtonProps {
   solidSurfaceColor?: string;
 
   inert?: boolean;
+  id?: string;
 }
 
 /**
@@ -32,6 +33,7 @@ export function Button(props: MyButtonProps) {
       <AnchorButton
         as="a"
         href={props.href}
+        id={props.id}
         className={props.disabled ? 'disabled' : ''}
         onClick={props.onClick}
         title={props.href}
@@ -49,6 +51,7 @@ export function Button(props: MyButtonProps) {
   return (
     <StyledButton
       type="button"
+      id={props.id}
       onClick={props.onClick}
       title={props.href}
       disabled={props.disabled}

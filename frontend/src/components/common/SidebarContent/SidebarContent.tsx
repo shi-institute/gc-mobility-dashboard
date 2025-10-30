@@ -2,6 +2,7 @@ import styled from '@emotion/styled';
 
 export const SidebarContent = styled.aside`
   padding: 1rem;
+  font-size: 0.875rem;
 
   // enable scrolling within the sidebar if content overflows
   overflow: auto;
