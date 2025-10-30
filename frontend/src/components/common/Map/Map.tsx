@@ -756,7 +756,6 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    z-index: 1;
     background-color: transparent;
     border: none;
     padding: 0.25rem;
