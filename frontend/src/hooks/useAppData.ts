@@ -498,7 +498,11 @@ async function resolveObjectOfPromises<T extends DataPromises[number]>(
   return data as ResolvedData<T>;
 }
 
-function handleError(key: string, shouldThrow = true, supress404OrIncorrectHeaderCheck = false) {
+function handleError(
+  key: string,
+  shouldThrow = true,
+  supress404Or403OrIncorrectHeaderCheck = false
+) {
   return (error: Error | string) => {
     const errorMessage = typeof error === 'string' ? error : error.message || 'Unknown error';
 
@@ -509,9 +513,11 @@ function handleError(key: string, shouldThrow = true, supress404OrIncorrectHeade
     }
 
     if (
-      (supress404OrIncorrectHeaderCheck && errorMessage === 'incorrect header check') ||
-      (supress404OrIncorrectHeaderCheck &&
-        errorMessage.startsWith('Network response was not ok. Status: 404'))
+      (supress404Or403OrIncorrectHeaderCheck && errorMessage === 'incorrect header check') ||
+      (supress404Or403OrIncorrectHeaderCheck &&
+        errorMessage.startsWith('Network response was not ok. Status: 404')) ||
+      (supress404Or403OrIncorrectHeaderCheck &&
+        errorMessage.startsWith('Network response was not ok. Status: 403'))
     ) {
       console.debug(`Ignoring incorrect header check error for ${key}:`, error);
       return null;
