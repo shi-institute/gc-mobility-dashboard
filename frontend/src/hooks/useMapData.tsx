@@ -110,7 +110,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
         }
 
         return {
-          title: `${areaName} Boundary`,
+          title: `${areaName === 'full_area' ? 'Greenville County' : areaName} Boundary`,
           id: `area-polygon__${areaName}`,
           data: polygon,
           renderer: createInterestAreaRenderer(),
