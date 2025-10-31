@@ -74,7 +74,7 @@ export function GeneralAccess() {
         render('WorkAndSchoolCommute', 'Work & School'),
         render('AreaDemographics', 'Area Demographics'),
         render('RiderDemographics', 'Work Demographics'),
-        <DeveloperDetails key="Developer Tools" />,
+        import.meta.env.DEV ? <DeveloperDetails key="Developer Tools" /> : null,
       ])}
     />
   );
