@@ -779,7 +779,7 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
 
   .close-button {
     position: absolute;
-    z-index: 1;
+    z-index: 501;
     top: 2px;
     right: 2px;
 

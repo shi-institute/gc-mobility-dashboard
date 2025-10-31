@@ -184,6 +184,7 @@ const CloseButton = styled(IconButton)<{ size?: string }>`
   position: absolute;
   top: 2px;
   right: 2px;
+  z-index: 500;
 
   &:not(:hover):not(:active) {
     box-shadow: none;

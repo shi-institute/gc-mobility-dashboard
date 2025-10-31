@@ -23,6 +23,7 @@ export const SidebarContent = styled.aside`
     background-color: var(--sidebar-background-color, white);
     padding: 1.25rem 1rem 0.5rem;
     border-radius: var(--surface-radius) var(--surface-radius) 0 0;
+    z-index: 500;
   }
 
   // sidebar section titles
