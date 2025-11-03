@@ -539,13 +539,55 @@ The prepared data for the web application is stored in the `./data/__public` fol
 
 ## Running a subset of the data pipeline (updating the output with new data)
 
-TODO: @jackbuehner
-- running a subset
-- updating data - review dependencies
-- special case: replica determines the seasons shown on the dashboard
-- Example: updating for new Replica data
-- Example: updating for new Greenlink rider data
-- Example: updating for new essential services data
+To run a subset of the data pipeline to update the outputs with new data, add `--etls=<etl1>,<etl2>,...` to the command used to run the pipeline. Replace `<etl1>,<etl2>,...` with a comma-separated list of the ETL names you want to run. For example, to only run the `replica` and `greenlink_ridership` ETLs, you would add `--etls=replica,greenlink_ridership` to the command:
+
+   ```bash
+   docker run --rm -it --volume ./input:/input --volume ./data:/data --volume ./gbq-credentials:/credentials --user $(id -u):$(id -g) --env-file .env ghcr.io/shi-institute/gc-mobility-dashboard-data-pipeline:latest --etls=replica,greenlink_ridership
+   ```
+
+When running a subset of the data pipeline, ensure that all dependencies for the selected ETLs are met. If an ETL depends on another ETL that is not being run, you must ensure that the outputs from the dependent ETL are already present in the `./data` folder. 
+
+Consider whether data from dependent ETLs needs to be updated as well. When updating data, it is important to consider the relationships between different datasets. Some datasets may depend on others, and updating one dataset without updating its dependencies may lead to inconsistencies or inaccuracies in the outputs.
+
+> [!CAUTION]
+> The web dashboard lists its available seasons based on the data present in the `replica` output. However, other runners/ETLs may also generate outputs for specific seasons. When updating data for a new season, ensure that all relevant ETLs are updated to include data for the new season, not just the `replica` ETL.
+
+### Examples
+
+#### Updating for new Replica data
+
+According to the `replica` section above, it is dependent on the `greenlink_gtfs` runner. Therefore, when updating for new Replica data, you should run both the `replica` and `greenlink_gtfs` ETLs.
+
+Additionally, other ETLs depend on the output of the `replica` ETL. Therefore, you should also run the following ETLs to ensure that all outputs are updated with the new Replica data:
+- `essential_services`
+- `future_routes`
+- `greenlink_ridership`
+- `greenlink_gtfs`
+- `geocoder`
+
+The dashboard also needs updated Census data to match the new Replica data. Therefore, you should also run the `census` ETL.
+
+After every run, you should run the `finalize` ETL to prepare the data for use by the web application.
+
+In summary, to update for new Replica data, you should run all but the `passthrough` ETL. Since the `passthrough` ETL is
+extremely fast, you may choose to run all ETLs including `passthrough` for simplicity.
+
+#### New Greenlink rider data
+
+Updating the Greenlink ridership data only requires running the `greenlink_ridership` ETL. However, since the `greenlink_ridership` ETL depends on the output of the `greenlink_gtfs` ETL, you should also run the `greenlink_gtfs` ETL to ensure that the ridership data is accurate. Also, after running these ETLs, you should run the `finalize` ETL to prepare the data for use by the web application.
+
+In summary, when updating for new Greenlink rider data, you should run the following ETLs:
+- `greenlink_gtfs`
+- `greenlink_ridership`
+- `finalize`
+
+#### New essential services data
+
+The `essential_services` ETL depends on the output of the `geocoder` and `greenlink_gtfs` ETLs. Therefore, when updating for new essential services data, you should run the following ETLs:
+- `geocoder`
+- `greenlink_gtfs`
+- `essential_services`
+- `finalize`
 
 ## Required passthrough data
 
