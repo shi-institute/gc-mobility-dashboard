@@ -518,6 +518,25 @@ For each input future route, this runner stores all outputs in the `./data/futur
 
 </details>
 
+## Preparing the data for the web application
+
+The `finalize` step is a special runner/ETL that prepares the data for use by the web application. It collects outputs from all other runners and organizes them into a single folder structure that the web application can read.
+It always runs after other selected ETLs have completed.
+
+### Actions
+
+1. Create the `./data/__public` folder if it does not already exist. If it already exists, delete all its contents.
+2. Create symlinks from the outputs of all other runners to the `./data/__public` folder that are used by the web application. If the operating system does not support symlinks, the files are copied instead. Include file types are `.json`, `.geojson`, `.defalte`, and `.vectortiles`.
+3. If `replica` data are present, simple index text files are generated to list the available areas and seasons. These index files are stored in `./data/__public/replica`.
+4. If `future_routes` data are present, a simple index text file is generated to list the available future routes. This index file is stored in `./data/__public/future_routes`.
+5. Remove empty folders and other data that are not meant to be included.
+6. Compress (deflate) all JSON and GeoJSON files in the `./data/__public` folder to reduce file size and improve web application performance. This step replaces the original uncompressed files with the compressed versions, which have an additional `.deflate` file extension.
+7. Create file indices for each `.vectortiles` file in the `./data/__public` folder. `.vectortiles` files are TAR archives or ZIP archives that contains an entire vector tile dataset. The index allows us to query a small byte range from the archive instead of downloading the entire archive. This significantly improves performance when loading vector tiles in the web application, and it also eliminates the need to extract the entire archive to access indiviual tiles (millions of small files). The `.vectortiles` files are converted to `.tar`, and the index files are stored alongside the original `.tar` files with an additional `.index` file extension.
+
+### Outputs
+
+The prepared data for the web application is stored in the `./data/__public` folder.
+
 ## Running a subset of the data pipeline (updating the output with new data)
 
 TODO: @jackbuehner
