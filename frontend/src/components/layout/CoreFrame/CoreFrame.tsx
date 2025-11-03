@@ -8,6 +8,8 @@ import { SidebarWrapper } from './SidebarWrapper';
 interface CoreFrameProps {
   /** style to apply to the outer frame of this element */
   outerStyle?: React.CSSProperties;
+  /** style to apply to the inner frame of this element */
+  innerStyle?: React.CSSProperties;
   /** style to applt to the sections grid of this element */
   sectionsStyle?: React.CSSProperties;
   /** The tabs for switching between routes. The tabs move to the bottom of the frame on widths less than 900. */
@@ -58,28 +60,36 @@ export function CoreFrame(props: CoreFrameProps) {
         <InnerFrame
           fixedSidebarOpen={!props.sidebar ? false : fixedSidebarOpen && isFullDesktop}
           hasMapElement={!!props.map}
+          style={props.innerStyle}
         >
           {isMobile ? (
             <>
               <div style={{ gridArea: 'section-tabs' }}>
-                {[props.map, ...(props.sections || [])].filter(notEmpty).map((section, index) => {
-                  const tabLabel =
-                    (section.props as Record<string, unknown>).title?.toString() ||
-                    (section.props as Record<string, unknown>).shortTitle?.toString() ||
-                    section.key?.toString() ||
-                    `Tab ${index + 1}`;
-                  return (
-                    <Tab
-                      key={index}
-                      onClick={() => {
-                        setActiveMobileSection(index);
-                      }}
-                      label={tabLabel}
-                      variant="line"
-                      isActive={activeMobileSection === index}
-                    />
-                  );
-                })}
+                {[props.map, ...(props.sections || [])]
+                  .filter(notEmpty)
+                  .map((section, index, array) => {
+                    if (array.length <= 1) {
+                      // do not show tabs if there is only one section
+                      return null;
+                    }
+
+                    const tabLabel =
+                      (section.props as Record<string, unknown>).title?.toString() ||
+                      (section.props as Record<string, unknown>).shortTitle?.toString() ||
+                      section.key?.toString() ||
+                      `Tab ${index + 1}`;
+                    return (
+                      <Tab
+                        key={index}
+                        onClick={() => {
+                          setActiveMobileSection(index);
+                        }}
+                        label={tabLabel}
+                        variant="line"
+                        isActive={activeMobileSection === index}
+                      />
+                    );
+                  })}
               </div>
               <MainAreaWrapper>
                 {props.sectionsHeader}

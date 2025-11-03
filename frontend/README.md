@@ -114,6 +114,16 @@ If you are injecting the frontend into an existing webpage and need to override 
 ></div>
 ```
 
+## Show a home button
+
+To display a home button that directs users to a custom home page or landing page, you can set the `data-home-path` attribute on the `gcmd-root` div. For example:
+
+```html
+<div id="gcmd-root" data-home-path="/custom-home-page"></div>
+```
+
+A home button will appear in the dashboard's navigation.
+
 ## Important cache considerations
 
 The `index.html` and `index.js` files must not be cached by browsers or CDNs. These files contain references to the unique asset paths generated during the build process. If these files are cached, users may receive outdated references to assets that no longer exist, leading to broken functionality. To prevent caching issues, ensure that your server or CDN is configured to set appropriate cache-control headers for these files, such as `Cache-Control: no-cache` or `Cache-Control: max-age=0, must-revalidate`.

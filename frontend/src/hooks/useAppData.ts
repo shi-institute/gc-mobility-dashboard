@@ -28,7 +28,7 @@ export function _useAppDataContext() {
   return useContext(AppDataContext);
 }
 
-function getDataOriginAndPath() {
+export function getDataOriginAndPath() {
   const rootElement = document.getElementById('gcmd-root');
 
   const dataOrigin = rootElement?.getAttribute('data-origin') || __GCMD_DATA_ORIGIN__;
