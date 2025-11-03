@@ -526,7 +526,7 @@ It always runs after other selected ETLs have completed.
 ### Actions
 
 1. Create the `./data/__public` folder if it does not already exist. If it already exists, delete all its contents.
-2. Create symlinks from the outputs of all other runners to the `./data/__public` folder that are used by the web application. If the operating system does not support symlinks, the files are copied instead. Include file types are `.json`, `.geojson`, `.defalte`, and `.vectortiles`.
+2. Create symlinks from the outputs of all other runners to the `./data/__public` folder that are used by the web application. If the operating system does not support symlinks, the files are copied instead. Include file types are `.json`, `.geojson`, `.deflate`, `.md`, and `.vectortiles`.
 3. If `replica` data are present, simple index text files are generated to list the available areas and seasons. These index files are stored in `./data/__public/replica`.
 4. If `future_routes` data are present, a simple index text file is generated to list the available future routes. This index file is stored in `./data/__public/future_routes`.
 5. Remove empty folders and other data that are not meant to be included.

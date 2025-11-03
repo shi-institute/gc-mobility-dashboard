@@ -36,7 +36,7 @@ export function Tab(props: TabProps) {
         style={props.style}
       >
         {props.iconLeft}
-        <span className="label">{props.label}</span>
+        {props.label && <span className="label">{props.label}</span>}
         {props.iconRight}
       </Component>
     );
@@ -50,7 +50,7 @@ export function Tab(props: TabProps) {
       style={props.style}
     >
       {props.iconLeft}
-      <span className="label">{props.label}</span>
+      {props.label && <span className="label">{props.label}</span>}
       {props.iconRight}
     </Component>
   );

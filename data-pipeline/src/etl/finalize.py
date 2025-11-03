@@ -11,7 +11,7 @@ from typing import TypedDict
 
 from tqdm import tqdm
 
-FILE_EXTENSIONS_TO_MOVE = ['.json', '.geojson', '.deflate', '.vectortiles']
+FILE_EXTENSIONS_TO_MOVE = ['.json', '.geojson', '.deflate', '.vectortiles', '.md']
 PIPELINE_DATA_DIR = './data'
 PUBLIC_DIR_NAME = '__public'
 

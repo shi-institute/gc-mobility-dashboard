@@ -4,6 +4,7 @@ import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-
 import { Button, CoreFrameContext, createCoreFrameContextValue } from './components';
 import {
   COMPONENTS_ROUTE_FRAGMENT,
+  FAQ_TAB_FRAGMENT,
   LANDING_PAGE_FRAGMENT,
   TAB_1_FRAGMENT,
   TAB_2_FRAGMENT,
@@ -17,6 +18,7 @@ import { notEmpty } from './utils';
 import {
   DevModeComponentsAll,
   EssentialServicesAccess,
+  FAQ,
   FutureOpportunities,
   GeneralAccess,
   JobAccess,
@@ -268,6 +270,7 @@ export default function App() {
             {!visibleTabs || visibleTabs.includes(TAB_5_FRAGMENT) ? (
               <Route path={TAB_5_FRAGMENT} Component={RoadsVsTransit} />
             ) : null}
+            <Route path={FAQ_TAB_FRAGMENT} Component={FAQ} />
 
             {import.meta.env.DEV ? (
               <Route path={COMPONENTS_ROUTE_FRAGMENT} element={<DevModeComponentsAll />} />
