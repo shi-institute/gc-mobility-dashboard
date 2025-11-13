@@ -475,12 +475,32 @@ Each subfolder should contain the following files:
 - `bikeshed.geojson`: The biking service area for the future route. This should be a `FeatureCollection` of `Polygon`s.
 - `paratransit.geojson`: The paratransit service area for the future route. This should be a `FeatureCollection` of `Polygon`s
 
-<details>
-<summary>**Preparing the future route layers**</summary>
 
-To do: @mwiniski
+#### Preparing the future route layers
 
-</details>
+The future routes are based on the [2021 Transit Development Plan Update](https://content.civicplus.com/api/assets/de77f1ba-c64b-406e-acc7-e59bb9f725a2). Greenlink staff provide shapefiles that encompass future routes. Future routes and stops are provided in separate features. Each route and associated stops must be separated into separate files using a GIS (e.g., ArcGIS Pro, QGIS, etc.). Walksheds, bikesheds, and paratransit buffers are then generated for each future route and associated stops.
+
+##### Isolating single, future routes and stops
+
+1. Use an attribute query to select a single, future route by line_name (e.g., 'US 123 all day'). This will select both the inbound and outbound route.
+2. Export this selection as a new feature class.
+3. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `route.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+4. Bus stops can be dedicated to an individual route or shared between routes. This is indicated in the `lines` attribute of the combined future stops feature class. For stops that are shared between routes, the routes are separated by a ',' (e.g., '502 White Horse (Inbound), US 123 all day (Outbound)'). To ensure that all stops associated with a route are selected, structure the attribute query to be inclusive of variations of the line_id. For example, for stops associated with route 'US 123 all day'.
+```sql
+stops.lines LIKE '%US 123 all day%'
+```
+5. Export this selection as a new feature class.
+6. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `stops.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+7. Repeat this for all future routes that are to be added to the dashboard.
+
+##### Creating walksheds and bikesheds
+
+Walk and bikesheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
+
+1. 
+
+##### Creating paratransit buffers
+
 
 #### Dependencies
 
