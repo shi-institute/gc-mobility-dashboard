@@ -497,9 +497,9 @@ stops.lines LIKE '%US 123 all day%'
 
 Walksheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
 
-1. In ArcGIS Pro add a service area analysis layer.
-2. Import the stop layer associated with the route of interest.
-3. To generate a walkshed, choose `Walking Distance` as the mode (in miles), `Away from facilities` as the direction, and cutoff as `.5`. A bus stop is considered within walking distance if it is within a walkable half mile.
+1. Add a service area analysis layer.
+2. Import the stop layer associated with the route of interest (`Import Facilities`).
+3. To generate a walkshed, choose `Walking Distance` as the mode (in miles), `Away from Facilities` as the direction, and cutoff as `.5`. A bus stop is considered within walking distance if it is within a walkable half mile.
 4. For the walkshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
 5. Estimate credits.
 6. Run the walkshed analysis.
@@ -511,14 +511,17 @@ Walksheds are based on the stops associated with each route. ArcGIS Pro or ArcGI
 
 Bikesheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
 
-1. In ArcGIS Pro add a service area analysis layer.
-2. Import the stop layer associated with the route of interest.
-3. To generate a walkshed, choose `Walking Distance` as the mode (in miles), `Away from facilities` as the direction, and cutoff as `.5`. A bus stop is considered within walking distance if it is within a walkable half mile.
-4. For the walkshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
+1. Add a service area analysis layer.
+2. Import the stop layer associated with the route of interest (`Import Facilities`).
+3. To generate a bikeshed, choose `Driving Time` as the mode (in miles), `Away from Facilities` as the direction, and cutoff as `3.75`. We assume a cyclist traveling at 15 mph, covering a distance of 3.75 miles in fifteen minutes is within reachable distance of a bus stop. 
+4. There is no mode for bicycling in ArcGIS Pro, so we modify the `Driving Time` settings. Right click on the `Service Area` settings.
+5. Select `Other` as the type, `Miles` as the impedence, `TravelTime` as the time cost (in minutes), and `Miles` as the distance cost. Expand the cost parameters section and set the `TravelTime` parameter to 15.
+4. For the bikeshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
 5. Estimate credits.
-6. Run the walkshed analysis.
-7. The walkshed will be added to the `Polygons` layer, under `Service Area`.
-8. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `walkshed.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+6. Run the bikeshed analysis.
+7. The bikeshed will be added to the `Polygons` layer, under `Service Area`.
+8. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `bikeshed.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+9. Repeat this process for the stops associated with each future route of interest. Be sure to uncheck `Append to Existing Locations` so that the stops are not combined with previous stops. 
 
 
 ##### Creating paratransit buffers
