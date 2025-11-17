@@ -526,6 +526,13 @@ Bikesheds are based on the stops associated with each route. ArcGIS Pro or ArcGI
 
 ##### Creating paratransit buffers
 
+ Individuals who meet the guidelines under the Americans with Disabilities Act and are within .75 miles of the fixed route system are eligible for paratransit services. To create the paratransit buffer in ArcGIS Pro:
+
+ 1. Select the `Buffer` tool from the geoprocessing toolkit.
+ 2. Use the future route of interest as the input feature. Select `US Survey Miles` as the linear unit.
+ 3. Enter `.75` in the distance field. Side type is `Full`, end type is `Round`, method is `Geodesic (shape preserving)`, and dissolve type is `Dissolve`.
+ 4. After the paratransit feature class has been created, export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `paratransit.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+ 9. Repeat this process for each future route of interest. 
 
 #### Dependencies
 
