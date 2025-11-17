@@ -493,11 +493,33 @@ stops.lines LIKE '%US 123 all day%'
 6. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `stops.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
 7. Repeat this for all future routes that are to be added to the dashboard.
 
-##### Creating walksheds and bikesheds
+##### Creating walksheds
 
-Walk and bikesheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
+Walksheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
 
-1. 
+1. In ArcGIS Pro add a service area analysis layer.
+2. Import the stop layer associated with the route of interest.
+3. To generate a walkshed, choose `Walking Distance` as the mode (in miles), `Away from facilities` as the direction, and cutoff as `.5`. A bus stop is considered within walking distance if it is within a walkable half mile.
+4. For the walkshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
+5. Estimate credits.
+6. Run the walkshed analysis.
+7. The walkshed will be added to the `Polygons` layer, under `Service Area`.
+8. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `walkshed.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+9. Repeat this process for the stops associated with each future route of interest. Be sure to uncheck `Append to Existing Locations` so that the stops are not combined with previous stops. 
+
+##### Creating bikesheds
+
+Bikesheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
+
+1. In ArcGIS Pro add a service area analysis layer.
+2. Import the stop layer associated with the route of interest.
+3. To generate a walkshed, choose `Walking Distance` as the mode (in miles), `Away from facilities` as the direction, and cutoff as `.5`. A bus stop is considered within walking distance if it is within a walkable half mile.
+4. For the walkshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
+5. Estimate credits.
+6. Run the walkshed analysis.
+7. The walkshed will be added to the `Polygons` layer, under `Service Area`.
+8. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `walkshed.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+
 
 ##### Creating paratransit buffers
 
