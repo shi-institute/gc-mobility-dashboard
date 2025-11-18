@@ -648,7 +648,7 @@ Follow the instructions for updating data described in the following sections to
 
 ### `operating_funds.json`
 
-Operating funds for Greenlink were determined based on annual reports submitted to the Federal Transit Administration by the Greenville Transit Authority. At the time of development of the dashboard, the 2024 report was not yet submitted to the FTA; however, Greenlink staff provided breakdowns for the 2024 report that they were preparing. Operating expenses are categorized according to the following: 1: Directly Generated (e.g., busfare); 2: Federal Government Funding; 3: Local Government Funding; 4: State Government Funding. The `operating_funds.json` file represents funding breakdowns for these categories for the years 2018-2024. An example is provided below. 
+Operating funds for Greenlink were determined based on [annual reports submitted to the Federal Transit Administration](https://www.transit.dot.gov/ntd/transit-agency-profiles/greenville-transit-authority) by the Greenville Transit Authority. At the time of development of the dashboard, the 2024 report had not yet been submitted to the FTA; however, Greenlink staff provided breakdowns for the 2024 report that they were preparing. Operating expenses are categorized according to the following: 1: Directly Generated (e.g., busfare); 2: Federal Government Funding; 3: Local Government Funding; 4: State Government Funding. The `operating_funds.json` file represents funding breakdowns for these categories for the years 2018-2024. An example is provided below. 
 
 ```json
 [
@@ -735,9 +735,13 @@ The cost estimate for an electric bus was provided by Greenlink staff.
 
 #### Identifying amenities to be highlighted in future scenarios
 
-When the user selects options on the `Roads vs. Transit` tab, associated features are highlighted on the map. Stops without shelters were identified by attribute data. However, some information was out-of-date. Each stop tagged as not having a shelter was double-checked in Google Street View. If the stop, in fact, had a shelter, attribute data was updated and the stop was excluded from shelter upgrade options. 
+When the user selects options on the `Roads vs. Transit` tab, associated features are highlighted on the map. Route IDs associated with future routes highlighted in certain scenarios match route IDs in the [future route features](#preparing-the-future-route-layers). These future routes are accessed via these route IDs.
 
-For flexibility, an object array was created with each object representing a set of features which could be assembled under different scenarios (associated with different cost bands). When the number of amenities exceeded the number of amenities needed in a given object, amenities were selected randomly. For example, more than 45 stops were without benches. However, only 45 were needed to meet the first $500,000 scenario, so 45 were selected at random to be included in the feature object and displayed on the map. A snippet of the `tab5_scenarios.json`', representing both features and scenarios is provided below.
+Stops without shelters were identified by attribute data. However, some information was out-of-date. Each stop tagged as not having a shelter was verified in Google Street View. If the stop, in fact, had a shelter, attribute data was updated and the stop was excluded from shelter upgrade options. 
+
+For flexibility, an object array was created with each object representing a set of features which could be assembled under different scenarios (associated with different cost bands). When the number of amenities exceeded the number of amenities needed, amenities were selected randomly. For example, more than 45 stops were without benches. However, only 45 were needed to meet the first $500,000 scenario, so 45 were selected at random to be included in the feature object and displayed on the map. A large number of stops do not provide ADA access. Stops highlighted for ADA upgrade were randomly selected based on a feasibility attribute score of 1 or 2. 
+
+A snippet of the `tab5_scenarios.json`', representing both features and scenarios is provided below.
 
 ```json
 {
@@ -810,12 +814,14 @@ For flexibility, an object array was created with each object representing a set
   ]
 }
 ```
+
 For more detail on how scenarios and features are assembled together [view the appropriate section of data.d.ts code](https://github.com/shi-institute/gc-mobility-dashboard/blob/3e48b186564f8e239dba75d83897b701ddec2839/frontend/src/data.d.ts#L584-L652?)
 
-TODO: @mwiniski
-- relationship to `future_routes` ETL
-- data sources (Greenlink - costs; Census - demographics)
-- structure of then JSON: how scenarios and features fit together. Point to https://github.com/shi-institute/gc-mobility-dashboard/blob/3e48b186564f8e239dba75d83897b701ddec2839/frontend/src/data.d.ts#L584-L652?
+#### Additonal census data context
+
+In some cases, additional census data is provided that is associated with a given feature. For example, for an additional route: "`Provide access to almost 15,000 people and almost 7,000 employees`". In this case, the walkshed associated with this route was provided as a custom boundary to a python script which aggregates US census data (ACS 5-year estimates and decennial census block data) to that walkshed. The census information was added to the feature `description` or `additionalNote` as text.
+
+The addition of census data to scenario features has not been integrated with the ETL process. However, the data aggregration script will be added to the Shi Institute github repository in the near future. 
 
 ## Developing
 
