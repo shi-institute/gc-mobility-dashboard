@@ -648,7 +648,7 @@ Follow the instructions for updating data described in the following sections to
 
 ### `operating_funds.json`
 
-Operating funds for Greenlink were determined based on annual reports submitted to the Federal Transit Administration by the Greenville Transit Authority. At the time of development of the dashboard, the 2024 report was not yet submitted to the FTA; however, Greenlink staff provided breakdowns for the 2024 report that they were preparing. Operating expenses are categorized according to the following: 1) Directly Generated (e.g., busfare); 2) Federal Government Funding; 3) Local Government Funding; 4) State Government Funding. The `operating_funds.json` file represents funding breakdowns for these categories for the years 2018-2024. An example is provided below. 
+Operating funds for Greenlink were determined based on annual reports submitted to the Federal Transit Administration by the Greenville Transit Authority. At the time of development of the dashboard, the 2024 report was not yet submitted to the FTA; however, Greenlink staff provided breakdowns for the 2024 report that they were preparing. Operating expenses are categorized according to the following: 1: Directly Generated (e.g., busfare); 2: Federal Government Funding; 3: Local Government Funding; 4: State Government Funding. The `operating_funds.json` file represents funding breakdowns for these categories for the years 2018-2024. An example is provided below. 
 
 ```json
 [
@@ -706,6 +706,111 @@ Operating funds for Greenlink were determined based on annual reports submitted 
 ```
 
 ### `tab5_scenarios.json`
+
+The scenarios presented on the `Roads Vs. Transit` tab are generated from the data in this file. Determination of the costs associated with road paving and public transit elements are described below.
+
+#### Road paving costs
+
+This number is an estimate and varies based on many factors, including what sort of resurfacing or prep needs to be done. We looked at budgets for various road paving projects in SC from the SCDOT to news stories about local projects. From those sources, we estimated an average 1.2 to 1.4 million dollars. For the purposes of the project, we erred on the low side (i.e., 1 million dollars).
+
+#### Future route costs
+
+Costs for future routes was based on operating costs cited for each route in the [2021 Transit Development Plan Update](https://content.civicplus.com/api/assets/de77f1ba-c64b-406e-acc7-e59bb9f725a2?cache=1800%22).
+
+#### Public transit amenities costs
+
+Estimates for amenities such as benches, solstops, and ADA access were based on data from Greenlink's [Bus Stop Upgrade Program Website](https://platform.remix.com/project/f7762799?latlng=34.84579,-82.40389,12.072). Unexposed attribute data was gathered by downloading and processing vector tiles from the website. For future updates, we recommend requesting feature classes from Greenlink staff. Tabular data associated with the bus stop upgrade program contain cost estimates for these features. Costs for the different features was averaged across all planned upgrades and is as follows:
+
+| Amenity | Cost |
+|---------|------|
+| 4 foot bench | $11,079 |
+| 6 foot bench | $14,333 |
+| Shelter | $28,898 |
+| Solstop bench | $13,116 |
+| *ADA Upgrade | $8,821 |
+
+*only based on 2 proposed ADA upgrades
+
+The cost estimate for an electric bus was provided by Greenlink staff. 
+
+#### Identifying amenities to be highlighted in future scenarios
+
+When the user selects options on the `Roads vs. Transit` tab, associated features are highlighted on the map. Stops without shelters were identified by attribute data. However, some information was out-of-date. Each stop tagged as not having a shelter was double-checked in Google Street View. If the stop, in fact, had a shelter, attribute data was updated and the stop was excluded from shelter upgrade options. 
+
+For flexibility, an object array was created with each object representing a set of features which could be assembled under different scenarios (associated with different cost bands). When the number of amenities exceeded the number of amenities needed in a given object, amenities were selected randomly. For example, more than 45 stops were without benches. However, only 45 were needed to meet the first $500,000 scenario, so 45 were selected at random to be included in the feature object and displayed on the map. A snippet of the `tab5_scenarios.json`', representing both features and scenarios is provided below.
+
+```json
+{
+  "features": [
+    {
+      "id": "feature-1",
+      "name": "Benches",
+      "affects": "stops",
+      "type": "infrastructure",
+      "stopIds": [
+        "1193",
+        "6104",
+        "1032",
+        "5003",
+        "1542"
+      ],
+      "description": "Install benches at bus stops to improve safety and comfort for waiting passengers.",
+      "costUSD": 498555,
+      "__footnote": "Cost estimate based on the average cost of purchase and installation of a 4 foot bench ($11,079), made available on the Greenlink Bus Stop Upgrade Program website: https://www.greenvillesc.gov/1863/Planned-Bus-Stop-Upgrades"
+    },
+    {
+      "id": "feature-2",
+      "name": "Service Frequency",
+      "affects": "routes",
+      "type": "frequency",
+      "before": 60,
+      "after": 30,
+      "routeIds": [
+        "503",
+        "508"
+      ],
+      "description": "Get more riders to work and grocery stores on time and more often",
+      "costUSD": 400000,
+      "__footnote": "Cost estimate based on input from Greenlink staff. Increasing frequency from 60 to 30 minutes estimated at $200,000 per route."
+    },
+    {
+      "id": "feature-6",
+      "name": "Bus",
+      "affects": "buses",
+      "type": "purchase",
+      "count": 1,
+      "description": "Purchase of an electric or CNG bus.",
+      "costUSD": 1000000,
+      "__footnote": "Cost estimate provided by Greenlink staff."
+    }
+  ],
+  "scenarios": [
+    {
+      "pavementMiles": 0.5,
+      "scenarioName": "Bus Stop Benches",
+      "featureIds": [
+        "feature-1"
+      ]
+    },
+    {
+      "pavementMiles": 0.5,
+      "scenarioName": "Increased Route Frequency",
+      "featureIds": [
+        "feature-2",
+        "feature-3"
+      ]
+    },
+    {
+      "pavementMiles": 1,
+      "scenarioName": "Bus Purchase",
+      "featureIds": [
+        "feature-6"
+      ]
+    }
+  ]
+}
+```
+For more detail on how scenarios and features are assembled together [view the appropriate section of data.d.ts code](https://github.com/shi-institute/gc-mobility-dashboard/blob/3e48b186564f8e239dba75d83897b701ddec2839/frontend/src/data.d.ts#L584-L652?)
 
 TODO: @mwiniski
 - relationship to `future_routes` ETL
