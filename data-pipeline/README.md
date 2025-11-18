@@ -648,9 +648,62 @@ Follow the instructions for updating data described in the following sections to
 
 ### `operating_funds.json`
 
-TODO: @mwiniski
-- data source (with links)
-- structuring the JSON (include a short snippet in a code fence)
+Operating funds for Greenlink were determined based on annual reports submitted to the Federal Transit Administration by the Greenville Transit Authority. At the time of development of the dashboard, the 2024 report was not yet submitted to the FTA; however, Greenlink staff provided breakdowns for the 2024 report that they were preparing. Operating expenses are categorized according to the following: 1) Directly Generated (e.g., busfare); 2) Federal Government Funding; 3) Local Government Funding; 4) State Government Funding. The `operating_funds.json` file represents funding breakdowns for these categories for the years 2018-2024. An example is provided below. 
+
+```json
+[
+    {
+        "Source": "Directly Generated",
+        "Year": 2024,
+        "Value": 2161936
+    },
+    {
+        "Source": "Directly Generated",
+        "Year": 2023,
+        "Value": 1135446
+    },
+    {
+        "Source": "Federal Government",
+        "Year": 2024,
+        "Value": 27357304
+    },
+    {
+        "Source": "Federal Government",
+        "Year": 2023,
+        "Value": 4544543
+    },
+    {
+        "Source": "Local Government",
+        "Year": 2024,
+        "Value": 4389331
+    },
+    {
+        "Source": "Local Government",
+        "Year": 2023,
+        "Value": 2936275
+    },
+    {
+        "Source": "State Government",
+        "Year": 2024,
+        "Value": 2172701
+    },
+    {
+        "Source": "State Government",
+        "Year": 2023,
+        "Value": 407081
+    },
+    {
+        "Source": "Total",
+        "Year": 2024,
+        "Value": 36081272
+    },
+    {
+        "Source": "Total",
+        "Year": 2023,
+        "Value": 9023345
+    }
+]
+```
 
 ### `tab5_scenarios.json`
 
