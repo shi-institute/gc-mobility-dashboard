@@ -2,13 +2,22 @@ import styled from '@emotion/styled';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router';
 import bannerImageSrc from '../assets/images/faq-banner.jpg';
 import { CoreFrame } from '../components';
 import { AppNavigation } from '../components/navigation';
 import { getDataOriginAndPath } from '../hooks/useAppData';
 
 export function FAQ() {
+  const { search } = useLocation();
   const { dataOrigin, dataPath } = getDataOriginAndPath();
+
+  // redirect to external FAQs if the data-help-path attribute is specified
+  const rootElement = document.getElementById('gcmd-root');
+  const externalFAQsPath = rootElement?.getAttribute('data-help-path') || undefined;
+  if (externalFAQsPath) {
+    window.location.href = externalFAQsPath + search;
+  }
 
   const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(true);
