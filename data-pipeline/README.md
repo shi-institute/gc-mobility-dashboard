@@ -821,7 +821,7 @@ For more detail on how scenarios and features are assembled together [view the a
 
 In some cases, additional census data is provided that is associated with a given feature. For example, for an additional route: "`Provide access to almost 15,000 people and almost 7,000 employees`". In this case, the walkshed associated with this route was provided as a custom boundary to a python script which aggregates US census data (ACS 5-year estimates and decennial census block data) to that walkshed. The census information was added to the feature `description` or `additionalNote` as text.
 
-The addition of census data to scenario features has not been integrated with the ETL process. However, the data aggregration script will be added to the Shi Institute github repository in the near future. 
+The addition of census data to scenario features has not been integrated with the ETL process. However, the data aggregration script will be added to the Shi Institute organization on GitHub in the near future. 
 
 ## Developing
 
