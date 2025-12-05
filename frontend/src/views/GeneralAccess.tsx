@@ -71,6 +71,7 @@ export function GeneralAccess() {
       }
       sections={renderSections([
         render('ServiceStatistics', 'Service Statistics'),
+        render('MapTravelOptions', 'Map Options'),
         render('WorkAndSchoolCommute', 'Work & School'),
         render('AreaDemographics', 'Area Demographics'),
         render('RiderDemographics', 'Work Demographics'),
