@@ -3,6 +3,7 @@ import { AreaDemographics } from './AreaDemographics';
 import { Coverage } from './Coverage';
 import { EssentialServicesAccessViaPublicTransit } from './EssentialServicesAccessViaPublicTransit';
 import { EssentialServicesTravelTimeViaPublicTransit } from './EssentialServicesTravelTimeViaPublicTransit';
+import { MapTravelOptions } from './MapTravelOptions';
 import { RiderDemographics } from './RiderDemographics';
 import { ServiceStatistics } from './ServiceStatistics';
 import { WorkAndSchool2 } from './WorkAndSchool2';
@@ -13,6 +14,7 @@ export const SectionBundle = {
   WorkAndSchoolCommute,
   AreaDemographics,
   RiderDemographics,
+  MapTravelOptions,
   Future: {
     Coverage,
     WorkAndSchoolCommute: WorkAndSchool2,
@@ -28,6 +30,7 @@ export const sectionBundleId = {
   WorkAndSchoolCommute: 'workedu',
   AreaDemographics: 'areadem',
   RiderDemographics: 'ridedem',
+  MapTravelOptions: 'mapopts',
   Future: {
     Coverage: 'coverage',
     WorkAndSchoolCommute: 'futurews',
