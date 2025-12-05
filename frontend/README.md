@@ -124,6 +124,18 @@ To display a home button that directs users to a custom home page or landing pag
 
 A home button will appear in the dashboard's navigation.
 
+The user's current search parameters will be preserved when navigating to the home page.
+
+## Replace the FAQs link
+
+To replace the default FAQs link in the dashboard with a link to an external help page, you can set the `data-help-path` attribute on the `gcmd-root` div. For example:
+
+```html
+<div id="gcmd-root" data-help-path="/custom-help-page"></div>
+```
+
+This will update the FAQs link in the dashboard's navigation to point to the specified help page. The user's current search parameters will be preserved when navigating to the help page.
+
 ## Important cache considerations
 
 The `index.html` and `index.js` files must not be cached by browsers or CDNs. These files contain references to the unique asset paths generated during the build process. If these files are cached, users may receive outdated references to assets that no longer exist, leading to broken functionality. To prevent caching issues, ensure that your server or CDN is configured to set appropriate cache-control headers for these files, such as `Cache-Control: no-cache` or `Cache-Control: max-age=0, must-revalidate`.

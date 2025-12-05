@@ -111,6 +111,7 @@ const sectionsToTabs = new Map<string, string>([
   [sectionBundleId.AreaDemographics, TAB_1_FRAGMENT],
   [sectionBundleId.Future.WorkAndSchoolCommute, TAB_2_FRAGMENT],
   [sectionBundleId.WorkAndSchoolCommute, TAB_1_FRAGMENT],
+  [sectionBundleId.MapTravelOptions, TAB_1_FRAGMENT],
   [manualSectionIds.jobsTreeMap, TAB_3_FRAGMENT],
   [manualSectionIds.roadsVsTransitScenarios, TAB_5_FRAGMENT],
 ]);

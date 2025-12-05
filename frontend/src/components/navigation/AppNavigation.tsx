@@ -23,6 +23,15 @@ export function AppNavigation() {
     window.location.href = homePath + search;
   }
 
+  const externalFAQsPath = rootElement?.getAttribute('data-help-path') || undefined;
+  function navigateToFAQs() {
+    if (externalFAQsPath) {
+      window.location.href = externalFAQsPath + search;
+    } else {
+      handleClick(FAQ_TAB_FRAGMENT + search);
+    }
+  }
+
   const handleClick =
     (to: string) => (evt: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement, MouseEvent>) => {
       evt.preventDefault();
@@ -147,8 +156,8 @@ export function AppNavigation() {
                 </Button>
               )}
               <Button
-                href={'#' + FAQ_TAB_FRAGMENT + search}
-                onClick={handleClick(FAQ_TAB_FRAGMENT + search)}
+                href={(externalFAQsPath || '#' + FAQ_TAB_FRAGMENT) + search}
+                onClick={navigateToFAQs}
               >
                 FAQs
               </Button>
@@ -268,9 +277,9 @@ export function AppNavigation() {
           <div className="spacer" style={{ flexGrow: 1 }}></div>
           <Tab
             label={isNarrowerDesktop ? '' : 'FAQs'}
-            href={'#' + FAQ_TAB_FRAGMENT + search}
+            href={(externalFAQsPath || '#' + FAQ_TAB_FRAGMENT) + search}
             isActive={pathname === FAQ_TAB_FRAGMENT}
-            onClick={handleClick(FAQ_TAB_FRAGMENT + search)}
+            onClick={navigateToFAQs}
             iconLeft={
               <svg viewBox="0 0 24 24">
                 <path
