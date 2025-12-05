@@ -36,7 +36,7 @@ export function ServiceStatistics() {
   })();
 
   return (
-    <Section title="Service Statistics">
+    <Section title="Greenlink Service Statistics">
       <Statistic.Number
         wrap
         label="Miles of service"

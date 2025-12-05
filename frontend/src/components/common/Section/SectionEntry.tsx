@@ -13,6 +13,8 @@ export interface SectionEntryProps {
   s?: SectionEntryPlacement;
   /** Placement instructions, to be used when the large, medium, or small instructions do not apply. */
   f?: SectionEntryPlacement;
+  onClick?: (event: React.MouseEvent) => void;
+  style?: React.CSSProperties;
 }
 
 interface SectionEntryPlacement {
@@ -59,7 +61,11 @@ export function SectionEntry(props: SectionEntryProps) {
   `;
 
   return (
-    <SectionEntryComponent placementStrings={placementStrings}>
+    <SectionEntryComponent
+      placementStrings={placementStrings}
+      style={props.style}
+      onClick={props.onClick}
+    >
       {props.children}
     </SectionEntryComponent>
   );

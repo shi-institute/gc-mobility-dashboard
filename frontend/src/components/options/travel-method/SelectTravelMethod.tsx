@@ -35,7 +35,7 @@ const displayMap = new Map<string, string>();
 displayMap.set('any', 'Any');
 displayMap.set('biking', 'Biking');
 displayMap.set('carpool', 'Carpool');
-displayMap.set('commercial', 'Commercial');
+displayMap.set('commercial', 'Commercial Trucks/Freight');
 displayMap.set('on_demand_auto', 'Rideshare (Uber, Lyft, etc.)');
 displayMap.set('other_travel_mode', 'Other');
 displayMap.set('private_auto', 'Personal Vehicle');

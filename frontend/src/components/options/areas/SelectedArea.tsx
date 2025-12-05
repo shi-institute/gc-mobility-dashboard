@@ -16,7 +16,9 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
       label: area === 'full_area' ? 'Greenville County' : area,
       value: area,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .filter((area) => area.value !== 'FurmanSquare')
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .sort((a) => (a.value === 'full_area' ? -1 : 1));
 
   const currentSelectedAreas = searchParams.get('areas')?.split(',').filter(notEmpty) || [];
   const selectedOptions = currentSelectedAreas
