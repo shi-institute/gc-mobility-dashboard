@@ -475,12 +475,64 @@ Each subfolder should contain the following files:
 - `bikeshed.geojson`: The biking service area for the future route. This should be a `FeatureCollection` of `Polygon`s.
 - `paratransit.geojson`: The paratransit service area for the future route. This should be a `FeatureCollection` of `Polygon`s
 
-<details>
-<summary>**Preparing the future route layers**</summary>
 
-To do: @mwiniski
+#### Preparing the future route layers
 
-</details>
+The future routes are based on the [2021 Transit Development Plan Update](https://content.civicplus.com/api/assets/de77f1ba-c64b-406e-acc7-e59bb9f725a2). Greenlink staff provide shapefiles that encompass future routes. Future routes and stops are provided in separate features. Each route and associated stops must be separated into separate files using a GIS (e.g., ArcGIS Pro, QGIS, etc.). Walksheds, bikesheds, and paratransit buffers are then generated for each future route and associated stops.
+
+##### Isolating single, future routes and stops
+
+1. Use an attribute query to select a single, future route by line_name (e.g., 'US 123 all day'). This will select both the inbound and outbound route.
+2. Export this selection as a new feature class.
+3. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `route.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+4. Bus stops can be dedicated to an individual route or shared between routes. This is indicated in the `lines` attribute of the combined future stops feature class. For stops that are shared between routes, the routes are separated by a ',' (e.g., '502 White Horse (Inbound), US 123 all day (Outbound)'). To ensure that all stops associated with a route are selected, structure the attribute query to be inclusive of variations of the line_id. For example, for stops associated with route 'US 123 all day'.
+```sql
+stops.lines LIKE '%US 123 all day%'
+```
+5. Export this selection as a new feature class.
+6. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `stops.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+7. Repeat this for all future routes that are to be added to the dashboard.
+
+##### Creating walksheds
+
+Walksheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
+
+1. Add a service area analysis layer.
+2. Import the stop layer associated with the route of interest (`Import Facilities`).
+3. To generate a walkshed, choose `Walking Distance` as the mode (in miles), `Away from Facilities` as the direction, and cutoff as `.5`. A bus stop is considered within walking distance if it is within a walkable half mile.
+4. For the walkshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
+5. Estimate credits.
+6. Run the walkshed analysis.
+7. The walkshed will be added to the `Polygons` layer, under `Service Area`.
+8. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `walkshed.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+9. Repeat this process for the stops associated with each future route of interest. Be sure to uncheck `Append to Existing Locations` so that the stops are not combined with previous stops. 
+
+##### Creating bikesheds
+
+Bikesheds are based on the stops associated with each route. ArcGIS Pro or ArcGIS Online is required to generate these areas to take advantage of ESRI's built-in network dataset. In ArcGIS Pro:
+
+1. Add a service area analysis layer.
+2. Import the stop layer associated with the route of interest (`Import Facilities`).
+3. To generate a bikeshed, choose `Driving Time` as the mode (in miles), `Away from Facilities` as the direction, and cutoff as `3.75`. We assume a cyclist traveling at 15 mph, covering a distance of 3.75 miles in fifteen minutes is within reachable distance of a bus stop. 
+4. There is no mode for bicycling in ArcGIS Pro, so we modify the `Driving Time` settings. Right click on the `Service Area` settings.
+5. Select `Other` as the type, `Miles` as the impedence, `TravelTime` as the time cost (in minutes), and `Miles` as the distance cost. Expand the cost parameters section and set the `TravelTime` parameter to 15.
+4. For the bikeshed polygons choose `Standard Precision`, `Dissolve`, and `Rings`.
+5. Estimate credits.
+6. Run the bikeshed analysis.
+7. The bikeshed will be added to the `Polygons` layer, under `Service Area`.
+8. Export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `bikeshed.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+9. Repeat this process for the stops associated with each future route of interest. Be sure to uncheck `Append to Existing Locations` so that the stops are not combined with previous stops. 
+
+
+##### Creating paratransit buffers
+
+ Individuals who meet the guidelines under the Americans with Disabilities Act and are within .75 miles of the fixed route system are eligible for paratransit services. To create the paratransit buffer in ArcGIS Pro:
+
+ 1. Select the `Buffer` tool from the geoprocessing toolkit.
+ 2. Use the future route of interest as the input feature. Select `US Survey Miles` as the linear unit.
+ 3. Enter `.75` in the distance field. Side type is `Full`, end type is `Round`, method is `Geodesic (shape preserving)`, and dissolve type is `Dissolve`.
+ 4. After the paratransit feature class has been created, export this feature class to GeoJSON into the appropriate directory (e.g., `./input/future_routes/US 123`) using the `paratransit.geojson` file name. In ArcGIS Pro, only check `Output to GeoJSON` and `Project to WGS84`.
+ 9. Repeat this process for each future route of interest. 
 
 #### Dependencies
 
@@ -596,16 +648,180 @@ Follow the instructions for updating data described in the following sections to
 
 ### `operating_funds.json`
 
-TODO: @mwiniski
-- data source (with links)
-- structuring the JSON (include a short snippet in a code fence)
+Operating funds for Greenlink were determined based on [annual reports submitted to the Federal Transit Administration](https://www.transit.dot.gov/ntd/transit-agency-profiles/greenville-transit-authority) by the Greenville Transit Authority. At the time of development of the dashboard, the 2024 report had not yet been submitted to the FTA; however, Greenlink staff provided breakdowns for the 2024 report that they were preparing. Operating expenses are categorized according to the following: 1: Directly Generated (e.g., busfare); 2: Federal Government Funding; 3: Local Government Funding; 4: State Government Funding. The `operating_funds.json` file represents funding breakdowns for these categories for the years 2018-2024. An example is provided below. 
+
+```json
+[
+    {
+        "Source": "Directly Generated",
+        "Year": 2024,
+        "Value": 2161936
+    },
+    {
+        "Source": "Directly Generated",
+        "Year": 2023,
+        "Value": 1135446
+    },
+    {
+        "Source": "Federal Government",
+        "Year": 2024,
+        "Value": 27357304
+    },
+    {
+        "Source": "Federal Government",
+        "Year": 2023,
+        "Value": 4544543
+    },
+    {
+        "Source": "Local Government",
+        "Year": 2024,
+        "Value": 4389331
+    },
+    {
+        "Source": "Local Government",
+        "Year": 2023,
+        "Value": 2936275
+    },
+    {
+        "Source": "State Government",
+        "Year": 2024,
+        "Value": 2172701
+    },
+    {
+        "Source": "State Government",
+        "Year": 2023,
+        "Value": 407081
+    },
+    {
+        "Source": "Total",
+        "Year": 2024,
+        "Value": 36081272
+    },
+    {
+        "Source": "Total",
+        "Year": 2023,
+        "Value": 9023345
+    }
+]
+```
 
 ### `tab5_scenarios.json`
 
-TODO: @mwiniski
-- relationship to `future_routes` ETL
-- data sources (Greenlink - costs; Census - demographics)
-- structure of then JSON: how scenarios and features fit together. Point to https://github.com/shi-institute/gc-mobility-dashboard/blob/3e48b186564f8e239dba75d83897b701ddec2839/frontend/src/data.d.ts#L584-L652?
+The scenarios presented on the `Roads Vs. Transit` tab are generated from the data in this file. Determination of the costs associated with road paving and public transit elements are described below.
+
+#### Road paving costs
+
+This number is an estimate and varies based on many factors, including what sort of resurfacing or prep needs to be done. We looked at budgets for various road paving projects in SC from the SCDOT to news stories about local projects. From those sources, we estimated an average 1.2 to 1.4 million dollars. For the purposes of the project, we erred on the low side (i.e., 1 million dollars).
+
+#### Future route costs
+
+Costs for future routes was based on operating costs cited for each route in the [2021 Transit Development Plan Update](https://content.civicplus.com/api/assets/de77f1ba-c64b-406e-acc7-e59bb9f725a2?cache=1800%22).
+
+#### Public transit amenities costs
+
+Estimates for amenities such as benches, solstops, and ADA access were based on data from Greenlink's [Bus Stop Upgrade Program Website](https://platform.remix.com/project/f7762799?latlng=34.84579,-82.40389,12.072). Unexposed attribute data was gathered by downloading and processing vector tiles from the website. For future updates, we recommend requesting feature classes from Greenlink staff. Tabular data associated with the bus stop upgrade program contain cost estimates for these features. Costs for the different features was averaged across all planned upgrades and is as follows:
+
+| Amenity | Cost |
+|---------|------|
+| 4 foot bench | $11,079 |
+| 6 foot bench | $14,333 |
+| Shelter | $28,898 |
+| Solstop bench | $13,116 |
+| *ADA Upgrade | $8,821 |
+
+*only based on 2 proposed ADA upgrades
+
+The cost estimate for an electric bus was provided by Greenlink staff. 
+
+#### Identifying amenities to be highlighted in future scenarios
+
+When the user selects options on the `Roads vs. Transit` tab, associated features are highlighted on the map. Route IDs associated with future routes highlighted in certain scenarios match route IDs in the [future route features](#preparing-the-future-route-layers). These future routes are accessed via these route IDs.
+
+Stops without shelters were identified by attribute data. However, some information was out-of-date. Each stop tagged as not having a shelter was verified in Google Street View. If the stop, in fact, had a shelter, attribute data was updated and the stop was excluded from shelter upgrade options. 
+
+For flexibility, an object array was created with each object representing a set of features which could be assembled under different scenarios (associated with different cost bands). When the number of amenities exceeded the number of amenities needed, amenities were selected randomly. For example, more than 45 stops were without benches. However, only 45 were needed to meet the first $500,000 scenario, so 45 were selected at random to be included in the feature object and displayed on the map. A large number of stops do not provide ADA access. Stops highlighted for ADA upgrade were randomly selected based on a feasibility attribute score of 1 or 2. 
+
+A snippet of the `tab5_scenarios.json`', representing both features and scenarios is provided below.
+
+```json
+{
+  "features": [
+    {
+      "id": "feature-1",
+      "name": "Benches",
+      "affects": "stops",
+      "type": "infrastructure",
+      "stopIds": [
+        "1193",
+        "6104",
+        "1032",
+        "5003",
+        "1542"
+      ],
+      "description": "Install benches at bus stops to improve safety and comfort for waiting passengers.",
+      "costUSD": 498555,
+      "__footnote": "Cost estimate based on the average cost of purchase and installation of a 4 foot bench ($11,079), made available on the Greenlink Bus Stop Upgrade Program website: https://www.greenvillesc.gov/1863/Planned-Bus-Stop-Upgrades"
+    },
+    {
+      "id": "feature-2",
+      "name": "Service Frequency",
+      "affects": "routes",
+      "type": "frequency",
+      "before": 60,
+      "after": 30,
+      "routeIds": [
+        "503",
+        "508"
+      ],
+      "description": "Get more riders to work and grocery stores on time and more often",
+      "costUSD": 400000,
+      "__footnote": "Cost estimate based on input from Greenlink staff. Increasing frequency from 60 to 30 minutes estimated at $200,000 per route."
+    },
+    {
+      "id": "feature-6",
+      "name": "Bus",
+      "affects": "buses",
+      "type": "purchase",
+      "count": 1,
+      "description": "Purchase of an electric or CNG bus.",
+      "costUSD": 1000000,
+      "__footnote": "Cost estimate provided by Greenlink staff."
+    }
+  ],
+  "scenarios": [
+    {
+      "pavementMiles": 0.5,
+      "scenarioName": "Bus Stop Benches",
+      "featureIds": [
+        "feature-1"
+      ]
+    },
+    {
+      "pavementMiles": 0.5,
+      "scenarioName": "Increased Route Frequency",
+      "featureIds": [
+        "feature-2",
+        "feature-3"
+      ]
+    },
+    {
+      "pavementMiles": 1,
+      "scenarioName": "Bus Purchase",
+      "featureIds": [
+        "feature-6"
+      ]
+    }
+  ]
+}
+```
+
+For more detail on how scenarios and features are assembled together [view the appropriate section of data.d.ts code](https://github.com/shi-institute/gc-mobility-dashboard/blob/3e48b186564f8e239dba75d83897b701ddec2839/frontend/src/data.d.ts#L584-L652?)
+
+#### Additonal census data context
+
+In some cases, additional census data is provided that is associated with a given feature. For example, for an additional route: "`Provide access to almost 15,000 people and almost 7,000 employees`". In this case, the walkshed associated with this route was provided as a custom boundary to a python script which aggregates US census data (ACS 5-year estimates and decennial census block data) to that walkshed. The census information was added to the feature `description` or `additionalNote` as text.
+
+The addition of census data to scenario features has not been integrated with the ETL process. However, the data aggregration script will be added to the Shi Institute organization on GitHub in the near future. 
 
 ## Developing
 
