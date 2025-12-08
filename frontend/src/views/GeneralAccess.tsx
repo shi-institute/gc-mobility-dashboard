@@ -145,15 +145,16 @@ function SectionsHeader() {
           </IconButton>
           <p>
             This is the General Access page. Here, you can see where Greenlink’s routes go, how many
-            riders they service, and how they match with other modes of transportation.
+            riders they service, and how they can work in relation to other mobility options.
           </p>
           <p>
-            In the options menu, you can select which area you’d like to get data about, and when
+            In the options menu, you can select which area you’d like to get data about and when
             that data is from.
           </p>
           <p>
-            You can also select which mode of transportation you’d like to see. The weight of the
-            blue lines indicates how often those routes are taken using that form of transportation.{' '}
+            You can also select which other mode of transportation you’d like to see alongside
+            transit. The weight of the blue lines indicates how often those roads are taken using
+            that form of transportation.
           </p>
           <p>
             You can enter comparison mode to see how two areas of Greenville compare in their
