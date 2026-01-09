@@ -107,6 +107,12 @@ function SectionsHeader() {
 
   const [showAside, setShowAside] = useLocalStorage('aside--tab-2', true);
 
+  const [searchParams] = useSearchParams();
+  const selectedRouteIds = (searchParams.get('futures')?.split(',').filter(notEmpty) || []).slice(
+    0,
+    isComparing ? undefined : 1
+  );
+
   return (
     <PageHeader isComparing={isComparing}>
       <h2>Where can transit expand?</h2>
@@ -144,6 +150,18 @@ function SectionsHeader() {
           <p>
             Click the dropdown menu to select a new route, and check the stats to see how the routes
             stack up.
+          </p>
+        </aside>
+      ) : null}
+      {selectedRouteIds.includes('GSP Connector') ? (
+        <aside>
+          <p>
+            Greenlink{' '}
+            <a href="https://greenvillejournal.com/news/greenlink-to-establish-bus-route-from-downtown-greenville-to-gsp-airport/">
+              recently secured
+            </a>{' '}
+            funding for the bus route between downtown Greenville and Greenville-Spartanburg
+            International Airport. It may be ready as soon as 2027.
           </p>
         </aside>
       ) : null}
