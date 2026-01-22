@@ -4,7 +4,7 @@ This repository contains the frontend and data pipeline code for the dashboard.
 
 Live website: TBA \
 Preview website: https://gc-mobility-dashboard.pages.dev/ \
-Example: https://jsfiddle.net/Jack_Buehner/75xsnbac/22/
+Example: https://jsfiddle.net/Jack_Buehner/rxj6amt5/latest
 
 ## Project structure
 
