@@ -75,10 +75,7 @@ export function AreaDemographics() {
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
-            return {
-              __label: area.__label,
-              ...area.statistics.synthetic_demographics.race,
-            };
+            return { __label: area.__label, ...area.statistics.synthetic_demographics.race };
           })
           .map(({ __label, ...areaRaceData }) => {
             const domainMap: Record<string, string> = {
@@ -117,10 +114,7 @@ export function AreaDemographics() {
               return {
                 title: array.length > 1 ? __label : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 // require a sample size of at least 30 to display the figure
                 sampleSizeIsTooSmall:
                   Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
@@ -146,10 +140,7 @@ export function AreaDemographics() {
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
-            return {
-              __label: area.__label,
-              ...area.statistics.synthetic_demographics.ethnicity,
-            };
+            return { __label: area.__label, ...area.statistics.synthetic_demographics.ethnicity };
           })
           .map(({ __label, ...areaRaceData }) => {
             const domainMap: Record<string, string> = {
@@ -185,10 +176,7 @@ export function AreaDemographics() {
               return {
                 title: array.length > 1 ? __label : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 // require a sample size of at least 30 to display the figure
                 sampleSizeIsTooSmall:
                   Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,
@@ -214,10 +202,7 @@ export function AreaDemographics() {
         plot={(data || [])
           .filter(requireKey('statistics'))
           .map((area) => {
-            return {
-              __label: area.__label,
-              ...area.statistics.synthetic_demographics.education,
-            };
+            return { __label: area.__label, ...area.statistics.synthetic_demographics.education };
           })
           .map(({ __label, ...areaRaceData }) => {
             const domainMap: Record<string, string> = {
@@ -258,10 +243,7 @@ export function AreaDemographics() {
               return {
                 title: array.length > 1 ? __label : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 // require a sample size of at least 30 to display the figure
                 sampleSizeIsTooSmall:
                   Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,

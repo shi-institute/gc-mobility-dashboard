@@ -34,10 +34,7 @@ export function useToggleSectionItemVisibility(section: keyof typeof allSectionI
         newItemIds.push(itemId);
       }
 
-      return {
-        ...prev,
-        [allSectionIds[section]]: newItemIds,
-      };
+      return { ...prev, [allSectionIds[section]]: newItemIds };
     });
   };
 
@@ -48,9 +45,5 @@ export function useToggleSectionItemVisibility(section: keyof typeof allSectionI
     return toggleVisibility(itemId, event);
   };
 
-  return {
-    editMode,
-    toggleVisibility,
-    handleClick,
-  };
+  return { editMode, toggleVisibility, handleClick };
 }

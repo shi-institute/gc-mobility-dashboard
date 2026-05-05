@@ -12,12 +12,7 @@ export function createInterestAreaRenderer() {
             {
               type: 'CIMSolidStroke',
               effects: [
-                {
-                  type: 'CIMGeometricEffectOffset',
-                  method: 'Square',
-                  offset: 0,
-                  option: 'Fast',
-                },
+                { type: 'CIMGeometricEffectOffset', method: 'Square', offset: 0, option: 'Fast' },
                 {
                   type: 'CIMGeometricEffectDashes',
                   dashTemplate: [16, 8, 2, 8],

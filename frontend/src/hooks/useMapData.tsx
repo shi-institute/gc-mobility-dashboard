@@ -135,20 +135,22 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
   function calculateRidership(allAreas = false) {
     const filteredData = (data || [])
       .map(({ ridership, __year, __quarter }) => ({ ridership, __year, __quarter }))
-      .reduce((acc, curr) => {
-        const currentYear = curr.__year;
-        const currentQuarter = curr.__quarter;
-        const ridershipData =
-          curr.ridership?.[allAreas ? 'all' : 'area'].map((r) => {
-            return {
-              ...r,
-              __year: currentYear,
-              __quarter: currentQuarter,
-            };
-          }) || [];
+      .reduce(
+        (acc, curr) => {
+          const currentYear = curr.__year;
+          const currentQuarter = curr.__quarter;
+          const ridershipData =
+            curr.ridership?.[allAreas ? 'all' : 'area'].map((r) => {
+              return { ...r, __year: currentYear, __quarter: currentQuarter };
+            }) || [];
 
-        return [...acc, ...ridershipData];
-      }, [] as (NonNullable<NonNullable<AppData>[0]['ridership']>['area'][0] & { __year: number; __quarter: 'Q2' | 'Q4' })[])
+          return [...acc, ...ridershipData];
+        },
+        [] as (NonNullable<NonNullable<AppData>[0]['ridership']>['area'][0] & {
+          __year: number;
+          __quarter: 'Q2' | 'Q4';
+        })[]
+      )
       .map((ridershipData) => {
         const season = `${ridershipData.__quarter}:${ridershipData.__year}`;
         return { season, ...ridershipData };
@@ -288,22 +290,12 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
                                   <Statistic.Number
                                     wrap
                                     label="Boardings"
-                                    data={[
-                                      {
-                                        label: season,
-                                        value: stats.boardings,
-                                      },
-                                    ]}
+                                    data={[{ label: season, value: stats.boardings }]}
                                   />
                                   <Statistic.Number
                                     wrap
                                     label="Alightings"
-                                    data={[
-                                      {
-                                        label: season,
-                                        value: stats.alightings,
-                                      },
-                                    ]}
+                                    data={[{ label: season, value: stats.alightings }]}
                                   />
                                 </Section>
                                 <Credits>
@@ -757,10 +749,7 @@ export function useMapData(data: AppData, view?: __esri.MapView | null, options?
             renderer: new SimpleRenderer({
               symbol: new SimpleFillSymbol({
                 color: [255, 0, 255, 0.18],
-                outline: {
-                  color: [0, 0, 0, 0],
-                  width: 0,
-                },
+                outline: { color: [0, 0, 0, 0], width: 0 },
               }),
             }),
             popupEnabled: true,
@@ -1067,20 +1056,14 @@ export function useFutureMapData(
 const serviceAreaRenderer = new SimpleRenderer({
   symbol: new SimpleFillSymbol({
     color: new Color('rgba(255, 255, 255, 0.32)'),
-    outline: {
-      color: [0, 0, 0, 0.36],
-      width: 1,
-    },
+    outline: { color: [0, 0, 0, 0.36], width: 1 },
   }),
 });
 
 const futureServiceAreaRenderer = new SimpleRenderer({
   symbol: new SimpleFillSymbol({
     color: new Color('rgba(128, 255, 135, 0.24)'),
-    outline: {
-      color: [0, 0, 0, 0.36],
-      width: 1,
-    },
+    outline: { color: [0, 0, 0, 0.36], width: 1 },
   }),
 });
 
@@ -1221,7 +1204,10 @@ const PopupAside = styled.aside`
 
     color: var(--color-primary) !important;
     box-shadow: 0 1px 0 0 var(--color-primary);
-    transition: background-color 0.2s, box-shadow 0.1s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      box-shadow 0.1s,
+      color 0.2s;
     text-decoration: none;
 
     &:hover {

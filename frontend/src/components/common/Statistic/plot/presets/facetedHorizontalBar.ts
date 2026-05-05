@@ -5,11 +5,7 @@ interface FacetedHorizontalBarParams {
   domainY: string[];
   data: Record<string, unknown>[];
 
-  axis: {
-    label: string;
-    tickFormat: (n: number) => string;
-    domainX?: [number, number];
-  };
+  axis: { label: string; tickFormat: (n: number) => string; domainX?: [number, number] };
 
   /** The property to use for the x-axis */
   x: string;
@@ -28,9 +24,7 @@ export function facetedHorizontalBar(params: FacetedHorizontalBarParams) {
   const facetNames = Array.from(new Set(params.data.map((d) => d[params.fy])));
 
   return {
-    color: {
-      domain: params.domainY,
-    },
+    color: { domain: params.domainY },
     fy: {
       // hide area/season axis label
       label: null,

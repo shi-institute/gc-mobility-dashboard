@@ -99,7 +99,8 @@ const ToggleContainer = styled.label`
     position: absolute;
     border-radius: 7px;
     background-color: var(--text-secondary);
-    transition: var(--wui-control-fast-duration) ease-in-out transform,
+    transition:
+      var(--wui-control-fast-duration) ease-in-out transform,
       var(--wui-control-fast-duration) var(--wui-control-fast-out-slow-in-easing) height,
       var(--wui-control-fast-duration) var(--wui-control-fast-out-slow-in-easing) width,
       var(--wui-control-fast-duration) var(--wui-control-fast-out-slow-in-easing) margin,

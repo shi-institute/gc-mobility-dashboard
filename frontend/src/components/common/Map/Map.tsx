@@ -66,10 +66,7 @@ export function Map(props: MapProps) {
         }
 
         if (layerInit.data instanceof URL) {
-          return new GeoJSONLayer({
-            ...layerInit,
-            url: layerInit.data.toString(),
-          });
+          return new GeoJSONLayer({ ...layerInit, url: layerInit.data.toString() });
         }
 
         // if the data is a GeoJSON object, we need to create a blob URL
@@ -77,10 +74,7 @@ export function Map(props: MapProps) {
         const objectUrl = URL.createObjectURL(blob);
         objectUrls.push(objectUrl);
 
-        return new GeoJSONLayer({
-          ...layerInit,
-          url: objectUrl,
-        });
+        return new GeoJSONLayer({ ...layerInit, url: objectUrl });
       })
       .filter(notEmpty);
 
@@ -190,21 +184,22 @@ export function Map(props: MapProps) {
   });
 
   // manage the reactive layer info
-  const [layers, setLayers] = useState<
-    ReadonlyArray<
-      Readonly<{
-        title: string | nullish;
-        id: string;
-        visible: boolean;
-        layer:
-          | __esri.GeoJSONLayer
-          | __esri.WebTileLayer
-          | __esri.VectorTileLayer
-          | __esri.FeatureLayer;
-        minScale?: number;
-      }>
-    >
-  >();
+  const [layers, setLayers] =
+    useState<
+      ReadonlyArray<
+        Readonly<{
+          title: string | nullish;
+          id: string;
+          visible: boolean;
+          layer:
+            | __esri.GeoJSONLayer
+            | __esri.WebTileLayer
+            | __esri.VectorTileLayer
+            | __esri.FeatureLayer;
+          minScale?: number;
+        }>
+      >
+    >();
 
   // manage the symbols
   const [symbols, setSymbols] = useState<
@@ -238,10 +233,7 @@ export function Map(props: MapProps) {
       const isLine = symbol.type === 'simple-line';
       const layerSymbolHTML = symbolUtils.renderPreviewHTML(symbol, { size: isLine ? 2 : 16 });
 
-      newSymbols.push({
-        ...layer,
-        symbolHTML: await layerSymbolHTML,
-      });
+      newSymbols.push({ ...layer, symbolHTML: await layerSymbolHTML });
     }
 
     newSymbols.reverse();
@@ -378,17 +370,11 @@ export function Map(props: MapProps) {
       })
       .map((symbol) => {
         if (symbol.id.startsWith('stops__future__')) {
-          return {
-            ...symbol,
-            title: 'Future Stops',
-          };
+          return { ...symbol, title: 'Future Stops' };
         }
 
         if (symbol.id.startsWith('future_route__')) {
-          return {
-            ...symbol,
-            title: 'Future Routes',
-          };
+          return { ...symbol, title: 'Future Routes' };
         }
 
         if (symbol.id.startsWith('area-polygon__')) {
@@ -401,24 +387,15 @@ export function Map(props: MapProps) {
         }
 
         if (symbol.id.startsWith('walk-service-area__future__')) {
-          return {
-            ...symbol,
-            title: 'Future Route Walk Service Area',
-          };
+          return { ...symbol, title: 'Future Route Walk Service Area' };
         }
 
         if (symbol.id.startsWith('bike-service-area__future__')) {
-          return {
-            ...symbol,
-            title: 'Future Route Bike Service Area',
-          };
+          return { ...symbol, title: 'Future Route Bike Service Area' };
         }
 
         if (symbol.id.startsWith('paratransit-service-area__future__')) {
-          return {
-            ...symbol,
-            title: 'Future Route Paratransit Service Area',
-          };
+          return { ...symbol, title: 'Future Route Paratransit Service Area' };
         }
 
         return symbol;
@@ -459,13 +436,7 @@ export function Map(props: MapProps) {
           slot="popup"
           hideCollapseButton
           hideActionBar
-          dockOptions={{
-            buttonEnabled: false,
-            breakpoint: {
-              width: 200,
-              height: 600,
-            },
-          }}
+          dockOptions={{ buttonEnabled: false, breakpoint: { width: 200, height: 600 } }}
           className="custom-popup"
         ></arcgis-popup>
         <arcgis-placement slot="top-left">
@@ -683,7 +654,8 @@ const SegmentedControlContainer = styled.div`
   background: white;
   border-radius: var(--button-radius);
 
-  box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+  box-shadow:
+    inset 0 0 0 0.063em var(--control-stroke-default),
     inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay),
     0 0.25em 0.75em 0.25em var(--control-stroke-default);
 
@@ -700,7 +672,8 @@ const LayerListContainer = styled.aside<{ mapHeight: number | null }>`
   position: relative;
   max-height: ${({ mapHeight }) => (mapHeight ? `${mapHeight - 80}px` : '300px')};
 
-  box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+  box-shadow:
+    inset 0 0 0 0.063em var(--control-stroke-default),
     inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay),
     0 0.25em 0.75em 0.25em var(--control-stroke-default);
 

@@ -55,10 +55,7 @@ export function Coverage() {
           const meters_distance = stats?.route_distance_meters || 0;
           const miles_distance = meters_distance / 1609.344; // convert meters to miles
 
-          return {
-            label: __routeId,
-            value: miles_distance.toFixed(2),
-          };
+          return { label: __routeId, value: miles_distance.toFixed(2) };
         })}
         unit="miles"
         onClick={handleClick('l')}
@@ -68,10 +65,7 @@ export function Coverage() {
         label="Route stops"
         if={shouldRender('st')}
         data={futures.map(({ stats, __routeId }) => {
-          return {
-            label: __routeId,
-            value: stats?.stops_count ?? NaN,
-          };
+          return { label: __routeId, value: stats?.stops_count ?? NaN };
         })}
         onClick={handleClick('st')}
       />
@@ -83,10 +77,7 @@ export function Coverage() {
           const meters_area = stats?.walk_service_area_area_square_meters || 0;
           const miles_area = meters_area / 1609.344 / 1609.344; // convert square meters to square miles
 
-          return {
-            label: __routeId,
-            value: miles_area.toFixed(2),
-          };
+          return { label: __routeId, value: miles_area.toFixed(2) };
         })}
         unit="square miles"
         onClick={handleClick('cov')}

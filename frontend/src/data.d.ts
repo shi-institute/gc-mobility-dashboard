@@ -154,10 +154,7 @@ interface ReplicaSyntheticDemographicsStatistics {
     american_indian_alaska_native?: number;
     hawaiian_pacific?: number;
   };
-  ethnicity: {
-    hispanic_or_latino?: number;
-    not_hispanic_or_latino?: number;
-  };
+  ethnicity: { hispanic_or_latino?: number; not_hispanic_or_latino?: number };
   education: {
     k_12?: number;
     high_school?: number;
@@ -199,10 +196,7 @@ interface ReplicaTripStatistics {
     undirected: number;
     other_home_based: number;
   };
-  possible_conversions: {
-    via_walk?: number;
-    via_bike?: number;
-  };
+  possible_conversions: { via_walk?: number; via_bike?: number };
   destination_building_use?: ReplicaDestinationUseTypeStatisticsVia;
   destination_building_use__by_tour_type?: {
     commute?: ReplicaDestinationUseTypeStatisticsVia;
@@ -260,14 +254,7 @@ interface ReplicaDesinationUseSubTypeStatistics {
 
 interface GeoJSON<T = Record<string, any>, K = string> {
   type: 'FeatureCollection';
-  features: Array<{
-    type: 'Feature';
-    geometry: {
-      type: K;
-      coordinates: any;
-    };
-    properties: T;
-  }>;
+  features: Array<{ type: 'Feature'; geometry: { type: K; coordinates: any }; properties: T }>;
 }
 
 namespace GTFS {
@@ -376,10 +363,7 @@ interface FutureRouteStatistics {
     undirected: number;
     other_home_based: number;
   };
-  possible_conversions: {
-    via_walk?: number;
-    via_bike?: number;
-  };
+  possible_conversions: { via_walk?: number; via_bike?: number };
   destination_building_use?: ReplicaDestinationUseTypeStatisticsVia;
   destination_building_use__by_tour_type?: {
     commute?: ReplicaDestinationUseTypeStatisticsVia;

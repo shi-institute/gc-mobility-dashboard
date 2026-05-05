@@ -56,15 +56,10 @@ export function Figure(props: FigureProps) {
   );
 
   if (props.wrap) {
-    let sectionEntryProps: SectionEntryProps = {
-      children: content,
-    };
+    let sectionEntryProps: SectionEntryProps = { children: content };
 
     if (typeof props.wrap === 'object') {
-      sectionEntryProps = {
-        ...sectionEntryProps,
-        ...props.wrap,
-      };
+      sectionEntryProps = { ...sectionEntryProps, ...props.wrap };
     }
 
     return <SectionEntry {...sectionEntryProps} />;

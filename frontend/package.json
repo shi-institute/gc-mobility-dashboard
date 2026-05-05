@@ -13,6 +13,7 @@
     "zipdist": "tar --create --use-compress-program=pigz --file dist.tar.gz dist && rm -rf dist && mkdir dist && mv dist.tar.gz dist/",
     "zipdata": "tar --create --use-compress-program=pigz --file data.tar.gz public",
     "preinstall": "npm run install-cotar-core",
+    "format": "prettier --write .",
     "install-cotar-core": "./install-cotar-core.sh"
   },
   "dependencies": {
@@ -49,6 +50,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "eslint-plugin-react-x": "^1.43.0",
     "globals": "^15.15.0",
+    "prettier": "^3.8.3",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.4.1"

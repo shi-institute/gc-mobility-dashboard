@@ -73,7 +73,8 @@ const StyledButton = styled.button<{
   min-block-size: 2.25em;
   box-sizing: border-box;
   border: none;
-  box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+  box-shadow:
+    inset 0 0 0 0.063em var(--control-stroke-default),
     inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay);
   border-radius: var(--button-radius);
   color: inherit;

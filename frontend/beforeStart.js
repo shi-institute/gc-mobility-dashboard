@@ -65,18 +65,10 @@ async function getFilesToCopy(sourceDir, destDir) {
     const destinationPath = joinPath(destDir, entry.name);
 
     if (entry.isDirectory()) {
-      files.push({
-        source: sourcePath,
-        destination: destinationPath,
-        isDirectory: true,
-      });
+      files.push({ source: sourcePath, destination: destinationPath, isDirectory: true });
       files = files.concat(await getFilesToCopy(sourcePath, destinationPath));
     } else {
-      files.push({
-        source: sourcePath,
-        destination: destinationPath,
-        isDirectory: false,
-      });
+      files.push({ source: sourcePath, destination: destinationPath, isDirectory: false });
     }
   }
   return files;

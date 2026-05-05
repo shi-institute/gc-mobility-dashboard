@@ -6,9 +6,7 @@ type FlattenedKeys<T, P extends string = ''> = {
     : `${P}${string & K}`;
 }[keyof T];
 
-type FlattenedObject<T> = {
-  [K in FlattenedKeys<T>]: any;
-};
+type FlattenedObject<T> = { [K in FlattenedKeys<T>]: any };
 
 export function flattenObject<T extends Record<string, any>>(
   obj: T,

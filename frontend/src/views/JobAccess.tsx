@@ -102,10 +102,7 @@ function Sections() {
       return (
         <Button
           onClick={() => {
-            setVisibleSections((prev) => ({
-              ...prev,
-              [manualSectionIds.jobsTreeMap]: [''],
-            }));
+            setVisibleSections((prev) => ({ ...prev, [manualSectionIds.jobsTreeMap]: [''] }));
           }}
         >
           Show this tab
@@ -161,7 +158,7 @@ function useJobData() {
       {
         type_counts: ReplicaDesinationUseTypeStatistics;
         subtype_counts: ReplicaDesinationUseSubTypeStatistics;
-      }
+      },
     ]
   ) {
     const [{ __label }, { type_counts, subtype_counts }] = data;
@@ -169,56 +166,26 @@ function useJobData() {
     return {
       name: __label,
       children: [
-        {
-          name: 'Transportation Utilities',
-          value: type_counts?.transportation_utilities || 0,
-        },
-        {
-          name: 'Other',
-          value: type_counts?.other || 0,
-        },
-        {
-          name: 'Industrial',
-          value: type_counts?.industrial || 0,
-        },
+        { name: 'Transportation Utilities', value: type_counts?.transportation_utilities || 0 },
+        { name: 'Other', value: type_counts?.other || 0 },
+        { name: 'Industrial', value: type_counts?.industrial || 0 },
         {
           name: 'Commercial',
           children: [
-            {
-              name: 'Retail',
-              value: subtype_counts?.retail || 0,
-            },
-            {
-              name: 'Office',
-              value: subtype_counts?.office || 0,
-            },
-            {
-              name: 'Non-Retail Attraction',
-              value: subtype_counts?.non_retail_attraction || 0,
-            },
+            { name: 'Retail', value: subtype_counts?.retail || 0 },
+            { name: 'Office', value: subtype_counts?.office || 0 },
+            { name: 'Non-Retail Attraction', value: subtype_counts?.non_retail_attraction || 0 },
           ],
         },
         {
           name: 'Civic Institutional',
           children: [
-            {
-              name: 'Other Civic Institutional',
-              value: subtype_counts?.civic_institutional || 0,
-            },
-            {
-              name: 'Education',
-              value: subtype_counts?.education || 0,
-            },
-            {
-              name: 'Healthcare',
-              value: subtype_counts?.healthcare || 0,
-            },
+            { name: 'Other Civic Institutional', value: subtype_counts?.civic_institutional || 0 },
+            { name: 'Education', value: subtype_counts?.education || 0 },
+            { name: 'Healthcare', value: subtype_counts?.healthcare || 0 },
           ],
         },
-        {
-          name: 'Agriculture',
-          value: type_counts?.agriculture || 0,
-        },
+        { name: 'Agriculture', value: type_counts?.agriculture || 0 },
       ] as TreeMapEntry[],
     };
   }
@@ -259,7 +226,7 @@ function useJobData() {
 
       return [{ __label }, viaWalk] as [
         { __label: string },
-        ReplicaDestinationUseTypeStatisticsVia['via_walk']
+        ReplicaDestinationUseTypeStatisticsVia['via_walk'],
       ];
     })
     .filter(notEmpty)

@@ -7,10 +7,7 @@ interface HorizontalBarParams {
   domainX?: [number, number];
   domainY: string[];
 
-  axis: {
-    label: string;
-    tickFormat: (n: number) => string;
-  };
+  axis: { label: string; tickFormat: (n: number) => string };
 
   /** The property to use for the x-axis */
   x: string;
@@ -86,9 +83,7 @@ export function horizontalBar(params: HorizontalBarParams) {
   const numericalDomainY = [addTickToStartY ? -tickSize : 0, maxY + (addTickToEndY ? tickSize : 0)];
 
   return {
-    color: {
-      domain: params.domainY,
-    },
+    color: { domain: params.domainY },
     y: {
       // hide the axis - the legend will suffice
       axis: null,

@@ -105,10 +105,7 @@ export function RiderDemographics() {
               return {
                 title: array.length > 1 ? __label : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 sampleSizeIsTooSmall: __noData
                   ? 'Data on rider demographics is not available for this season.'
                   : // require a sample size of at least 30 to display the figure
@@ -187,10 +184,7 @@ export function RiderDemographics() {
               return {
                 title: array.length > 1 ? __label : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 sampleSizeIsTooSmall: __noData
                   ? 'Data on rider demographics is not available for this season.'
                   : // require a sample size of at least 30 to display the figure
@@ -274,10 +268,7 @@ export function RiderDemographics() {
               return {
                 title: array.length > 1 ? __label : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 sampleSizeIsTooSmall: __noData
                   ? 'Data on rider demographics is not available for this season.'
                   : // require a sample size of at least 30 to display the figure

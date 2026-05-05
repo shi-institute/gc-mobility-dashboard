@@ -16,12 +16,7 @@ export function createBusStopRenderer(backgroundColor: Color = new Color([51, 51
               enable: true,
               anchorPointUnits: 'Relative',
               size: 40,
-              frame: {
-                xmin: 0,
-                ymin: 0,
-                xmax: 21,
-                ymax: 21,
-              },
+              frame: { xmin: 0, ymin: 0, xmax: 21, ymax: 21 },
               markerGraphics: [
                 {
                   type: 'CIMMarkerGraphic',
@@ -123,11 +118,7 @@ export function createBusStopRenderer(backgroundColor: Color = new Color([51, 51
                         width: 0,
                         color: [0, 0, 0, 255],
                       },
-                      {
-                        type: 'CIMSolidFill',
-                        enable: true,
-                        color: [255, 255, 255, 255],
-                      },
+                      { type: 'CIMSolidFill', enable: true, color: [255, 255, 255, 255] },
                     ],
                   },
                 },
@@ -141,12 +132,7 @@ export function createBusStopRenderer(backgroundColor: Color = new Color([51, 51
               enable: true,
               anchorPointUnits: 'Relative',
               size: 40,
-              frame: {
-                xmin: 0,
-                ymin: 0,
-                xmax: 17,
-                ymax: 17,
-              },
+              frame: { xmin: 0, ymin: 0, xmax: 17, ymax: 17 },
               markerGraphics: [
                 {
                   type: 'CIMMarkerGraphic',
@@ -205,11 +191,7 @@ export function createBusStopRenderer(backgroundColor: Color = new Color([51, 51
                         width: 0,
                         color: [0, 0, 0, 255],
                       },
-                      {
-                        type: 'CIMSolidFill',
-                        enable: true,
-                        color: backgroundColor.toJSON(),
-                      },
+                      { type: 'CIMSolidFill', enable: true, color: backgroundColor.toJSON() },
                     ],
                   },
                 },

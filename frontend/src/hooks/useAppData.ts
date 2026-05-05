@@ -271,10 +271,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
               if (!data) {
                 return null;
               }
-              return {
-                area: data.filter((stop) => stop.areas?.includes(area)),
-                all: data,
-              };
+              return { area: data.filter((stop) => stop.areas?.includes(area)), all: data };
             }),
           operating_funds: (abortSignal?: AbortSignal) =>
             promises.operating_funds(abortSignal).then((data) => {
@@ -391,11 +388,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     seasonsList,
     travelMethodList,
     scenariosList,
-    scenarios: {
-      data: scenarioData,
-      loading: scenarioLoading,
-      errors: scenarioErrors,
-    },
+    scenarios: { data: scenarioData, loading: scenarioLoading, errors: scenarioErrors },
   };
 }
 
@@ -413,9 +406,7 @@ async function fetchData<T = Record<string, unknown>>(
     return globalResultCache[inputHash] as T;
   }
 
-  return fetch(input, {
-    signal: abortSignal,
-  })
+  return fetch(input, { signal: abortSignal })
     .then((response) => {
       if (!response.ok) {
         throw new Error(
@@ -446,9 +437,7 @@ async function fetchData<T = Record<string, unknown>>(
 
 type DataPromises = Record<string, (abortSignal?: AbortSignal) => Promise<unknown>>[];
 
-type ResolvedData<T extends DataPromises[number]> = {
-  [K in keyof T]: Awaited<ReturnType<T[K]>>;
-};
+type ResolvedData<T extends DataPromises[number]> = { [K in keyof T]: Awaited<ReturnType<T[K]>> };
 
 /**
  * Resolve all promises from an input array of objects with promises as their values.

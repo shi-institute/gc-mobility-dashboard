@@ -1,6 +1,1 @@
-{
-  "recommendations": [
-    "esbenp.prettier-vscode",
-    "yoavbls.pretty-ts-errors",
-  ]
-}
+{ "recommendations": ["esbenp.prettier-vscode", "yoavbls.pretty-ts-errors"] }

@@ -33,11 +33,7 @@ export default defineConfig(({ mode }) => {
     ],
     appType: 'spa',
     base: './',
-    server: {
-      watch: {
-        ignored: ['**/node_modules/**', '**/public/data/**'],
-      },
-    },
+    server: { watch: { ignored: ['**/node_modules/**', '**/public/data/**'] } },
     build: {
       rollupOptions: {
         output: {
@@ -64,10 +60,7 @@ function removeCalciteFontFamilyCss() {
       if (id.includes('calcite-components/dist/calcite/calcite.css')) {
         // remove global font-family definitions
         const newCode = code.replace(/font-family:\s*var\(--calcite-font-family\);?/g, '');
-        return {
-          code: newCode,
-          map: null,
-        };
+        return { code: newCode, map: null };
       }
       return null;
     },

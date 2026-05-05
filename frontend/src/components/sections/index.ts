@@ -15,10 +15,7 @@ export const SectionBundle = {
   AreaDemographics,
   RiderDemographics,
   MapTravelOptions,
-  Future: {
-    Coverage,
-    WorkAndSchoolCommute: WorkAndSchool2,
-  },
+  Future: { Coverage, WorkAndSchoolCommute: WorkAndSchool2 },
   EssentialServices: {
     AccessViaPublicTransit: EssentialServicesAccessViaPublicTransit,
     TravelTimeViaPublicTransit: EssentialServicesTravelTimeViaPublicTransit,
@@ -31,27 +28,15 @@ export const sectionBundleId = {
   AreaDemographics: 'areadem',
   RiderDemographics: 'ridedem',
   MapTravelOptions: 'mapopts',
-  Future: {
-    Coverage: 'coverage',
-    WorkAndSchoolCommute: 'futurews',
-  },
-  EssentialServices: {
-    AccessViaPublicTransit: 'espubacc',
-    TravelTimeViaPublicTransit: 'espubtt',
-  },
+  Future: { Coverage: 'coverage', WorkAndSchoolCommute: 'futurews' },
+  EssentialServices: { AccessViaPublicTransit: 'espubacc', TravelTimeViaPublicTransit: 'espubtt' },
 };
 
-export const manualSectionIds = {
-  jobsTreeMap: 'jobstree',
-  roadsVsTransitScenarios: 'bubbles',
-};
+export const manualSectionIds = { jobsTreeMap: 'jobstree', roadsVsTransitScenarios: 'bubbles' };
 
 export const flatSectionBundleIds = flattenObject(sectionBundleId);
 
 export const allSectionIds: Record<
   keyof typeof flatSectionBundleIds | keyof typeof manualSectionIds,
   string
-> = {
-  ...flatSectionBundleIds,
-  ...manualSectionIds,
-};
+> = { ...flatSectionBundleIds, ...manualSectionIds };

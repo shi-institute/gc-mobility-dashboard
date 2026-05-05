@@ -96,10 +96,7 @@ export function PlotContainer(props: PlotFigureProps) {
 }
 
 const helpers = {
-  presets: {
-    facetedHorizontalBar,
-    horizontalBar,
-  },
+  presets: { facetedHorizontalBar, horizontalBar },
   utils: {
     sumAcross: (data: Record<string, unknown>[], key: string) => {
       return data.reduce((acc, d) => {

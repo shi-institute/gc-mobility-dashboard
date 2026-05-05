@@ -259,10 +259,7 @@ export function TreeMap(props: TreeMapProps) {
 
 interface TooltipProps {
   children: React.ReactNode;
-  mousePosition: {
-    x: number;
-    y: number;
-  };
+  mousePosition: { x: number; y: number };
 }
 
 function Tooltip(props: TooltipProps) {

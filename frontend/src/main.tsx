@@ -20,10 +20,7 @@ if (!mountElement) {
 const shadowRoot = mountElement.attachShadow({ mode: 'open' });
 
 // configure emotion to use the shadow DOM
-const emotionCache = createCache({
-  key: 'gcmd',
-  container: shadowRoot,
-});
+const emotionCache = createCache({ key: 'gcmd', container: shadowRoot });
 
 // Override the global fetch function to intercept requests for files inside .tar files
 // and serve them using the Cotar library.

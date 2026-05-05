@@ -177,8 +177,8 @@ export default function App() {
   const resolvedSeasons = isOnJobAccessPage
     ? jobAccessSeasonsOverride
     : isOnRoadsVsTransitPage
-    ? roadsVsTransitSeasonsOverride
-    : seasons;
+      ? roadsVsTransitSeasonsOverride
+      : seasons;
 
   const editMode = searchParams.get('edit') === 'true';
 
@@ -325,7 +325,6 @@ const AppWrapper = styled.div`
   overflow: hidden;
   box-sizing: border-box;
 
-  max-height: 100vh;
   overflow: auto;
 
   > div:last-of-type {

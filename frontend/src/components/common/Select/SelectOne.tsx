@@ -70,7 +70,8 @@ const SelectOneComponent = styled.select`
   height: 2.25rem;
   box-sizing: border-box;
   border: none;
-  box-shadow: inset 0 0 0 1px var(--control-stroke-default),
+  box-shadow:
+    inset 0 0 0 1px var(--control-stroke-default),
     inset 0 -1px 0 0 var(--control-stroke-secondary-overlay);
   border-radius: var(--button-radius);
   text-decoration: none;

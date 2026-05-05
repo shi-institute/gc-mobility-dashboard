@@ -19,10 +19,7 @@ export function SelectedSeason({ seasonsList }: SelectedSeasonProps) {
       const year = season.split(':')[1];
       const label = `${year} ${quarter}`;
 
-      const monthRanges = {
-        Q2: 'April-June',
-        Q4: 'October-December',
-      };
+      const monthRanges = { Q2: 'April-June', Q4: 'October-December' };
 
       const subLabel = `${monthRanges[quarter]}, ${year}`;
 

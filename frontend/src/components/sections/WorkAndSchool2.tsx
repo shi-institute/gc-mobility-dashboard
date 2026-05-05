@@ -42,10 +42,7 @@ export function WorkAndSchool2() {
             0
           );
 
-          return {
-            label: __routeId,
-            value: ((publicTransitTrips / allTrips) * 100).toFixed(2),
-          };
+          return { label: __routeId, value: ((publicTransitTrips / allTrips) * 100).toFixed(2) };
         })}
       />
       <Statistic.Percent
@@ -61,10 +58,7 @@ export function WorkAndSchool2() {
             0
           );
 
-          return {
-            label: __routeId,
-            value: ((possibleConversions / allTrips) * 100).toFixed(2),
-          };
+          return { label: __routeId, value: ((possibleConversions / allTrips) * 100).toFixed(2) };
         })}
       />
       <Statistic.Number
@@ -86,11 +80,7 @@ export function WorkAndSchool2() {
         onClick={handleClick('currmode')}
         plot={futures
           .map(({ stats, __routeId, __label }) => {
-            return {
-              __label,
-              __routeId,
-              ...stats?.methods.commute,
-            };
+            return { __label, __routeId, ...stats?.methods.commute };
           })
           .map(({ __label, __routeId, ...walkServiceAreaCurrentTravelMethods }) => {
             const domainMap: Record<string, string> = {
@@ -133,10 +123,7 @@ export function WorkAndSchool2() {
               return {
                 title: array.length > 1 ? __routeId : undefined,
                 ...preset,
-                color: {
-                  ...preset.color,
-                  legend: index === 0,
-                },
+                color: { ...preset.color, legend: index === 0 },
                 // require a sample size of at least 30 to display the figure
                 sampleSizeIsTooSmall:
                   Object.values(plotData).reduce((acc, val) => acc + val.value, 0) < 30,

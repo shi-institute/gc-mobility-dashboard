@@ -12,10 +12,7 @@ export function SelectedArea({ areasList }: SelectedAreaProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const options = areasList
-    .map((area) => ({
-      label: area === 'full_area' ? 'Greenville County' : area,
-      value: area,
-    }))
+    .map((area) => ({ label: area === 'full_area' ? 'Greenville County' : area, value: area }))
     .filter((area) => area.value !== 'FurmanSquare')
     .sort((a, b) => a.label.localeCompare(b.label))
     .sort((a) => (a.value === 'full_area' ? -1 : 1));

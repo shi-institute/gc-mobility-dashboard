@@ -154,7 +154,10 @@ const StyledMarkdownContent = styled.div`
 
     color: var(--color-primary) !important;
     box-shadow: 0 1px 0 0 var(--color-primary);
-    transition: background-color 0.2s, box-shadow 0.1s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      box-shadow 0.1s,
+      color 0.2s;
     text-decoration: none;
 
     &:hover {

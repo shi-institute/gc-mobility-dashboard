@@ -44,10 +44,7 @@ export function ServiceStatistics() {
           const meters_distance = area.coverage?.routes_distance_meters || 0;
           const miles_distance = meters_distance / 1609.344; // convert meters to miles
 
-          return {
-            label: area.__label,
-            value: miles_distance.toFixed(2),
-          };
+          return { label: area.__label, value: miles_distance.toFixed(2) };
         })}
         unit="miles"
         if={shouldRender('mos')}
@@ -57,10 +54,7 @@ export function ServiceStatistics() {
         wrap
         label="Number of stops"
         data={data?.map((area) => {
-          return {
-            label: area.__label,
-            value: area.coverage?.stops_count || NaN,
-          };
+          return { label: area.__label, value: area.coverage?.stops_count || NaN };
         })}
         if={shouldRender('nostop')}
         onClick={handleClick('nostop')}
@@ -74,10 +68,7 @@ export function ServiceStatistics() {
             area.operating_funds?.find((fund) => fund.Source === 'Local Government')?.Value ?? NaN;
           const population = area.census_acs_5year__county_total_population || NaN;
 
-          return {
-            label: area.__label,
-            value: localFunding / population,
-          };
+          return { label: area.__label, value: localFunding / population };
         })}
         if={shouldRender('lf')}
         onClick={handleClick('lf')}
@@ -147,10 +138,7 @@ export function ServiceStatistics() {
           const meters_area = area.coverage?.walk_service_area_area_square_meters || 0;
           const miles_area = meters_area / 1609.344 / 1609.344; // convert square meters to square miles
 
-          return {
-            label: area.__label,
-            value: miles_area.toFixed(2),
-          };
+          return { label: area.__label, value: miles_area.toFixed(2) };
         })}
         unit="square miles"
         if={shouldRender('servsqmi')}

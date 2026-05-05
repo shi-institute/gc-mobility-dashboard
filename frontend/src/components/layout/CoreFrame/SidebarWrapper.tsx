@@ -131,7 +131,9 @@ const FloatingSidebarWrapper = styled.div<{ isOpen?: boolean }>`
   transition: var(--wui-control-normal-duration) cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid hsla(0, 0%, 46%, 40%);
   border-radius: var(--surface-radius);
-  box-shadow: 0px 32px 64px hsla(0, 0%, 0%, 18.76%), 0px 2px 21px hsl(0, 0%, 0%, 14.74%);
+  box-shadow:
+    0px 32px 64px hsla(0, 0%, 0%, 18.76%),
+    0px 2px 21px hsl(0, 0%, 0%, 14.74%);
   --sidebar-background-color: hsl(0, 0%, 98%);
   background-color: var(--sidebar-background-color);
 

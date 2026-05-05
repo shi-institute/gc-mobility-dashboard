@@ -21,43 +21,24 @@ export function createScaledSegmentsRenderer(
       {
         minValue: 1,
         maxValue: 2,
-        symbol: new SimpleLineSymbol({
-          color: withOpacity(color, 0.2),
-          width: 0.1,
-        }),
+        symbol: new SimpleLineSymbol({ color: withOpacity(color, 0.2), width: 0.1 }),
       },
       {
         minValue: 3,
         maxValue: 4,
-        symbol: new SimpleLineSymbol({
-          color: withOpacity(color, 0.4),
-          width: 1,
-        }),
+        symbol: new SimpleLineSymbol({ color: withOpacity(color, 0.4), width: 1 }),
       },
       {
         minValue: 5,
         maxValue: 6,
-        symbol: new SimpleLineSymbol({
-          color: withOpacity(color, 0.6),
-          width: 2,
-        }),
+        symbol: new SimpleLineSymbol({ color: withOpacity(color, 0.6), width: 2 }),
       },
       {
         minValue: 7,
         maxValue: 8,
-        symbol: new SimpleLineSymbol({
-          color: withOpacity(color, 0.8),
-          width: 3,
-        }),
+        symbol: new SimpleLineSymbol({ color: withOpacity(color, 0.8), width: 3 }),
       },
-      {
-        minValue: 9,
-        maxValue: 10,
-        symbol: new SimpleLineSymbol({
-          color,
-          width: 4,
-        }),
-      },
+      { minValue: 9, maxValue: 10, symbol: new SimpleLineSymbol({ color, width: 4 }) },
     ],
   });
 }

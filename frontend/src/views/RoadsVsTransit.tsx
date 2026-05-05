@@ -496,10 +496,7 @@ async function showFeaturesOnMap(
         return mapUtils
           .highlightFeatures(
             mapView,
-            targetLayerIds.map((layerId) => ({
-              layerId,
-              options: { signal: controller.signal },
-            }))
+            targetLayerIds.map((layerId) => ({ layerId, options: { signal: controller.signal } }))
           )
           .then(async (foundLayers) => {
             // save the highlight handles so we can remove the highlights later
@@ -698,8 +695,8 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
             return selectedIndex === index && mode === 'row'
               ? '100px'
               : selectedIndex === index && mode === 'column'
-              ? '120px'
-              : 'unset';
+                ? '120px'
+                : 'unset';
           }
 
           return selectedIndex === index && mode === 'column' ? '120px' : 'unset';
@@ -728,8 +725,8 @@ function Comparison(props: { title: string; mapView: __esri.MapView | null }) {
                 selectedIndex !== index
                   ? 'var(--wui-control-faster-duration) opacity'
                   : prefersReducedMotion
-                  ? '0 opacity'
-                  : '1000ms opacity',
+                    ? '0 opacity'
+                    : '1000ms opacity',
             }}
           >
             {selectedIndex === index ? (
@@ -1263,7 +1260,9 @@ const ComparisonComponent = styled.div`
     }
 
     p {
-      text-shadow: 0 0 40px var(--color-secondary), 0 0 2px var(--color-secondary);
+      text-shadow:
+        0 0 40px var(--color-secondary),
+        0 0 2px var(--color-secondary);
       background-color: color-mix(in srgb, var(--blue-background--solid) 50%, transparent);
 
       backdrop-filter: blur(12px);
@@ -1333,7 +1332,8 @@ const ButtonInterior = styled.article`
           padding: 0.54em 0.8em;
           border-radius: 10em;
           overflow: hidden;
-          box-shadow: inset 0 0 0 0.063em var(--control-stroke-default),
+          box-shadow:
+            inset 0 0 0 0.063em var(--control-stroke-default),
             inset 0 -0.063em 0 0 var(--control-stroke-secondary-overlay);
 
           &::before {
