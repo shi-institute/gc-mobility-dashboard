@@ -136,6 +136,75 @@ To replace the default FAQs link in the dashboard with a link to an external hel
 
 This will update the FAQs link in the dashboard's navigation to point to the specified help page. The user's current search parameters will be preserved when navigating to the help page.
 
+## Control the dashboard's root element position and size based on the current tab
+
+The dashboard adds a class to its root element (element with ID `gcmd-root`) based on the current tab.
+
+| Tab Name                                                | Class Name                  |
+| ------------------------------------------------------- | --------------------------- |
+| Home (when `data-home-path` is specified)               | `fragment--`                |
+| General Access (when `data-home-path` is specified)     | `fragment--general`         |
+| General Access (when `data-home-path` is not specified) | `fragment--`                |
+| Future Opportunities                                    | `fragment--future`          |
+| Job Access                                              | `fragment--job-access`      |
+| Access to Essential Services                            | `fragment--services-access` |
+| Roads or Transit?                                       | `fragment--roads`           |
+| FAQs                                                    | `fragment--faq`             |
+
+An example use-case for this feature is to embed the dashboard into an existing webpage with other content, and to have the dashboard expand to fullscreen when the user navigates to a tab other than the home tab. This can be achieved with the following CSS:
+
+<details>
+<summary>Example CSS for fullscreen mode on non-home tabs</summary>
+
+```css
+:root {
+  --body-margin: 10px; /* adjust this to match your webpage's padding around the dashboard */
+}
+
+#gcmd-root {
+  background: white;
+  font-family: 'Poppins', sans-serif;
+
+  /* ensure that the tab bar always uses the full width fo the viewport */
+  position: relative;
+  width: 100dvw;
+  left: calc(var(--body-margin) * -1);
+
+  /* enable transition animations between the home tab size and the other tabs size */
+  transition: all 280ms ease;
+  transition-behavior: allow-discrete;
+  height: calc-size(min-content, size);
+}
+
+/* switch to fullscreen mode when not on home tab */
+#gcmd-root:not(.fragment--) {
+  position: absolute;
+  inset: 0;
+  height: 100dvh;
+}
+
+/* disable body scrolling when we are in fullscreen mode */
+body:has(#gcmd-root[class*='fragment--']:not(.fragment--)) {
+  overflow: hidden;
+}
+
+/* put the mobile-mode nav bar at the bottom of the page when on the home screen */
+@media (max-width: 899px) {
+  #gcmd-root.fragment-- {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+  }
+  body {
+    padding-bottom: 70px;
+  }
+}
+```
+
+</details>
+
 ## Important cache considerations
 
 The `index.html` and `index.js` files must not be cached by browsers or CDNs. These files contain references to the unique asset paths generated during the build process. If these files are cached, users may receive outdated references to assets that no longer exist, leading to broken functionality. To prevent caching issues, ensure that your server or CDN is configured to set appropriate cache-control headers for these files, such as `Cache-Control: no-cache` or `Cache-Control: max-age=0, must-revalidate`.
