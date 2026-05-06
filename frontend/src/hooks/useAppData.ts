@@ -1,7 +1,7 @@
 import type { Style as MapboxStyle, VectorSource as MapboxVectorSource } from 'mapbox-gl';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { generateHash, inflateResponse, notEmpty } from '../utils';
+import { generateHash, getRootAttributes, inflateResponse, notEmpty } from '../utils';
 
 export function createAppDataContext(
   areas: AppDataHookParameters['areas'],
@@ -28,14 +28,6 @@ export function _useAppDataContext() {
   return useContext(AppDataContext);
 }
 
-export function getDataOriginAndPath() {
-  const rootElement = document.getElementById('gcmd-root');
-
-  const dataOrigin = rootElement?.getAttribute('data-origin') || __GCMD_DATA_ORIGIN__;
-  const dataPath = rootElement?.getAttribute('data-path') || __GCMD_DATA_PATH__;
-  return { dataOrigin, dataPath };
-}
-
 export interface AppDataHookParameters {
   areas: string[];
   seasons: ['Q2' | 'Q4', number][];
@@ -50,7 +42,7 @@ export interface AppDataHookParameters {
 
 function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   const [areasList, setAreasList] = useState<string[]>([]);
   useEffect(() => {
@@ -536,7 +528,7 @@ function handleError(
  * Fetches the core census data that is used across all areas and seasons.
  */
 function getCensusData() {
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   const paths = {
     households: dataOrigin + dataPath + `/census_acs_5year/B08201/time_series.json.deflate`,
@@ -585,7 +577,7 @@ function getCensusData() {
  * Provides promises that fetch the data related to Greenlink service.
  */
 function getGreenlinkPromises(seasons: AppDataHookParameters['seasons']) {
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   const allPromises = seasons.map(([__quarter, __year]) => {
     const gtfsFolder = dataOrigin + dataPath + `/greenlink_gtfs/${__year}/${__quarter}`;
@@ -647,7 +639,7 @@ function getEssentialServicesPromises(
   areas: AppDataHookParameters['areas'],
   seasons: AppDataHookParameters['seasons']
 ) {
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   const allPromises = seasons.flatMap(([__quarter, __year]) => {
     return areas.map((__area) => {
@@ -751,7 +743,7 @@ function constructReplicaPaths(
   seasons: AppDataHookParameters['seasons'],
   travelMethod?: AppDataHookParameters['travelMethod']
 ) {
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   return areas.flatMap((area) => {
     return seasons.map(([quarter, year]) => {
@@ -794,7 +786,7 @@ function constructReplicaPaths(
  * @param replicaPaths - the returned value of `constructReplicaPaths`
  */
 function constructReplicaPromises(replicaPaths: ReturnType<typeof constructReplicaPaths>) {
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   return replicaPaths.map(({ __area, __displayArea, __year, __quarter, __label, ...paths }) => {
     return {
@@ -852,7 +844,7 @@ function constructReplicaPromises(replicaPaths: ReturnType<typeof constructRepli
 }
 
 function constructScenarioDataPromises(futureRoutesList: string[]) {
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
+  const { dataOrigin, dataPath } = getRootAttributes();
 
   const futureRoutesPromises = futureRoutesList.map((routeId) => {
     const folderPath = dataOrigin + dataPath + '/future_routes/' + routeId;

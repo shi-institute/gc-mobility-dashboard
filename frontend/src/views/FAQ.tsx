@@ -6,15 +6,13 @@ import { useLocation } from 'react-router';
 import bannerImageSrc from '../assets/images/faq-banner.jpg';
 import { CoreFrame } from '../components';
 import { AppNavigation } from '../components/navigation';
-import { getDataOriginAndPath } from '../hooks/useAppData';
+import { getRootAttributes } from '../utils';
 
 export function FAQ() {
   const { search } = useLocation();
-  const { dataOrigin, dataPath } = getDataOriginAndPath();
 
   // redirect to external FAQs if the data-help-path attribute is specified
-  const rootElement = document.getElementById('gcmd-root');
-  const externalFAQsPath = rootElement?.getAttribute('data-help-path') || undefined;
+  const { externalFAQsPath, dataOrigin, dataPath } = getRootAttributes();
   if (externalFAQsPath) {
     window.location.href = externalFAQsPath + search;
   }
@@ -23,7 +21,10 @@ export function FAQ() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   useEffect(() => {
-    fetch(dataOrigin + dataPath + '/faq.md', { redirect: 'error' })
+    fetch(dataOrigin + dataPath + '/faq.md', {
+      redirect: 'error',
+      headers: { Accept: 'text/markdown, text/x-markdowm, text/plain' },
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error('Failed to load FAQ content', { cause: response.statusText });

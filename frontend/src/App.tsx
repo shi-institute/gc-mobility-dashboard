@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Button, CoreFrameContext, createCoreFrameContextValue } from './components';
 import {
+  AppNavigation,
   COMPONENTS_ROUTE_FRAGMENT,
   FAQ_TAB_FRAGMENT,
   LANDING_PAGE_FRAGMENT,
+  TAB_1_ALT_FRAGMENT,
   TAB_1_FRAGMENT,
   TAB_2_FRAGMENT,
   TAB_3_FRAGMENT,
@@ -14,7 +16,7 @@ import {
 } from './components/navigation';
 import { useSectionsVisibility } from './hooks';
 import { AppDataContext, AppDataHookParameters, createAppDataContext } from './hooks/useAppData';
-import { notEmpty } from './utils';
+import { getRootAttributes, notEmpty } from './utils';
 import {
   DevModeComponentsAll,
   EssentialServicesAccess,
@@ -29,6 +31,7 @@ export default function App() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { pathname } = useLocation();
   const [, , visibleTabs] = useSectionsVisibility();
+  const { homePath } = getRootAttributes();
 
   const comparisonEnabled = useMemo(() => {
     return searchParams.get('compare') === '1';
@@ -212,6 +215,26 @@ export default function App() {
     setSearchParams(searchParams, { replace: true });
   };
 
+  // Add a class to the root element that matches the current path fragment for
+  // easier external styling based on route.
+  // Format: fragment-{path-fragment}, with slashes replaced by dashes.
+  // For example, /future becomes fragment--future
+  useEffect(() => {
+    const rootElement = document.getElementById('gcmd-root');
+    if (!rootElement) return;
+
+    const fragmentClass = pathname.split('/').filter(notEmpty).join('-');
+
+    // remove any existing fragment classes
+    Array.from(rootElement.classList)
+      .filter((cls) => cls.startsWith('fragment-'))
+      .forEach((cls) => rootElement.classList.remove(cls));
+
+    if (fragmentClass) {
+      rootElement.classList.add(`fragment-${fragmentClass}`);
+    }
+  }, [pathname]);
+
   return (
     <AppWrapper>
       <AppDataContext.Provider
@@ -255,8 +278,14 @@ export default function App() {
           {import.meta.env.DEV ? <PlaceholderGreenvilleConnectsWebsiteHeader /> : null}
 
           <Routes>
+            {!!homePath ? (
+              <Route path={LANDING_PAGE_FRAGMENT} element={<AppNavigation />}></Route>
+            ) : null}
             {!visibleTabs || visibleTabs.includes(TAB_1_FRAGMENT) ? (
-              <Route index Component={GeneralAccess} />
+              <>
+                {!homePath && <Route index Component={GeneralAccess} />}
+                {!!homePath && <Route path={TAB_1_ALT_FRAGMENT} index Component={GeneralAccess} />}
+              </>
             ) : null}
             {!visibleTabs || visibleTabs.includes(TAB_2_FRAGMENT) ? (
               <Route path={TAB_2_FRAGMENT} Component={FutureOpportunities} />
@@ -298,6 +327,7 @@ function Error404() {
   const validPaths = [
     LANDING_PAGE_FRAGMENT,
     TAB_1_FRAGMENT,
+    TAB_1_ALT_FRAGMENT,
     TAB_2_FRAGMENT,
     TAB_3_FRAGMENT,
     TAB_4_FRAGMENT,

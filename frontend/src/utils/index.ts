@@ -2,6 +2,7 @@ export { createPopupRoot } from './createPopupRoot';
 export { debounce } from './debounce';
 export { flattenObject } from './flattenObject';
 export { generateHash } from './generateHash';
+export { getRootAttributes } from './getRootAttributes';
 export { hasKey } from './hasKey';
 export { inflateResponse } from './inflateResponse';
 export { isGeoJSON } from './isGeoJson';

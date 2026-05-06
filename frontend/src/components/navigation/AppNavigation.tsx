@@ -2,9 +2,11 @@ import styled from '@emotion/styled';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useSectionsVisibility } from '../../hooks';
+import { getRootAttributes } from '../../utils';
 import { Button, NavBar, NavBarItem, Tab, Tabs } from '../common';
 import {
   FAQ_TAB_FRAGMENT,
+  LANDING_PAGE_FRAGMENT,
   TAB_1_FRAGMENT,
   TAB_2_FRAGMENT,
   TAB_3_FRAGMENT,
@@ -16,14 +18,12 @@ export function AppNavigation() {
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const [, , visibleTabs] = useSectionsVisibility();
+  const { homePath, externalFAQsPath } = getRootAttributes();
 
-  const rootElement = document.getElementById('gcmd-root');
-  const homePath = rootElement?.getAttribute('data-home-path') || undefined;
   function goHome() {
     window.location.href = homePath + search;
   }
 
-  const externalFAQsPath = rootElement?.getAttribute('data-help-path') || undefined;
   function navigateToFAQs() {
     if (externalFAQsPath) {
       window.location.href = externalFAQsPath + search;
@@ -170,6 +170,7 @@ export function AppNavigation() {
             <Tab
               label={''}
               href={homePath + search}
+              isActive={pathname === LANDING_PAGE_FRAGMENT}
               onClick={goHome}
               iconLeft={
                 <svg viewBox="0 0 24 24">
@@ -185,7 +186,9 @@ export function AppNavigation() {
             <Tab
               label="General Access"
               href={'#' + TAB_1_FRAGMENT + search}
-              isActive={pathname === TAB_1_FRAGMENT}
+              isActive={
+                pathname === TAB_1_FRAGMENT || (!homePath && pathname === LANDING_PAGE_FRAGMENT)
+              }
               onClick={handleClick(TAB_1_FRAGMENT + search)}
               iconLeft={
                 !isNarrowerDesktop && (
