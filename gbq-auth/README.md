@@ -12,12 +12,28 @@ to ./credentials/bigquery_credentials.json. KEEP THESE CREDENTIALS PRIVATE; they
 Remember to bind the credentials folder from this docker image to data-pipeline docker image's credentials volume. If you do not, you will
 not have access to the credentials and the data pipeline process will fail.
 
-## 2. Serverless
+## 2. Cloudflare Worker
 
-The app is also deployed to https://gbq-auth.shi.institute. To retrieve credentials, you will need a server endpoint that can receive a POST request
-with the credentials to save to bigquery_credentials.json. Authenticate and trigger the POST for the crednetials by visiting
-https://gbq-auth.shi.institute?postUrl={{postUrl}}, where {{postURL}} is the the URL of the endpoint that can receive the credentials.
+The app is deployed as a Cloudflare Worker at https://gbq-auth.shi.institute. To retrieve credentials, you will need a server endpoint
+that can receive a POST request with the credentials to save to bigquery_credentials.json. Authenticate and trigger the POST for the
+credentials by visiting https://gbq-auth.shi.institute?postUrl={{postUrl}}, where {{postUrl}} is the URL of the endpoint that can receive
+the credentials.
 
 Remember to copy the bigquery_credentials.json to the appropriate directory for the data pipeline (the credentials folder).
 
 An example server that can receive the credentials is available at [listen.mjs](../.github/actions/authenticate-gbq/listen.mjs)
+
+### Deploying
+
+```bash
+npm install
+npm run deploy
+```
+
+### Local development
+
+```bash
+npm run dev
+```
+
+The worker runs on http://localhost:3000 by default.

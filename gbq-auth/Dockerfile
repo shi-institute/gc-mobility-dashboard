@@ -18,8 +18,8 @@ RUN npm ci
 COPY docker-image-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# add script
-COPY api ./api/
+# add scripts
+COPY src ./src/
 
 # start the server when the container starts
 ENTRYPOINT ["/entrypoint.sh"]

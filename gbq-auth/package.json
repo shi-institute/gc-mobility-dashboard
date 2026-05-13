@@ -1,11 +1,14 @@
 {
   "scripts": {
-    "start": "node api/index.mjs"
+    "start": "node src/docker.mjs",
+    "dev": "wrangler dev --port 3000",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "express": "^5.2.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1"
+    "@types/express": "^5.0.1",
+    "wrangler": "^4.0.0"
   }
 }
