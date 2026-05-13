@@ -48,9 +48,6 @@ runs:
       with:
         node-version: 22
 
-    - run: npm i express@5
-      shell: bash
-
     - name: Start tunnel and listen for credentials
       id: get-credentials
       run: |

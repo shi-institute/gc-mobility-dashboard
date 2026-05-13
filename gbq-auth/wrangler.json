@@ -1,0 +1,11 @@
+{
+  "name": "gbq-auth",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-05-12",
+  "routes": [
+    {
+      "pattern": "gbq-auth.shi.institute",
+      "custom_domain": true
+    }
+  ]
+}
