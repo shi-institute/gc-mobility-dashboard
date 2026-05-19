@@ -643,7 +643,7 @@ The `essential_services` ETL depends on the output of the `geocoder` and `greenl
 
 ## Required passthrough data
 
-This section describes the input files for the `passthrough_data` runner. These files are used by the web application and must be structured in a specific way.
+This section describes the input files for the `passthrough` runner. These files are used by the web application and must be structured in a specific way.
 Follow the instructions for updating data described in the following sections to ensure the web app does not break.
 
 ### `operating_funds.json`
