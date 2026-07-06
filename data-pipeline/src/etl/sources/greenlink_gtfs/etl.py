@@ -411,7 +411,8 @@ class GreenlinkGtfsETL:
 
 def convert_stops(stops_csv_file: str) -> str:
     # convert stops to geodataframe
-    stops_df = pandas.read_csv(stops_csv_file)
+    # - we read stop codes as strings since some stop codes have trailing letters
+    stops_df = pandas.read_csv(stops_csv_file, dtype={'stop_code': str})
     stops_gdf = geopandas.GeoDataFrame(
         stops_df,
         geometry=geopandas.points_from_xy(
@@ -439,9 +440,6 @@ def convert_stops(stops_csv_file: str) -> str:
     # Each stop appears twice, but we only need it once.
     # Greelinks's GTFS omits the stop_code for the duplicates.
     stops_gdf = stops_gdf[stops_gdf['ID'].notna()]
-
-    # convert data types
-    stops_gdf['ID'] = stops_gdf['ID'].astype(int)
 
     # save to GeoJSON
     output_path = stops_csv_file.replace('.csv', '.geojson')

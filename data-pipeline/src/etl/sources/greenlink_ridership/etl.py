@@ -43,7 +43,7 @@ class GreenlinkRidershipETL:
         for file in self.input_folder.glob("*.csv"):
             print(f"Reading {file.name}...")
             try:
-                df = pandas.read_csv(file, on_bad_lines='skip')
+                df = pandas.read_csv(file, on_bad_lines='skip', dtype={'Stop Point': str})
                 print(f"✔︎ Successfully read {file.name} containing {len(df)} rows.")
 
                 df.columns = df.columns.str.strip()
@@ -79,7 +79,7 @@ class GreenlinkRidershipETL:
                 df['period'] = df['period'].dt.strftime('%Y-%m-%d')
 
                 # Clean numeric columns
-                for col in ['stop_point', 'boarding', 'alighting']:
+                for col in ['boarding', 'alighting']:
                     df[col] = pandas.to_numeric(df[col], errors='coerce')
                     invalid_values = df[col].isna()
                     if invalid_values.any():
@@ -87,6 +87,14 @@ class GreenlinkRidershipETL:
                             f"⚠ WARNING. {file.name}: Dropped {invalid_values.sum()} rows with non-numeric or missing values in '{col}'.")
                     df = df[~invalid_values]
                     df[col] = df[col].astype('int64')
+
+                # Clean stop_point: We read as string, so we must remove whitespace and check for empty strings
+                df['stop_point'] = df['stop_point'].str.strip()
+                invalid_values = df['stop_point'].isna() | df['stop_point'].eq('')
+                if invalid_values.any():
+                    print(
+                        f"⚠ WARNING. {file.name}: Dropped {invalid_values.sum()} rows with missing stop_point values.")
+                df = df[~invalid_values]
 
                 if df.empty:
                     print(
@@ -181,7 +189,7 @@ class GreenlinkRidershipETL:
 
                 # Identify the stops ids in the polygon area and save the area's name to the
                 # stop in the season_ridership dataframe (semicolon-delimited for multiple areas)
-                area_stop_ids = area_stops_gdf['ID'].unique()
+                area_stop_ids = area_stops_gdf['ID'].astype(str).unique()
                 season_ridership_df.loc[season_ridership_df['stop_point'].isin(
                     area_stop_ids), 'area'] = polygon_file.stem
                 mask = season_ridership_df['stop_point'].isin(area_stop_ids)

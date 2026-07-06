@@ -538,7 +538,10 @@ async function showFeaturesOnMap(
               layers.find(
                 (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
               ),
-            target: feature.stopIds.map((id) => parseInt(id)),
+            target: {
+              field: 'ID',
+              values: feature.stopIds.map((stopId) => `${stopId}`), // convert integers to strings since the stop layer uses string IDs
+            },
             options: { signal: controller.signal },
           },
         ])
