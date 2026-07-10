@@ -441,6 +441,12 @@ def convert_stops(stops_csv_file: str) -> str:
     stops_gdf = stops_gdf[stops_gdf['ID'].notna()]
 
     # convert data types
+    # NOTE: Greenlink has started appending letters to some stop codes (e.g. "1000D").
+    # Skipping non-numeric IDs here instead of crashing until the rest of the
+    # pipeline (esp. greenlink_ridership) is updated to handle them consistently.
+    # TODO: flag to Jack -- this silently drops lettered stops from the dataset.
+    is_numeric_id = stops_gdf['ID'].astype(str).str.match(r'^\d+$')
+    stops_gdf = stops_gdf[is_numeric_id]
     stops_gdf['ID'] = stops_gdf['ID'].astype(int)
 
     # save to GeoJSON
