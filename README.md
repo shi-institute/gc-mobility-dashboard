@@ -57,3 +57,22 @@ Be sure to carefully read the instructions and explainations in the data pipelin
 6. Upload the contents of the `data-pipeline/data/__public` directory to the `data` folder in your S3 bucket. Do not include the `__public` folder itself; only upload its contents.
 
 Note: This folder structure can be replicated on any static file hosting service, not just S3.
+
+### Updating without overwriting data
+
+To update data without overwriting existing data, use the following process when uploading data:
+
+1. Instead of uploading the the `data` folder in the S3 bucket, upload to `data2`.
+2. When the upload is complete, rename the existing `data` folder to `old_data`.
+   1. Click into the `data` folder.
+   2. Check the each folder and file inside the `data` folder.
+   3. Choose **Actions » Move**.
+   4. For the destination, choose `s3://greenville-connects/old_data/`.
+   5. Click **Move**. This may take between 30 and 45 minutes.
+6. When the move is complete, rename the `data2` folder to `data`.
+   1. Click into the `data2` folder.
+   2. Check the each folder and file inside the `data2` folder.
+   3. Choose **Actions » Move**.
+   4. For the destination, choose `s3://greenville-connects/data/`.
+   5. Click **Move**. This may take between 30 and 45 minutes.
+6. Confirm that the frontend is functional and the new data can be accessed.
