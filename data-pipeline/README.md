@@ -128,6 +128,23 @@ The following datasets are recommended inputs:
 
 *The above recommended inputs are used by the `essential_services` runner.*
 
+#### Preparing the Inputs
+
+1. For medical facilities (hospitals, eycare providers, dental, etc.), we are utilizing data that was provided by Prisma Health during the iMap project. The iMap and associated services were hosted by Greenville County GIS, but are no longer being hosted. A new solution will need to be developed to obtain up-to-date medical services data. This beyond the scope of this current project.
+2. Childcare -Utilize SC Childcare's [provider search](https://www.scchildcare.org/provider-search/). Search by county (e.g., Greenville). Save results to excel. Confirm that column names are the same as previous downloads from SC Childcare.
+3. Grocery stores - The most reliable source we have found is Reference Solutions. The Reference Solutions database is available with a Greenville library card and online Greenville library account. Steps:
+  * After logging in to your library account, go to the [Business and Money](https://www.greenvillelibrary.org/business-money) section under 'Learning and Research.' 
+  * Select Reference Solutions
+  * Select advanced search
+  * Search by County (e.g.Greenville)
+  * Record Type = Verified Businesses
+  * Search All NAICS
+  * Specify 44511003 (GROCERS-RETAIL)
+  * View Results
+  * Go to each individual page and check all records on each page (use checkbox at the top to select all on a page)
+  * Select detailed export (necessary to get NCAIS Code and description)
+  * Manually filter out records that are misclassified (e.g., Ahold Delhaize USA)
+
 #### Dependencies
 
 *This runner has no depencency on other runners.*
