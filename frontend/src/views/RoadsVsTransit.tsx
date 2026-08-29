@@ -19,6 +19,7 @@ import {
   IconButton,
   manualSectionIds,
   OptionTrack,
+  PageHeader,
   renderManualSection,
   renderSections,
   Section,
@@ -74,6 +75,7 @@ export function RoadsVsTransit() {
 
   const render = renderManualSection.bind(null, visibleSections, 'roadsVsTransitScenarios');
   const { isMobile } = useContext(CoreFrameContext);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   const layers = useMemo(() => {
     return [
@@ -162,29 +164,31 @@ export function RoadsVsTransit() {
 
         ...(isMobile
           ? [
-              <Comparison title="Explore Scenarios" mapView={mapView} />,
+              !isSafari ? <Comparison title="Explore Scenarios" mapView={mapView} /> : null,
               <List title="All Scenarios" mapView={mapView} />,
             ]
           : [
               render(
                 <div key={0} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <Tabs style={{ padding: 0, border: 'none' }}>
-                    <Tab
-                      label="Explore"
-                      variant="line"
-                      isActive={view === 'comparison'}
-                      onClick={() => setView('comparison')}
-                      style={{ fontSize: '1.125 rem' }}
-                    />
-                    <Tab
-                      label="All"
-                      variant="line"
-                      isActive={view === 'list'}
-                      onClick={() => setView('list')}
-                      style={{ fontSize: '1.125 rem' }}
-                    />
-                  </Tabs>
-                  {view === 'comparison' ? (
+                  {!isSafari ? (
+                    <Tabs style={{ padding: 0, border: 'none' }}>
+                      <Tab
+                        label="Explore"
+                        variant="line"
+                        isActive={view === 'comparison'}
+                        onClick={() => setView('comparison')}
+                        style={{ fontSize: '1.125 rem' }}
+                      />
+                      <Tab
+                        label="All"
+                        variant="line"
+                        isActive={view === 'list'}
+                        onClick={() => setView('list')}
+                        style={{ fontSize: '1.125 rem' }}
+                      />
+                    </Tabs>
+                  ) : null}
+                  {view === 'comparison' && !isSafari ? (
                     <Comparison title="Scenarios" mapView={mapView} />
                   ) : (
                     <List title="Scenarios" mapView={mapView} />
@@ -281,6 +285,15 @@ function List(props: { title: string; mapView: __esri.MapView | null }) {
 
   return (
     <ListContainer>
+      <ListContainerHeader>
+        <h2>One mile of road costs around $1 million!</h2>
+        <p>
+          What if we invested that money in transit infrastructure instead? Review an approximate
+          dollar amount and see how we can fund new transit projects.
+        </p>
+        <img src={busImageSrc} alt="" className="bus-container" />
+      </ListContainerHeader>
+
       {(() => {
         return scenariosByMiles.map(([miles, scenarios]) => {
           const title =
@@ -460,6 +473,33 @@ const ListContainer = styled.article`
       padding-inline-start: 20px;
     }
   }
+
+  --blue-background--solid: #9fa9fd;
+
+  .bus-container {
+    max-width: 300px;
+    width: 100%;
+  }
+`;
+
+const ListContainerHeader = styled(PageHeader)`
+  --blue-background--solid: #9fa9fd;
+
+  border-radius: var(--surface-radius);
+  border-bottom: none;
+  background-color: var(--blue-background--solid);
+  padding: 1rem;
+  text-shadow:
+    0 0 40px var(--color-secondary),
+    0 0 2px var(--color-secondary),
+    0 0 40px var(--color-secondary);
+  --color-primary: white;
+  --text-primary: white;
+
+  @container core (max-width: 899px) {
+    padding: 1rem;
+    margin: 1rem 0.5rem;
+  }
 `;
 
 /**
@@ -538,7 +578,10 @@ async function showFeaturesOnMap(
               layers.find(
                 (layer) => layer.id.startsWith('stops__') && !layer.id.startsWith('stops__future__')
               ),
-            target: feature.stopIds.map((id) => parseInt(id)),
+            target: {
+              field: 'ID',
+              values: feature.stopIds.map((stopId) => `${stopId}`), // convert integers to strings since the stop layer uses string IDs
+            },
             options: { signal: controller.signal },
           },
         ])

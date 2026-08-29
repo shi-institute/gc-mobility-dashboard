@@ -24,6 +24,7 @@
     "@emotion/styled": "^11.14.0",
     "@observablehq/plot": "^0.6.17",
     "@types/mapbox-gl": "^3.4.1",
+    "@types/node": "^24.0.4",
     "dompurify": "^3.3.0",
     "groupby-polyfill": "^1.0.0",
     "htl": "^0.3.1",

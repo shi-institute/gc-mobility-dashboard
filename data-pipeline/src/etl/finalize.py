@@ -97,6 +97,9 @@ def finalize():
     # repackage .vectortiles files in public/data as cloud-optimized tar files
     cloud_optimize_vectortiles(public_dir)
 
+    # build an index of travel methods that actually have network segment data
+    build_travel_method_index(public_dir / 'replica')
+
     # # put the public dir in an uncompressed tar file for easy transfer
     # tar_path = data_dir / '__public.tar'
     # print(f'Creating uncompressed tar file: {tar_path}')
@@ -380,6 +383,62 @@ def build_season_index(stats_directory: Path) -> list[SeasonIndexEntry]:
         for quarter, year in (name.split(":") for name in unique_season_names)
     ]
     return result
+
+
+def build_travel_method_index(replica_directory: Path) -> dict[tuple[str, str], list[str]]:
+    """
+    Builds an index of travel methods that have actual network segment vector tile
+    data available (i.e. a `.tar` file was produced) for each area + season
+    combination, based on the network segment tar filenames in that area's
+    `network_segments` directory.
+
+    Available modes can differ per area and per season.
+
+    Args:
+        replica_directory: Path to the `replica` directory to scan for network segment tiles
+
+    Returns:
+        Dictionary mapping (area name, "YYYY_Q#" season) to the list of travel
+        methods with data available for that area/season
+    """
+    if not replica_directory.exists():
+        return {}
+
+    print(
+        f"Building travel method index for each area/season in: {replica_directory.resolve().relative_to(data_dir).as_posix()}")
+
+    tar_name_pattern = re.compile(r"(\d{4}_Q[1-4])__\w+__commute__(.+)$")
+
+    area_season_travel_methods: dict[tuple[str, str], list[str]] = {}
+    for area_dir in replica_directory.iterdir():
+        if not area_dir.is_dir():
+            continue
+
+        network_segments_dir = area_dir / 'network_segments'
+        if not network_segments_dir.exists():
+            continue
+
+        travel_methods_by_season: dict[str, set[str]] = {}
+        for tar_file in network_segments_dir.glob('*.tar'):
+            match = tar_name_pattern.search(tar_file.stem)
+            if not match:
+                continue
+
+            season_name, travel_method = match.group(1), match.group(2)
+            travel_methods_by_season.setdefault(season_name, set()).add(travel_method)
+
+        for season_name, travel_methods in travel_methods_by_season.items():
+            travel_method_names = sorted(travel_methods)
+            area_season_travel_methods[(area_dir.name, season_name)] = travel_method_names
+
+            # write the travel method names to a text file scoped to this area/season
+            index_file_path = area_dir / f'travel_method_index__{season_name}.txt'
+            with open(index_file_path, 'w') as f:
+                f.write('\n'.join(travel_method_names))
+            print(
+                f"  Travel method index written to: {index_file_path.resolve().relative_to(data_dir).as_posix()}")
+
+    return area_season_travel_methods
 
 
 def build_future_routes_index(future_routes_directory: Path) -> None:
