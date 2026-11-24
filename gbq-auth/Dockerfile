@@ -1,4 +1,4 @@
-FROM node:22-slim
+FROM node:25-slim
 
 # set working directory
 RUN mkdir -p /home/gbq-auth

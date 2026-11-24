@@ -29,7 +29,7 @@ runs:
   using: "composite"
   steps:
     - name: Download Docker image artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: docker-image-data-pipeline
         path: .
@@ -87,7 +87,7 @@ runs:
       shell: bash
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact_name }}
         path: /tmp/artifacts/${{ inputs.artifact_name }}
