@@ -9,6 +9,6 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.168.0"
   }
 }
