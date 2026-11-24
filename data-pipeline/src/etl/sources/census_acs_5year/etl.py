@@ -53,11 +53,11 @@ class CensusACS5YearEstimatesETL:
 
         # download the data for each year
         for year in self.years:
-            url = self.table_info['data'].format(
-                year=year) + f'&key={self.api_key}'
+            base_url = self.table_info['data'].format(year=year)
+            url = base_url + f'&key={self.api_key}'
             download_file_path = f'{self.table_folder_path}/{year - 4}-{year}.json'
 
-            print(f"Downloading data from {url}")
+            print(f"Downloading data from {base_url}{'&key=***' if self.api_key else ''}")
             Downloader(
                 url,
                 download_file_path

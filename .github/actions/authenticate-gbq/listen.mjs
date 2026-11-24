@@ -68,6 +68,15 @@ const server = createServer((req, res) => {
         return;
       }
 
+      // register the sensitive values as masks so GitHub Actions
+      // redacts them from all subsequent log output in this job
+      for (const value of [
+        credentials.refresh_token,
+        credentials.client_secret,
+      ]) {
+        console.log(`::add-mask::${value}`);
+      }
+
       // write the credentials to a file
       fs.writeFile("credentials.json", JSON.stringify(credentials));
 
