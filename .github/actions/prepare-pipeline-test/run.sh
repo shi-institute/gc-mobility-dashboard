@@ -15,10 +15,11 @@ docker run -d \
   sleep infinity
 
 # copy the credentials into the volume via the temporary container
-if [ -n $BIGQUERY_CREDENTIALS ]; then
-  echo $BIGQUERY_CREDENTIALS > ./bigquery_credentials.json
+if [ -n "$BIGQUERY_CREDENTIALS" ]; then
+  printf '%s' "$BIGQUERY_CREDENTIALS" > ./bigquery_credentials.json
   sudo chmod +r ./bigquery_credentials.json
   docker cp ./bigquery_credentials.json temp_copier_$SUFFIX:/credentials/bigquery_credentials.json
+  rm -f ./bigquery_credentials.json
 fi
 
 # copy contents of the input directory into the volume via the temporary container

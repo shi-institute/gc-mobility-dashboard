@@ -1,4 +1,3 @@
-import { exec } from "child_process";
 import fs from "fs/promises";
 import { createServer } from "http";
 
@@ -34,7 +33,7 @@ const server = createServer((req, res) => {
   if (req.method === "POST" && req.url === "/") {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
+    req.on("end", async () => {
       let parsed;
       try {
         parsed = JSON.parse(body);
@@ -78,49 +77,21 @@ const server = createServer((req, res) => {
       }
 
       // write the credentials to a file
-      fs.writeFile("credentials.json", JSON.stringify(credentials));
-
-      // write the json to the GITHUB_OUTPUT variable
-      /**
-       * ## Example Usage
-       *
-       *  jobs:
-       *    job-one:
-       *      runs-on: ubuntu-latest
-       *      outputs:
-       *        bigquery_credentials: ${{ steps.job-one.outputs.BIGQUERY_CREDENTIALS }}
-       *      steps:
-       *        # logic to start a nodejs server wait for the credentials
-       *        # tip: add a timeout to the server to stop it after 5 minutes
-       *
-       *    job-two:
-       *     needs: [job-one]
-       *     runs-on: ubuntu-latest
-       *     env:
-       *       BIGQUERY_CREDENTIALS: ${{ needs.job-one.outputs.bigquery_credentials }}
-       *     steps:
-       *       # logic to use the credentials
-       */
-      exec(
-        `echo 'BIGQUERY_CREDENTIALS=${JSON.stringify(
-          credentials,
-        )}' >> $GITHUB_OUTPUT`,
-        (err) => {
-          if (err) {
-            console.error("Error writing to GITHUB_OUTPUT:", err);
-            res.writeHead(500, { "Content-Type": "application/json" });
-            res.end(
-              JSON.stringify({ error: "Error writing to GITHUB_OUTPUT" }),
-            );
-            return;
-          }
-        },
-      );
+      try {
+        await fs.writeFile("credentials.json", JSON.stringify(credentials), {
+          mode: 0o600,
+        });
+      } catch (err) {
+        console.error("Error writing credentials file:", err);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Error saving credentials" }));
+        return;
+      }
 
       // stop the server
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ message: "Credentials saved" }));
-      console.log("Credentials saved to job output");
+      console.log("Credentials saved");
       server.close();
       process.exit(0);
     });
