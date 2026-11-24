@@ -1,0 +1,74 @@
+version: 2
+
+# combine docker and github-actions version updates into a single pull request
+multi-ecosystem-groups:
+  infrastructure:
+    schedule:
+      interval: "weekly"
+
+updates:
+  # each npm project gets its own pull request
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(frontend)"
+    groups:
+      frontend:
+        applies-to: version-updates
+        patterns: ["*"]
+      frontend-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/gbq-auth"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(gbq-auth)"
+    groups:
+      gbq-auth:
+        applies-to: version-updates
+        patterns: ["*"]
+      gbq-auth-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: "npm"
+    directory: "/data-pipeline/src/cotar"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps(cotar)"
+    groups:
+      cotar:
+        applies-to: version-updates
+        patterns: ["*"]
+      cotar-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/data-pipeline"
+      - "/gbq-auth"
+    patterns: ["*"]
+    multi-ecosystem-group: "infrastructure"
+    groups:
+      docker-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directories:
+      - "/" # .github/workflows
+      - "/.github/actions/authenticate-gbq"
+      - "/.github/actions/prepare-pipeline-test"
+    patterns: ["*"]
+    multi-ecosystem-group: "infrastructure"
+    groups:
+      github-actions-security:
+        applies-to: security-updates
+        patterns: ["*"]

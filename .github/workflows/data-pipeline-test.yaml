@@ -168,7 +168,7 @@ jobs:
     needs: [determine_tests_to_run, check_previous_pass]
     if: ${{ fromJSON(needs.check_previous_pass.outputs.successfully_passed) == false && (needs.determine_tests_to_run.outputs.run_replica == 'true' || needs.determine_tests_to_run.outputs.run_generic_src == 'true') }}
     outputs:
-      bigquery_credentials: ${{ steps.authenticate.outputs.bigquery_credentials || secrets.BIGQUERY_CREDENTIALS }}
+      bigquery_credentials: ${{ steps.authenticate.outputs.bigquery_credentials }}
     env:
       BIGQUERY_CREDENTIALS: ${{ secrets.BIGQUERY_CREDENTIALS }}
 
@@ -183,6 +183,7 @@ jobs:
         uses: ./.github/actions/authenticate-gbq
         with:
           timeout: 300 # 5 minutes
+          encryption_key: ${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
 
   test__greenlink_gtfs:
     name: "Test / Greenlink GTFS"
@@ -259,7 +260,6 @@ jobs:
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
         with:
-          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
           artifact_name: "data__census_acs_5year"
           etls: "census_acs_5year"
 
@@ -285,7 +285,9 @@ jobs:
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
         with:
-          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          bigquery_credentials: ${{ secrets.BIGQUERY_CREDENTIALS }}
+          encrypted_bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          credentials_encryption_key: ${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
           artifact_name: "data__replica"
           input_dir: "${{ github.workspace }}/replica-input"
           etls: "greenlink_gtfs,replica"
@@ -422,7 +424,9 @@ jobs:
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
         with:
-          bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          bigquery_credentials: ${{ secrets.BIGQUERY_CREDENTIALS }}
+          encrypted_bigquery_credentials: ${{ needs.authenticate_google_big_query.outputs.bigquery_credentials }}
+          credentials_encryption_key: ${{ secrets.CREDENTIALS_ENCRYPTION_KEY }}
           artifact_name: "data__all"
           input_dir: "${{ github.workspace }}/pipeline-input"
 

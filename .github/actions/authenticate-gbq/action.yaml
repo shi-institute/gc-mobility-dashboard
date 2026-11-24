@@ -13,15 +13,28 @@ inputs:
   timeout:
     description: "How long to wait in seconds for the credentials to be received"
     required: false
+  encryption_key:
+    description: "Passphrase used to encrypt the credentials before they are exposed as an output."
+    required: true
 
 outputs:
   bigquery_credentials:
-    description: "Credentials JSON for pandas-gbq"
-    value: ${{ steps.get-credentials.outputs.BIGQUERY_CREDENTIALS }}
+    description: "Credentials JSON for pandas-gbq, encrypted with openssl (aes-256-cbc, pbkdf2) using encryption_key and base64-encoded"
+    value: ${{ steps.encrypt-credentials.outputs.bigquery_credentials }}
 
 runs:
   using: "composite"
   steps:
+    - name: Verify encryption key is provided
+      env:
+        ENCRYPTION_KEY: ${{ inputs.encryption_key }}
+      run: |
+        if [ -z "$ENCRYPTION_KEY" ]; then
+          echo "::error::An encryption key is required to safely pass BigQuery credentials between jobs. Set the CREDENTIALS_ENCRYPTION_KEY repository secret (or the BIGQUERY_CREDENTIALS secret to skip interactive authentication)."
+          exit 1
+        fi
+      shell: bash
+
     - name: Install GitHub CLI when running with act
       if: ${{ env.ACT }}
       run: |
@@ -56,3 +69,15 @@ runs:
       shell: bash
       env:
         TIMEOUT: ${{ inputs.timeout }}
+
+    - name: Encrypt credentials
+      id: encrypt-credentials
+      env:
+        ENCRYPTION_KEY: ${{ inputs.encryption_key }}
+      run: |
+        cd ${{ github.action_path }}
+        ENCRYPTED=$(openssl enc -aes-256-cbc -pbkdf2 -salt -base64 -A \
+          -pass env:ENCRYPTION_KEY -in credentials.json)
+        rm -f credentials.json
+        echo "bigquery_credentials=$ENCRYPTED" >> "$GITHUB_OUTPUT"
+      shell: bash

@@ -9,6 +9,12 @@ inputs:
   bigquery_credentials:
     description: "Credentials JSON for pandas-gbq"
     required: false
+  encrypted_bigquery_credentials:
+    description: "Encrypted credentials JSON from the authenticate-gbq action. Used when bigquery_credentials is empty."
+    required: false
+  credentials_encryption_key:
+    description: "Passphrase used to decrypt encrypted_bigquery_credentials"
+    required: false
   etls:
     description: "ETL files to run"
     required: false
@@ -37,11 +43,41 @@ runs:
     - name: Run test
       env:
         BIGQUERY_CREDENTIALS: ${{ inputs.bigquery_credentials }}
+        ENCRYPTED_BIGQUERY_CREDENTIALS: ${{ inputs.encrypted_bigquery_credentials }}
+        CREDENTIALS_ENCRYPTION_KEY: ${{ inputs.credentials_encryption_key }}
         INPUT_DIR: ${{ inputs.input_dir }}
         ETLS: ${{ inputs.etls }}
         ARTIFACT_NAME: ${{ inputs.artifact_name }}
       run: |
         cd ${{ github.action_path }}
+
+        # if credentials were not provided directly, decrypt the credentials
+        # from the authenticate-gbq action
+        if [ -z "$BIGQUERY_CREDENTIALS" ] && [ -n "$ENCRYPTED_BIGQUERY_CREDENTIALS" ]; then
+          if [ -z "$CREDENTIALS_ENCRYPTION_KEY" ]; then
+            echo "::error::encrypted_bigquery_credentials was provided without credentials_encryption_key."
+            exit 1
+          fi
+          BIGQUERY_CREDENTIALS=$(printf '%s' "$ENCRYPTED_BIGQUERY_CREDENTIALS" \
+            | openssl enc -d -aes-256-cbc -pbkdf2 -base64 -A -pass env:CREDENTIALS_ENCRYPTION_KEY) || {
+            echo "::error::Failed to decrypt BigQuery credentials."
+            exit 1
+          }
+        fi
+
+        # mask the sensitive credential values so they are redacted from all logs in this job
+        if [ -n "$BIGQUERY_CREDENTIALS" ]; then
+          if ! command -v jq > /dev/null; then
+            echo "::error::jq is required to mask BigQuery credentials."
+            exit 1
+          fi
+          for FIELD in refresh_token client_secret; do
+            VALUE=$(printf '%s' "$BIGQUERY_CREDENTIALS" | jq -r --arg f "$FIELD" '.[$f] // empty' 2>/dev/null)
+            [ -n "$VALUE" ] && echo "::add-mask::$VALUE"
+          done
+        fi
+        unset ENCRYPTED_BIGQUERY_CREDENTIALS CREDENTIALS_ENCRYPTION_KEY
+
         BIGQUERY_CREDENTIALS=$BIGQUERY_CREDENTIALS \
           INPUT_DIR=$INPUT_DIR \
           ETLS=$ETLS \
