@@ -86,7 +86,7 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
       });
   }, [setScenariosList]);
 
-  const travelMethodList = [
+  const allTravelMethods = [
     'biking',
     'carpool',
     'commercial',
@@ -96,6 +96,41 @@ function _useAppData({ areas, seasons, travelMethod }: AppDataHookParameters) {
     'public_transit',
     'walking',
   ];
+
+  const [travelMethodList, setTravelMethodList] = useState<string[]>(allTravelMethods);
+  useEffect(() => {
+    if (areas.length === 0 || seasons.length === 0) {
+      setTravelMethodList(allTravelMethods);
+      return;
+    }
+
+    Promise.all(
+      areas.flatMap((area) =>
+        seasons.map(([quarter, year]) =>
+          fetch(
+            dataOrigin + dataPath + `/replica/${area}/travel_method_index__${year}_${quarter}.txt`
+          )
+            .then((res) => (res.ok ? res.text() : ''))
+            .catch(() => '')
+        )
+      )
+    ).then((texts) => {
+      const availableTravelMethods = new Set(
+        texts
+          .flatMap((text) => text.split('\n'))
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+      );
+      if (availableTravelMethods.size > 0) {
+        setTravelMethodList(
+          allTravelMethods.filter((method) => availableTravelMethods.has(method))
+        );
+      } else {
+        // keep the full hardcoded list as a fallback if no index is available
+        setTravelMethodList(allTravelMethods);
+      }
+    });
+  }, [areas, seasons, setTravelMethodList]);
 
   // ensure an area is selected
   useEffect(() => {

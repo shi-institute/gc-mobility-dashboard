@@ -85,7 +85,7 @@ export function useSectionsVisibility() {
   /** The tabs that should be shown by the app. If null, show all tabs. */
   const visibleTabs =
     editMode || visibleSections === null
-      ? null
+      ? [...new Set(sectionsToTabs.values())]
       : Object.keys(visibleSections).reduce((tabs, section) => {
           const tab = sectionsToTabs.get(section);
           if (tab && !tabs.includes(tab)) {
@@ -94,7 +94,13 @@ export function useSectionsVisibility() {
           return tabs;
         }, [] as string[]);
 
-  return [visibleSections, setVisibleSections, visibleTabs, editMode] as const;
+  return [
+    visibleSections,
+    setVisibleSections,
+    // TODO: remote this filter once we update the Roads vs Transit tab
+    visibleTabs?.filter((tab) => tab !== TAB_5_FRAGMENT),
+    editMode,
+  ] as const;
 }
 
 /**

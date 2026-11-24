@@ -282,7 +282,7 @@ namespace GTFS {
 
 interface StopRidership {
   period: string;
-  stop_point: number;
+  stop_point: string;
   boarding: number;
   alighting: number;
   areas: string[] | null;

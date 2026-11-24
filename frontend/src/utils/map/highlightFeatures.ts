@@ -1,4 +1,5 @@
 import Query from '@arcgis/core/rest/support/Query.js';
+import { isEsriGraphic } from '..';
 import { notEmpty } from '../notEmpty';
 import { requireKey } from '../requireKey';
 import { toSqlList } from '../toSqlList';
@@ -25,7 +26,7 @@ export async function highlightFeatures(
   mapView: __esri.MapView,
   specs: {
     layerId: Parameters<typeof getLayerById>[1];
-    target?: EsriHighlightTarget;
+    target?: EsriHighlightTarget | { field: string; values: EsriHighlightTarget };
     options?: EsriHighlightOptions & { signal?: AbortSignal };
   }[]
 ) {
@@ -47,7 +48,56 @@ export async function highlightFeatures(
     }
 
     // otherwise, highlight the specified features
-    const handle = highlightLayerFeatures(layerView, target, abortableOptions);
+    const resolvedTarget = await (async (): Promise<EsriHighlightTarget | null> => {
+      // if the target is is one or more objectIds, we can use it directly
+      if (
+        Array.isArray(target) ||
+        isEsriGraphic(target) ||
+        typeof target === 'number' ||
+        typeof target === 'string'
+      ) {
+        return target;
+      }
+
+      // otherwise, we need to resolve the objectIds by querying the layer for
+      // the specified field and values
+
+      const field = target.field;
+      const values = target.values;
+      const query = constructComparableQuery(layerView, { field, values });
+      if (!query) {
+        return null;
+      }
+
+      // ensure that the layer view supports querying features
+      if (!('queryFeatures' in layerView) || typeof layerView.queryFeatures !== 'function') {
+        console.warn(
+          `LayerView of type ${layerView.layer.type} does not support querying features.`
+        );
+        return null;
+      }
+      const queryFeatures: __esri.FeatureLayerView['queryFeatures'] =
+        layerView.queryFeatures.bind(layerView);
+
+      const { features } = await queryFeatures(query, { signal: abortableOptions?.signal });
+      const featureIds = features.map((feature) => feature.getObjectId()).filter(notEmpty);
+
+      if (
+        !featureIds.every((id) => typeof id === 'number') &&
+        !featureIds.every((id) => typeof id === 'string')
+      ) {
+        console.warn(
+          `LayerView of type ${layerView.layer.type} returned features with mixed or invalid objectId types.`
+        );
+        return null;
+      }
+
+      return featureIds;
+    })();
+    if (!resolvedTarget) {
+      return null;
+    }
+    const handle = highlightLayerFeatures(layerView, resolvedTarget, abortableOptions);
     return { handle, layerView, targetQuery };
   });
 
@@ -63,50 +113,68 @@ export async function highlightFeatures(
  *
  * If the target cannot be converted, this function will return `undefined`.
  */
-function constructComparableQuery(layerView: __esri.LayerView, target?: EsriHighlightTarget) {
-  if (
-    !('objectIdField' in layerView.layer) ||
-    !layerView.layer.objectIdField ||
-    typeof layerView.layer.objectIdField !== 'string'
-  ) {
+function constructComparableQuery(
+  layerView: __esri.LayerView,
+  target?: EsriHighlightTarget | { field: string; values: EsriHighlightTarget }
+) {
+  // Prefer manually specified field. If the field is not specified,
+  // use the layer's objectIdField if it exists.
+  let field =
+    typeof target === 'object' && 'field' in target && typeof target.field === 'string'
+      ? target.field
+      : undefined;
+  if (!field) {
+    field =
+      'objectIdField' in layerView.layer && typeof layerView.layer.objectIdField === 'string'
+        ? layerView.layer.objectIdField
+        : undefined;
+  }
+  if (!field) {
     return undefined;
   }
 
-  if (!target) {
+  // Prefer manually specified values. If the values are not specified, use the target directly.
+  const resolvedTarget =
+    typeof target === 'object' && 'values' in target && Array.isArray(target.values)
+      ? target.values
+      : (target as EsriHighlightTarget | undefined);
+
+  if (!resolvedTarget) {
     const allFeaturesQuery = new Query({ where: '1=1' });
     return allFeaturesQuery;
   }
 
   // handle single id target
-  if (typeof target === 'number' || typeof target === 'string') {
-    return new Query({ where: `${layerView.layer.objectIdField} = ${target}` });
+  if (typeof resolvedTarget === 'number' || typeof resolvedTarget === 'string') {
+    return new Query({ where: `${field} = ${resolvedTarget}` });
   }
 
   // handle array of ids target
   if (
-    Array.isArray(target) &&
-    target.every((t) => typeof t === 'number' || typeof t === 'string')
+    Array.isArray(resolvedTarget) &&
+    (resolvedTarget.every((t) => typeof t === 'number') ||
+      resolvedTarget.every((t) => typeof t === 'string'))
   ) {
-    return new Query({ where: `${layerView.layer.objectIdField} IN (${toSqlList(target)})` });
+    return new Query({ where: `${field} IN (${toSqlList(resolvedTarget)})` });
   }
 
   // handle featureset target
-  if (Array.isArray(target)) {
-    const targetObjectIds = target.map((feature) => feature.getObjectId()).filter(notEmpty);
+  if (Array.isArray(resolvedTarget) && resolvedTarget.every((t) => isEsriGraphic(t))) {
+    const targetObjectIds = resolvedTarget.map((feature) => feature.getObjectId()).filter(notEmpty);
     if (targetObjectIds.length === 0) {
       return undefined;
     }
-    return new Query({
-      where: `${layerView.layer.objectIdField} IN (${toSqlList(targetObjectIds)})`,
-    });
+    return new Query({ where: `${field} IN (${toSqlList(targetObjectIds)})` });
   }
 
   // handle single feature target
-  const targetObjectId = target.getObjectId?.();
-  if (!targetObjectId) {
-    return undefined;
+  if (isEsriGraphic(resolvedTarget)) {
+    const targetObjectId = resolvedTarget.getObjectId?.();
+    if (!targetObjectId) {
+      return undefined;
+    }
+    return new Query({ where: `${field} = ${targetObjectId}` });
   }
-  return new Query({ where: `${layerView.layer.objectIdField} = ${targetObjectId}` });
 }
 
 /**

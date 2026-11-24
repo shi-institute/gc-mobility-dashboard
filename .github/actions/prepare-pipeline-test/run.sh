@@ -27,6 +27,18 @@ if [ -d $INPUT_DIR ]; then
   sudo chmod -R +r $INPUT_DIR
 fi
 
+# forward secrets from the host environment into the container,
+# but only do it when they are non-empty
+PASSTHROUGH_ENV_ARGS=()
+for VAR_NAME in CENSUS_API_KEY TRANSITLAND_API_KEY INCLUDE_FULL_AREA_IN_AREAS; do
+  if [ -n "${!VAR_NAME}" ]; then
+    PASSTHROUGH_ENV_ARGS+=(-e "$VAR_NAME")
+    echo "Passing $VAR_NAME to the data pipeline container."
+  else
+    echo "$VAR_NAME is not set; it will not be passed to the data pipeline container."
+  fi
+done
+
 # run the data pipeline and get whether it was successful
 SHOULD_USE_BIGQUERY_STORAGE_API=$([ -n "$ACT" ] && echo "true" || echo "false")
 docker run --rm \
@@ -37,6 +49,7 @@ docker run --rm \
   -e REPLICA_QUARTERS_FILTER=Q4 \
   -e USE_BIGQUERY_STORAGE_API=$SHOULD_USE_BIGQUERY_STORAGE_API \
   -e IS_GH_WORKFLOW=$IS_GH_WORKFLOW \
+  "${PASSTHROUGH_ENV_ARGS[@]}" \
   gc-mobility-dashboard-data-pipeline:test --etls=$ETLS
 EXIT_CODE=$?
 if [ $EXIT_CODE -ne 0 ]; then

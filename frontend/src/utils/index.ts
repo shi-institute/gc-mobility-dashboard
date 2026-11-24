@@ -5,6 +5,7 @@ export { generateHash } from './generateHash';
 export { getRootAttributes } from './getRootAttributes';
 export { hasKey } from './hasKey';
 export { inflateResponse } from './inflateResponse';
+export { isEsriGraphic } from './isEsriGraphic';
 export { isGeoJSON } from './isGeoJson';
 export { isGeoJsonLayerInitData } from './isGeoJsonLayerInitData';
 export { listOxford } from './listOxford';
