@@ -16,7 +16,7 @@ class CensusDataTableInfo(TypedDict):
 tables: dict[CensusDataTableName, CensusDataTableInfo] = {
     'S0101': {
         'label': 'Age and Sex',
-        'years': [2019, 2020, 2021, 2022, 2023],
+        'years': [2019, 2020, 2021, 2022, 2023, 2024],
         'data': "https://api.census.gov/data/{year}/acs/acs5/subject?get=group(S0101)&ucgid=pseudo(0500000US45045$1400000)",
         'metadata': 'https://api.census.gov/data/{year}/acs/acs5/subject',
         'variables': 'https://api.census.gov/data/{year}/acs/acs5/subject/variables',
@@ -26,7 +26,7 @@ tables: dict[CensusDataTableName, CensusDataTableInfo] = {
     },
     'DP05': {
         'label': 'ACS Demographic and Housing Estimates',
-        'years': [2019, 2020, 2021, 2022, 2023],
+        'years': [2019, 2020, 2021, 2022, 2023, 2024],
         'data': 'https://api.census.gov/data/{year}/acs/acs5/profile?get=group(DP05)&ucgid=pseudo(0500000US45045$1400000)',
         'metadata': 'https://api.census.gov/data/{year}/acs/acs5/profile',
         'variables': 'https://api.census.gov/data/{year}/acs/acs5/profile/variables',
@@ -43,7 +43,7 @@ tables: dict[CensusDataTableName, CensusDataTableInfo] = {
     },
     'S1501': {
         'label': 'Educational Attainment',
-        'years': [2019, 2020, 2021, 2022, 2023],
+        'years': [2019, 2020, 2021, 2022, 2023, 2024],
         'data': 'https://api.census.gov/data/{year}/acs/acs5/subject?get=group(S1501)&ucgid=pseudo(0500000US45045$1400000)',
         'metadata': 'https://api.census.gov/data/{year}/acs/acs5/subject',
         'variables': 'https://api.census.gov/data/{year}/acs/acs5/subject/variables',
@@ -59,7 +59,7 @@ tables: dict[CensusDataTableName, CensusDataTableInfo] = {
     },
     'B08201': {
         'label': 'Household Size by Vehicles Available',
-        'years': [2019, 2020, 2021, 2022, 2023],
+        'years': [2019, 2020, 2021, 2022, 2023, 2024],
         'data': 'https://api.census.gov/data/{year}/acs/acs5?get=group(B08201)&ucgid=pseudo(0500000US45045$1400000)',
         'metadata': 'https://api.census.gov/data/{year}/acs/acs5',
         'variables': 'https://api.census.gov/data/{year}/acs/acs5/variables',
@@ -80,5 +80,7 @@ tiger_web_tracts_services = {
     2021: {"layer_id": 6, "service": "tigerWMS_ACS2021"},
     2022: {"layer_id": 6, "service": "tigerWMS_ACS2022"},
     2023: {"layer_id": 8, "service": "tigerWMS_ACS2023"},
-    2024: {"layer_id": 8, "service": "tigerWMS_ACS2024"}
+    2024: {"layer_id": 8, "service": "tigerWMS_ACS2024"},
+    2025: {"layer_id": 8, "service": "tigerWMS_ACS2025"},
+    2026: {"layer_id": 8, "service": "tigerWMS_ACS2026"}
 }
