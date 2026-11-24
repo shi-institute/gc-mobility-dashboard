@@ -14,17 +14,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Set up buildx cache directory
         run: |
           mkdir -p /tmp/.buildx-cache
 
       - name: Restore Docker build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-docker-${{ hashFiles('./data-pipeline/Dockerfile', './data-pipeline/environment.yaml', './data-pipeline/src/**') }}
@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-docker-
 
       - name: Build Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./data-pipeline
           file: ./data-pipeline/Dockerfile
@@ -51,7 +51,7 @@ jobs:
           docker save gc-mobility-dashboard-data-pipeline:test -o ./gc-mobility-dashboard-data-pipeline.tar
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docker-image-data-pipeline
           path: ./gc-mobility-dashboard-data-pipeline.tar
@@ -71,7 +71,7 @@ jobs:
       run_generic_src: ${{ steps.check_changed_dirs.outputs.run_generic_src }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # fetch all history to ensure we can find the merge base
 
@@ -174,7 +174,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # if the BIGQUERY_CREDENTIALS secret is missing, run an action that prompts for credentials
       - name: Authenticate Google BigQuery
@@ -195,7 +195,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
@@ -211,7 +211,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Create sample input data
         env:
@@ -255,7 +255,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Run test
         uses: ./.github/actions/prepare-pipeline-test
@@ -271,7 +271,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Create sample input data
         env:
@@ -300,7 +300,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Create sample input data
         env:
@@ -345,7 +345,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Create sample input data
         env:
@@ -378,7 +378,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Create sample input data
         env:
@@ -443,7 +443,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Check if ACT_SUCCESS_COMMIT_HASH variable exists
         id: check
@@ -513,7 +513,7 @@ jobs:
           exit 1
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Install GitHub CLI
         if: "${{ env.ACT }}"
